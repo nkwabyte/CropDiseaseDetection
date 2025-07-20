@@ -199,7 +199,9 @@ fun HomeScreen(
                         Box(modifier = Modifier.fillMaxSize()) {
                             Image(
                                 painter = rememberAsyncImagePainter(selectedImageUri),
-                                contentDescription = stringResource(R.string.home_selected_image_description),
+                                contentDescription = stringResource(
+                                    R.string.home_selected_image_description
+                                ),
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize()
                             )

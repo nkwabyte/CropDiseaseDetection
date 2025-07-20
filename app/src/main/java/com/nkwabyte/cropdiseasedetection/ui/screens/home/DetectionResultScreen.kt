@@ -7,6 +7,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
@@ -28,8 +30,14 @@ import com.nkwabyte.cropdiseasedetection.common.model.DetectionResult
 import com.nkwabyte.cropdiseasedetection.common.utils.drawBoundingBoxesOnBitmap
 import com.nkwabyte.cropdiseasedetection.common.utils.loadBitmapFromUri
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.core.net.toUri
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.rememberStandardBottomSheetState
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,6 +97,13 @@ fun DetectionResultScreen(
         }
     }
 
+    val sheetState = rememberStandardBottomSheetState(
+        initialValue = SheetValue.PartiallyExpanded,
+        skipHiddenState = false // Allows the sheet to be fully hidden if needed
+    )
+    val scope = rememberCoroutineScope()
+
+
     Scaffold(
         topBar = {
             AppBar(
@@ -98,43 +113,35 @@ fun DetectionResultScreen(
             )
         },
     ) { contentPadding ->
-        Column(
+        Box(
             modifier = modifier
                 .fillMaxSize()
                 .padding(contentPadding)
         ) {
-            // --- 1. Image Display Area ---
+            // --- 1. Image Display Area (Fixed at the top) ---
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .fillMaxHeight(0.45f) // Image takes top 45% of the screen
+                    .fillMaxHeight(0.5f) // Image takes top 50% of the screen (adjust as needed)
+                    .align(Alignment.TopCenter)
             ) {
                 if (processedImageBitmap != null) {
-                    Image(
-                        bitmap = processedImageBitmap!!.asImageBitmap(),
-                        contentDescription = stringResource(R.string.detected_image_content_description),
+                    Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .fillMaxWidth()
-                            .clip(MaterialTheme.shapes.medium),
-                        contentScale = ContentScale.Fit
-                    )
-                    // Close button to clear state and navigate back
-                    IconButton(
-                        onClick = {
-                            appViewModel.reset()
-                            detectionViewModel.reset()
-                            onCloseDetection()
-                        },
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(16.dp)
-                            .background(
-                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
-                                MaterialTheme.shapes.small
-                            )
-                    ) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
+                            .padding(horizontal = 8.0.dp),
+                        contentAlignment = Alignment.Center
+                    ){
+                        Image(
+                            bitmap = processedImageBitmap!!.asImageBitmap(),
+                            contentDescription = stringResource(
+                                R.string.detected_image_content_description
+                            ),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(MaterialTheme.shapes.medium),
+                            contentScale = ContentScale.Crop,
+                        )
                     }
                 } else {
                     // Loading indicator
@@ -147,42 +154,145 @@ fun DetectionResultScreen(
                 }
             }
 
-            // --- 2. Scrollable Content Area ---
-            LazyColumn(
+            // --- 2. Modal Bottom Sheet for Scrollable Content ---
+            ModalBottomSheet(
+                onDismissRequest = {
+                    scope.launch { sheetState.partialExpand() }
+                },
+                sheetState = sheetState,
                 modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 12.dp)
+                    .fillMaxHeight(0.8f)
+                    .align(Alignment.BottomCenter)
             ) {
-                // Header item
-                item {
-                    Text(
-                        text = stringResource(R.string.detection_details_title),
-                        style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    )
-                    appState.selectedCrop?.let {
-                        Text(
-                            text = stringResource(R.string.selected_crop_label, it),
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                    }
-                }
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 12.dp)
+                ) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        // Header item with the close button
+                        item {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.detection_details_title),
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    modifier = Modifier.weight(1f) // Allow title to take available space
+                                )
+                                IconButton(
+                                    onClick = {
+                                        appViewModel.reset()
+                                        detectionViewModel.reset()
+                                        onCloseDetection()
+                                    },
+                                    modifier = Modifier
+                                        .background(
+                                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                                            MaterialTheme.shapes.small
+                                        )
+                                        .size(40.dp)
+                                ) {
+                                    Icon(Icons.Default.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurface)
+                                }
+                            }
 
-                // List of detection result cards
-                if (detectionResults.isEmpty()) {
-                    item {
-                        Text(
-                            text = stringResource(R.string.no_detections_found),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(vertical = 16.dp)
-                        )
-                    }
-                } else {
-                    items(detectionResults) { result ->
-                        DetectionResultCard(result = result)
-                        Spacer(modifier = Modifier.height(8.dp))
+                            appState.selectedCrop?.let {
+                                Text(
+                                    text = stringResource(R.string.selected_crop_label, it),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+                            }
+                        }
+
+                        // List of detection result cards
+                        if (detectionResults.isEmpty()) {
+                            item {
+                                Text(
+                                    text = stringResource(R.string.no_detections_found),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(vertical = 16.dp)
+                                )
+                            }
+                        } else {
+                            items(detectionResults) { result ->
+                                DetectionResultCard(result = result)
+                                Spacer(modifier = Modifier.height(12.0.dp))
+                            }
+                        }
+
+                        // --- New: Row with "Flag" and "Recommendations" buttons ---
+                        if(detectionResults.isNotEmpty()){
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .height(15.0.dp)
+                                ){}
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.SpaceAround,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            Toast.makeText(
+                                                context,
+                                                "Flag button clicked!",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        },
+                                        modifier = Modifier.weight(1f).padding(end = 4.dp)
+                                    ) {
+                                        BasicText(
+                                            text = "Flag",
+                                            style = MaterialTheme.typography.labelLarge.copy(
+                                                textAlign = TextAlign.Center,
+                                                color = MaterialTheme.colorScheme.onPrimary,
+                                            ),
+                                            maxLines = 1,
+                                            autoSize = TextAutoSize.StepBased(
+                                                minFontSize = 12.sp,
+                                                maxFontSize = 18.sp,
+                                            )
+                                        )
+                                    }
+                                    Button(
+                                        onClick = {
+                                            Toast.makeText(
+                                                context,
+                                                "Recommendations button clicked!",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        },
+                                        modifier = Modifier.weight(1f).padding(start = 4.dp)
+                                    ) {
+                                        BasicText(
+                                            text = "Recommendations",
+                                            style = MaterialTheme.typography.labelLarge.copy(
+                                                textAlign = TextAlign.Center,
+                                                color = MaterialTheme.colorScheme.onPrimary,
+                                            ),
+                                            maxLines = 1,
+                                            autoSize = TextAutoSize.StepBased(
+                                                minFontSize = 12.sp,
+                                                maxFontSize = 18.sp,
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        // --- End of New Buttons ---
                     }
                 }
             }
@@ -196,8 +306,10 @@ fun DetectionResultCard(result: DetectionResult) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.0.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
