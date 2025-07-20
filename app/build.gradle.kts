@@ -1,3 +1,5 @@
+import com.android.build.api.dsl.AaptOptions
+import com.android.build.api.dsl.AndroidResources
 import org.gradle.kotlin.dsl.implementation
 
 
@@ -47,11 +49,12 @@ android {
             assets.srcDirs("src/main/assets")
         }
     }
-//    packaging {
-//        resources {
-//            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-//        }
-//    }
+
+
+    androidResources{
+        noCompress += "tflite"
+        ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~"
+    }
 
 }
 
@@ -89,7 +92,12 @@ dependencies {
     implementation(libs.koin.androidx.compose)
 
     // pytorch integration
-    implementation(libs.executorch.android)
+    //implementation(libs.executorch.android)
+    implementation(libs.pytorch.android)
+    implementation(libs.pytorch.android.torchvision)
+    // TensorFlow Lite integration
+    implementation (libs.tensorflow.lite)
+    implementation (libs.tensorflow.lite.support)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

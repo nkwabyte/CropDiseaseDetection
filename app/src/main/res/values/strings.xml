@@ -14,6 +14,9 @@
     <string name="privacy_policy_drawer_item">PRIVACY POLICY</string>
     <string name="sign_in_drawer_item">Sign In</string>
     <string name="sign_in_icon_description">Sign In Icon</string>
+    <string name="default_user_name">Jane Doe</string>
+    <string name="default_user_bio">Responsible AI Lab</string>
+    <string name="unable_to_load_image">"Unable to load image."</string>
 
     <!-- Home Screen Strings -->
     <string name="home_button_submit">SUBMIT</string>
@@ -75,6 +78,10 @@
     <!-- Select Crop Screen Strings -->
     <string name="select_crop_title">Select Crop</string>
     <string name="select_crop_description">Please select the crop for which you want to perform analysis and disease prediction on.</string>
+    <string name="home_no_results_found">
+        No results found for the selected crop and the image provided.
+    </string>
+    <string name="crop_unknown">Unknown</string>
     <string name="crop_corn">Corn</string>
     <string name="crop_tomato">Tomato</string>
     <string name="crop_pepper">Pepper</string>
@@ -93,5 +100,16 @@
     <string name="rail_partners_description">RAIL Partners Logos</string>
     <string name="lock_icon_description">Lock Icon</string>
     <string name="phone_icon_description">Phone Icon</string>
+
+    <!--  Detection results strings  -->
+    <string name="detected_image_content_description">Detected image with results</string>
+    <string name="close_button_content_description">Close detection results</string>
+    <string name="no_image_available">No image available for display.</string>
+    <string name="detection_details_title">Detection Details</string>
+    <string name="selected_crop_label">Selected Crop: %s</string>
+    <string name="no_detections_found">No detections found for this image.</string>
+    <string name="no_image_selected_yet">No image has been selected for detection yet.</string>
+
+
 
 </resources>
