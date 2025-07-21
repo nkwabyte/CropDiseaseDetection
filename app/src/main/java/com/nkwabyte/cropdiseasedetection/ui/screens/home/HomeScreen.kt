@@ -34,6 +34,8 @@ import com.nkwabyte.cropdiseasedetection.common.model.DetectionResult
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AppViewModel
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.DetectionViewModel
 import com.nkwabyte.cropdiseasedetection.common.utils.loadBitmapFromUri
+import com.nkwabyte.cropdiseasedetection.ui.components.GradientSnackBar
+import com.nkwabyte.cropdiseasedetection.ui.components.LoadingDialog
 import com.nkwabyte.cropdiseasedetection.ui.theme.CropDiseaseDetectionTheme
 import org.koin.compose.koinInject
 import java.io.File
@@ -47,16 +49,29 @@ fun HomeScreen(
     detectionViewModel: DetectionViewModel,
     navigateToResult: (List<DetectionResult>) -> Unit
 ) {
+    val snackBarHostState = remember { SnackbarHostState() }
     var isCameraMode by remember { mutableStateOf(false) }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     val context = LocalContext.current
-    
-    //val appState by appViewModel.appState.collectAsState()
+
+    val appState by appViewModel.appState.collectAsState()
     val detectionData by detectionViewModel.detectionState.collectAsState()
 
     LaunchedEffect(detectionData) {
-        if (detectionData.results.isNotEmpty()) {
+        if (detectionData.results.isNotEmpty() || detectionData.isDetectionSuccessful) {
             navigateToResult(detectionData.results)
+        }
+        if (detectionData.isDetected && detectionData.results.isEmpty()) {
+            snackBarHostState.showSnackbar(
+                message = context.getString(R.string.no_detection_message),
+                actionLabel = context.getString(R.string.ok_text)
+            )
+        }
+        if (detectionData.results.isEmpty() && (detectionData.isDetected && !detectionData.isCropMissMatch)) {
+            snackBarHostState.showSnackbar(
+                message = context.getString(R.string.error_detecting_message),
+                actionLabel = context.getString(R.string.ok_text)
+            )
         }
     }
 
@@ -140,7 +155,9 @@ fun HomeScreen(
                     val bitmap = loadBitmapFromUri(context, uri)
                     if (bitmap != null) {
                         appViewModel.setSelectedImageUri(uri)
-                        detectionViewModel.detectWithPyTorch(bitmap)
+                        appState.selectedCrop?.let {
+                            detectionViewModel.detectWithPyTorch(bitmap, it)
+                        }
                     } else {
                         Toast.makeText(
                             context,
@@ -149,7 +166,6 @@ fun HomeScreen(
                         ).show()
                     }
                 }
-
             }
         }
     }
@@ -175,6 +191,19 @@ fun HomeScreen(
                     selectedImageUri = null
                     appViewModel.setSelectedImageUri(null)
                 },
+            )
+        },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackBarHostState,
+                modifier = Modifier.padding(8.dp),
+                snackbar = { snackBarData ->
+                    GradientSnackBar(
+                        message = snackBarData.visuals.message,
+                        actionLabel = snackBarData.visuals.actionLabel,
+                        onAction = { snackBarData.dismiss() }
+                    )
+                }
             )
         },
         content = { paddingValues ->
@@ -209,6 +238,7 @@ fun HomeScreen(
                                 onClick = {
                                     selectedImageUri = null
                                     appViewModel.setSelectedImageUri(null)
+                                    detectionViewModel.reset()
                                 },
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
@@ -264,6 +294,9 @@ fun HomeScreen(
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                     )
                 }
+            }
+            if(detectionData.isDetecting){
+                LoadingDialog()
             }
         }
     )

@@ -37,6 +37,7 @@ import androidx.compose.material3.SheetValue
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
+import com.nkwabyte.cropdiseasedetection.ui.components.GradientSnackBar
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,6 +50,7 @@ fun DetectionResultScreen(
     appViewModel: AppViewModel,
 ) {
     val context = LocalContext.current
+    val snackBarHostState = remember { SnackbarHostState() }
     val appState by appViewModel.appState.collectAsState()
     val detectionState by detectionViewModel.detectionState.collectAsState()
 
@@ -59,8 +61,8 @@ fun DetectionResultScreen(
             if (selectedCrop.isNullOrEmpty()) {
                 detectionState.results
             } else {
-                detectionState.results.filter { result ->
-                    result.className?.contains(selectedCrop, ignoreCase = true) == true
+                detectionState.results.filter {
+                    it.className?.contains(selectedCrop, ignoreCase = true) == true
                 }
             }
         }
@@ -99,7 +101,7 @@ fun DetectionResultScreen(
 
     val sheetState = rememberStandardBottomSheetState(
         initialValue = SheetValue.PartiallyExpanded,
-        skipHiddenState = false // Allows the sheet to be fully hidden if needed
+        skipHiddenState = false
     )
     val scope = rememberCoroutineScope()
 
@@ -112,6 +114,19 @@ fun DetectionResultScreen(
                 isHomeScreen = false
             )
         },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackBarHostState,
+                modifier = Modifier.padding(8.dp),
+                snackbar = {
+                    GradientSnackBar(
+                        message = it.visuals.message,
+                        actionLabel = it.visuals.actionLabel,
+                        onAction = { it.dismiss() }
+                    )
+                }
+            )
+        },
     ) { contentPadding ->
         Box(
             modifier = modifier
@@ -122,7 +137,7 @@ fun DetectionResultScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .fillMaxHeight(0.5f) // Image takes top 50% of the screen (adjust as needed)
+                    .fillMaxHeight(0.5f)
                     .align(Alignment.TopCenter)
             ) {
                 if (processedImageBitmap != null) {
@@ -216,7 +231,7 @@ fun DetectionResultScreen(
                         if (detectionResults.isEmpty()) {
                             item {
                                 Text(
-                                    text = stringResource(R.string.no_detections_found),
+                                    text = stringResource(R.string.no_detection_message),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(vertical = 16.dp)

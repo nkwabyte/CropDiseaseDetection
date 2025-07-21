@@ -19,6 +19,7 @@ class DetectionViewModel(
     private val detectionData = DetectionData(
         isModelLoading = true,
         isDetecting = false,
+        isDetectionSuccessful = false,
         results = emptyList(),
         imageWidth = 0,
         imageHeight = 0
@@ -33,9 +34,11 @@ class DetectionViewModel(
             try {
                 pytorchDetector.loadModel()
                 tfDetector.loadModel()
-                _detectionState.update { currentState ->
-                    currentState.copy(
+                _detectionState.update {
+                    it.copy(
                         isModelLoading = false,
+                        isDetectionSuccessful = false,
+                        isDetected = false,
                         isDetecting = false,
                     )
                 }
@@ -45,20 +48,46 @@ class DetectionViewModel(
         }
     }
 
-    fun detectWithPyTorch(bitmap: Bitmap) {
+    fun detectWithPyTorch(bitmap: Bitmap, crop: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // set is detecting to true
-                _detectionState.update { currentState ->
-                    currentState.copy(isDetecting = true)
-                }
+                _detectionState.update { it.copy(isDetecting = true) }
+
                 val results = pytorchDetector.detect(bitmap)
-                // log the detection results
                 Log.d("DetectionViewModel", "PyTorch detection results: $results")
-                _detectionState.update { currentState ->
-                    currentState.copy(
-                        results = results,
+
+                if (results.isEmpty()) {
+                    Log.d("DetectionViewModel", "No detection results found")
+                    // No detection made at all
+                    _detectionState.update {
+                        it.copy(
+                            results = emptyList(),
+                            isDetecting = false,
+                            isDetected = true,
+                            isDetectionSuccessful = false,
+                            isCropMissMatch = false,
+                            imageWidth = bitmap.width,
+                            imageHeight = bitmap.height,
+                        )
+                    }
+                    return@launch
+                }
+
+                val matchingResults = results.filter {
+                    it.className?.contains(crop, ignoreCase = true) == true
+                }
+                Log.d("DetectionViewModel", "Matching results: $matchingResults")
+
+                val isMismatch = matchingResults.isEmpty()
+                Log.d("DetectionViewModel", "Crop mismatch: $isMismatch")
+
+                _detectionState.update {
+                    it.copy(
+                        results = matchingResults,
                         isDetecting = false,
+                        isDetected = true,
+                        isDetectionSuccessful = matchingResults.isNotEmpty(),
+                        isCropMissMatch = isMismatch,
                         imageWidth = bitmap.width,
                         imageHeight = bitmap.height,
                     )
@@ -66,81 +95,59 @@ class DetectionViewModel(
             } catch (e: Exception) {
                 Log.e("DetectionViewModel", "PyTorch detection failed: ${e.message}")
             } finally {
-                _detectionState.update { currentState ->
-                    currentState.copy(
-                        isDetecting = false
-                    )
+                _detectionState.update {
+                    it.copy(isDetecting = false)
                 }
             }
         }
     }
 
-    fun detectWithTF(input: Bitmap) {
+    fun detectWithTF(input: Bitmap, crop: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                _detectionState.update { currentState ->
-                    currentState.copy(isDetecting = true)
-                }
+                _detectionState.update { it.copy(isDetecting = true) }
+
                 val results = tfDetector.detect(input)
-                Log.d("DetectionViewModel", "PyTorch detection results: $results")
-                _detectionState.update { currentState ->
-                    currentState.copy(
-                        results = results,
+                Log.d("DetectionViewModel", "TF detection results: $results")
+
+                val matchingResults = results.filter {
+                    it.className?.contains(crop, ignoreCase = true) == true
+                }
+
+                val isMismatch = matchingResults.isEmpty()
+
+                _detectionState.update {
+                    it.copy(
+                        results = matchingResults,
                         isDetecting = false,
+                        isDetected = true,
+                        isDetectionSuccessful = matchingResults.isNotEmpty(),
+                        isCropMissMatch = isMismatch,
                         imageWidth = input.width,
                         imageHeight = input.height,
                     )
                 }
             } catch (e: Exception) {
-                Log.e("DetectionViewModel", "TFLite detection failed: ${e.message}")
+                Log.e("DetectionViewModel", "TF detection failed: ${e.message}")
             } finally {
-                _detectionState.update { currentState ->
-                    currentState.copy(
-                        isDetecting = false
+                _detectionState.update {
+                    it.copy(
+                        isDetecting = false,
                     )
                 }
             }
         }
     }
 
-    fun setDetectionResult(results: List<DetectionResult>) {
-        _detectionState.update { currentState ->
-            currentState.copy(
-                results = results,
-            )
-        }
-    }
-
-    fun addDetectionResult(result: DetectionResult) {
-        _detectionState.update { currentState ->
-            currentState.copy(
-                results = currentState.results + result,
-            )
-        }
-    }
-
-    fun clearDetectionResults() {
-        _detectionState.update { currentState ->
-            currentState.copy(
-                results = emptyList(),
-                isDetecting = false,
-            )
-        }
-    }
-
-    fun removeDetectionResult(result: DetectionResult) {
-        _detectionState.update { currentState ->
-            currentState.copy(
-                results = currentState.results.filter { it != result }
-            )
-        }
-    }
 
     fun reset() {
         _detectionState.update {
             DetectionData(
                 isModelLoading = true,
                 isDetecting = false,
+                isDetectionSuccessful = false,
+                isCropMissMatch = false,
+                isDetected = false,
                 results = emptyList(),
                 imageWidth = 0,
                 imageHeight = 0

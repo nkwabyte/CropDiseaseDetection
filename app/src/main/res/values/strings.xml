@@ -4,6 +4,8 @@
 
     <!-- General Strings -->
     <string name="copy_right_text">RAIL - © COPYRIGHT 2025</string>
+    <string name="ok_text">OK</string>
+    <string name="cancel_text">Cancel</string>
 
     <!-- Drawer Strings -->
     <string name="drawer_close_button_description">Close navigation drawer</string>
@@ -107,8 +109,10 @@
     <string name="no_image_available">No image available for display.</string>
     <string name="detection_details_title">Detection Details</string>
     <string name="selected_crop_label">Selected Crop: %s</string>
-    <string name="no_detections_found">No detections found for this image.</string>
     <string name="no_image_selected_yet">No image has been selected for detection yet.</string>
+    <string name="crop_mis_match_message">Selected crop does not match the detected crop. Please select a different crop.</string>
+    <string name="no_detection_message">No detection found for this image, try a different one or take a better image.</string>
+    <string name="error_detecting_message">There was an error analysing this image, try again</string>
 
 
 

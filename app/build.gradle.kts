@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     // Optional, provides the @Serialize annotation for autogeneration of Serializers.
     alias(libs.plugins.jetbrains.kotlin.serialization)
+    alias(libs.plugins.google.gms.google.services)
 }
 
 android {
@@ -98,6 +99,12 @@ dependencies {
     // TensorFlow Lite integration
     implementation (libs.tensorflow.lite)
     implementation (libs.tensorflow.lite.support)
+    /// Firebase dependencies
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.auth)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
