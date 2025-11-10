@@ -1,5 +1,5 @@
 [versions]
-agp = "8.11.1"
+agp = "8.13.0"
 coilCompose = "2.4.0"
 executorchAndroid = "0.6.0"
 kotlin = "2.1.0"
