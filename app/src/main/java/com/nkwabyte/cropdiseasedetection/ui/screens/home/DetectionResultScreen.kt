@@ -199,7 +199,7 @@ fun DetectionResultScreen(
                                 Text(
                                     text = stringResource(R.string.detection_details_title),
                                     style = MaterialTheme.typography.headlineSmall,
-                                    modifier = Modifier.weight(1f) // Allow title to take available space
+                                    modifier = Modifier.weight(1f)
                                 )
                                 IconButton(
                                     onClick = {
@@ -210,7 +210,7 @@ fun DetectionResultScreen(
                                     modifier = Modifier
                                         .background(
                                             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
-                                            MaterialTheme.shapes.small
+                                            MaterialTheme.shapes.small,
                                         )
                                         .size(40.dp)
                                 ) {
@@ -262,7 +262,7 @@ fun DetectionResultScreen(
                                         onClick = {
                                             Toast.makeText(
                                                 context,
-                                                "Flag button clicked!",
+                                                "Flagging process initiated",
                                                 Toast.LENGTH_SHORT
                                             ).show()
                                         },
