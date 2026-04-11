@@ -4,31 +4,31 @@ import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable
 
 @Serializable
-data object SplashScreenRoute: NavKey
+data object SplashScreenRoute : NavKey
 
 @Serializable
-data object SelectCropScreenRoute: NavKey
+data object SelectCropScreenRoute : NavKey
 
 @Serializable
-data object HomeScreenRoute: NavKey
+data object HomeScreenRoute : NavKey
 
 @Serializable
-data object AboutScreenRoute: NavKey
+data object AboutScreenRoute : NavKey
 
 @Serializable
-data object HelpScreenRoute: NavKey
+data object HelpScreenRoute : NavKey
 
 @Serializable
-data object PrivacyScreenRoute: NavKey
+data object PrivacyScreenRoute : NavKey
 
 @Serializable
-data object LoginScreenRoute: NavKey
+data object LoginScreenRoute : NavKey
 
 @Serializable
-data object RegisterScreenRoute: NavKey
+data object RegisterScreenRoute : NavKey
 
 @Serializable
-data object ProfileScreenRoute: NavKey
+data object ProfileScreenRoute : NavKey
 
 @Serializable
-data object DetectionResultScreenRoute: NavKey
+data object DetectionResultScreenRoute : NavKey

@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.NavBackStack
+import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
 import com.nkwabyte.cropdiseasedetection.common.navigation.drawer.AppDrawer
 import com.nkwabyte.cropdiseasedetection.common.navigation.routes.AboutScreenRoute
@@ -32,7 +33,7 @@ fun NavigationRoot(
     val detectionViewModel: DetectionViewModel = koinInject()
     val profileViewModel: ProfileViewModel = koinInject<ProfileViewModel>()
 
-    val backStack: NavBackStack = rememberNavBackStack(SplashScreenRoute)
+    val backStack: NavBackStack<NavKey> = rememberNavBackStack(SplashScreenRoute)
     val currentKey = backStack.lastOrNull()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -58,13 +59,13 @@ fun NavigationRoot(
                     onNavigate = { destination ->
                         scope.launch { drawerState.close() }
                         when (destination) {
-                            "home" -> backStack.add(HomeScreenRoute)
-                            "select_crop" -> backStack.add(SelectCropScreenRoute)
-                            "profile" -> backStack.add(ProfileScreenRoute)
-                            "about" -> backStack.add(AboutScreenRoute)
-                            "help" -> backStack.add(HelpScreenRoute)
-                            "privacy" -> backStack.add(PrivacyScreenRoute)
-                            "login" -> backStack.add(LoginScreenRoute)
+                            "home" -> backStack += HomeScreenRoute
+                            "select_crop" -> backStack += SelectCropScreenRoute
+                            "profile" -> backStack += ProfileScreenRoute
+                            "about" -> backStack += AboutScreenRoute
+                            "help" -> backStack += HelpScreenRoute
+                            "privacy" -> backStack += PrivacyScreenRoute
+                            "login" -> backStack += LoginScreenRoute
                         }
                     },
                     onCloseDrawer = { scope.launch { drawerState.close() } },

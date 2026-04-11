@@ -7,9 +7,10 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberSavedStateNavEntryDecorator
-import androidx.navigation3.ui.NavDisplay
 import androidx.navigation3.ui.rememberSceneSetupNavEntryDecorator
+import androidx.navigation3.ui.NavDisplay
 import com.nkwabyte.cropdiseasedetection.common.navigation.routes.AboutScreenRoute
 import com.nkwabyte.cropdiseasedetection.common.navigation.routes.DetectionResultScreenRoute
 import com.nkwabyte.cropdiseasedetection.common.navigation.routes.HelpScreenRoute
@@ -34,13 +35,12 @@ import com.nkwabyte.cropdiseasedetection.ui.screens.privacy.PrivacyScreen
 import com.nkwabyte.cropdiseasedetection.ui.screens.splash.SplashScreen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 
 
 @Composable
 fun InnerNavHost(
-    backStack: NavBackStack,
+    backStack: NavBackStack<NavKey>,
     modifier: Modifier = Modifier,
     drawerState: DrawerState,
     scope: CoroutineScope,
@@ -51,23 +51,23 @@ fun InnerNavHost(
     NavDisplay(
         modifier = modifier,
         backStack = backStack,
+        onBack = { backStack.removeLastOrNull() },
         entryDecorators = listOf(
+            rememberSceneSetupNavEntryDecorator(),
             rememberSavedStateNavEntryDecorator(),
-            rememberViewModelStoreNavEntryDecorator(),
-            rememberSceneSetupNavEntryDecorator()
+            rememberViewModelStoreNavEntryDecorator()
         ),
         entryProvider = { key ->
             when (key) {
-                is SplashScreenRoute -> {
-                    NavEntry(key) {
-                        SplashScreen(
-                            onGetStartedClick = {
-                                backStack.add(SelectCropScreenRoute)
-                                backStack.remove(SplashScreenRoute)
-                            }
-                        )
-                    }
+                is SplashScreenRoute -> NavEntry(key) {
+                    SplashScreen(
+                        onGetStartedClick = {
+                            backStack.removeLastOrNull()
+                            backStack.add(SelectCropScreenRoute)
+                        }
+                    )
                 }
+
                 is SelectCropScreenRoute -> NavEntry(key) {
                     SelectCropScreen(
                         onDrawerButtonClick = {
@@ -81,6 +81,7 @@ fun InnerNavHost(
                         appViewModel = appViewModel
                     )
                 }
+
                 is HomeScreenRoute -> NavEntry(key) {
                     HomeScreen(
                         onDrawerButtonClick = {
@@ -95,6 +96,7 @@ fun InnerNavHost(
                         detectionViewModel = detectionViewModel,
                     )
                 }
+
                 is DetectionResultScreenRoute -> NavEntry(key) {
                     DetectionResultScreen(
                         onDrawerButtonClick = {
@@ -105,11 +107,12 @@ fun InnerNavHost(
                         detectionViewModel = detectionViewModel,
                         appViewModel = appViewModel,
                         onCloseDetection = {
-                            backStack.remove(DetectionResultScreenRoute)
-                            backStack.remove(HomeScreenRoute)
+                            backStack.removeLastOrNull()
+                            backStack.removeLastOrNull()
                         },
                     )
                 }
+
                 is AboutScreenRoute -> NavEntry(key) {
                     AboutScreen(
                         onDrawerButtonClick = {
@@ -119,6 +122,7 @@ fun InnerNavHost(
                         },
                     )
                 }
+
                 is HelpScreenRoute -> NavEntry(key) {
                     HelpScreen(
                         onDrawerButtonClick = {
@@ -128,6 +132,7 @@ fun InnerNavHost(
                         },
                     )
                 }
+
                 is PrivacyScreenRoute -> NavEntry(key) {
                     PrivacyScreen(
                         onDrawerButtonClick = {
@@ -137,6 +142,7 @@ fun InnerNavHost(
                         },
                     )
                 }
+
                 is LoginScreenRoute -> NavEntry(key) {
                     LoginScreen(
                         onDrawerButtonClick = {
@@ -145,15 +151,16 @@ fun InnerNavHost(
                             }
                         },
                         onLoginClick = { _, _ ->
+                            backStack.removeLastOrNull()
                             backStack.add(HomeScreenRoute)
-                            backStack.remove(LoginScreenRoute)
                         },
                         onRegisterClick = {
+                            backStack.removeLastOrNull()
                             backStack.add(RegisterScreenRoute)
-                            backStack.remove(LoginScreenRoute)
                         }
                     )
                 }
+
                 is RegisterScreenRoute -> NavEntry(key) {
                     RegisterScreen(
                         onDrawerButtonClick = {
@@ -162,11 +169,12 @@ fun InnerNavHost(
                             }
                         },
                         onLoginClick = { _, _ ->
+                            backStack.removeLastOrNull()
                             backStack.add(LoginScreenRoute)
-                            backStack.remove(RegisterScreenRoute)
                         }
                     )
                 }
+
                 is ProfileScreenRoute -> NavEntry(key) {
                     ProfileScreen(
                         modifier = modifier,
@@ -179,7 +187,10 @@ fun InnerNavHost(
                         },
                     )
                 }
-                else -> throw RuntimeException("Invalid NavKey.")
+
+                else -> NavEntry(key) {
+                    // Fallback for unknown routes
+                }
             }
         }
     )

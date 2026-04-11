@@ -1,16 +1,13 @@
-import com.android.build.api.dsl.AaptOptions
-import com.android.build.api.dsl.AndroidResources
-import org.gradle.kotlin.dsl.implementation
-
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     // Optional, provides the @Serialize annotation for autogeneration of Serializers.
     alias(libs.plugins.jetbrains.kotlin.serialization)
     alias(libs.plugins.google.gms.google.services)
 }
+
 
 android {
     namespace = "com.nkwabyte.cropdiseasedetection"
@@ -36,11 +33,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-    kotlinOptions {
-        jvmTarget = "11"
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
     buildFeatures {
         compose = true
@@ -51,12 +45,22 @@ android {
         }
     }
 
-
-    androidResources{
+    androidResources {
         noCompress += "tflite"
         ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~"
     }
 
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_21)
+    }
 }
 
 dependencies {
@@ -96,9 +100,8 @@ dependencies {
     //implementation(libs.executorch.android)
     implementation(libs.pytorch.android)
     implementation(libs.pytorch.android.torchvision)
-    // TensorFlow Lite integration
+    // TensorFlow Lite integration - use only tensorflow-lite, exclude support library with namespace conflict
     implementation (libs.tensorflow.lite)
-    implementation (libs.tensorflow.lite.support)
     /// Firebase dependencies
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.auth)
