@@ -5,16 +5,13 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nkwabyte.cropdiseasedetection.common.helpers.PyTorchObjectDetector
-import com.nkwabyte.cropdiseasedetection.common.helpers.TFObjectDetector
 import com.nkwabyte.cropdiseasedetection.common.model.DetectionData
-import com.nkwabyte.cropdiseasedetection.common.model.DetectionResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class DetectionViewModel(
     private val pytorchDetector: PyTorchObjectDetector,
-    private val tfDetector: TFObjectDetector
 ): ViewModel() {
     private val detectionData = DetectionData(
         isModelLoading = true,
@@ -33,7 +30,6 @@ class DetectionViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 pytorchDetector.loadModel()
-                tfDetector.loadModel()
                 _detectionState.update {
                     it.copy(
                         isModelLoading = false,
@@ -101,44 +97,6 @@ class DetectionViewModel(
             }
         }
     }
-
-    fun detectWithTF(input: Bitmap, crop: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                _detectionState.update { it.copy(isDetecting = true) }
-
-                val results = tfDetector.detect(input)
-                Log.d("DetectionViewModel", "TF detection results: $results")
-
-                val matchingResults = results.filter {
-                    it.className?.contains(crop, ignoreCase = true) == true
-                }
-
-                val isMismatch = matchingResults.isEmpty()
-
-                _detectionState.update {
-                    it.copy(
-                        results = matchingResults,
-                        isDetecting = false,
-                        isDetected = true,
-                        isDetectionSuccessful = matchingResults.isNotEmpty(),
-                        isCropMissMatch = isMismatch,
-                        imageWidth = input.width,
-                        imageHeight = input.height,
-                    )
-                }
-            } catch (e: Exception) {
-                Log.e("DetectionViewModel", "TF detection failed: ${e.message}")
-            } finally {
-                _detectionState.update {
-                    it.copy(
-                        isDetecting = false,
-                    )
-                }
-            }
-        }
-    }
-
 
     fun reset() {
         _detectionState.update {

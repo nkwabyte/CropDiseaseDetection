@@ -46,8 +46,7 @@ android {
     }
 
     androidResources {
-        noCompress += "tflite"
-        ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~"
+ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~"
     }
 
     packaging {
@@ -100,8 +99,6 @@ dependencies {
     //implementation(libs.executorch.android)
     implementation(libs.pytorch.android)
     implementation(libs.pytorch.android.torchvision)
-    // TensorFlow Lite integration - use only tensorflow-lite, exclude support library with namespace conflict
-    implementation (libs.tensorflow.lite)
     /// Firebase dependencies
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.auth)
