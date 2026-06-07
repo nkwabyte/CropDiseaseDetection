@@ -1,0 +1,119 @@
+<resources>
+    <string name="app_name">CDD</string>
+    <string name="app_name_full">Crop Disease Detector</string>
+
+    <!-- General Strings -->
+    <string name="copy_right_text">RAIL - © COPYRIGHT 2025</string>
+    <string name="ok_text">OK</string>
+    <string name="cancel_text">Cancel</string>
+
+    <!-- Drawer Strings -->
+    <string name="drawer_close_button_description">Close navigation drawer</string>
+    <string name="home_drawer_item">HOME</string>
+    <string name="select_crop_drawer_item">SELECT CROP</string>
+    <string name="select_crop_drawer_item_text_alt">DETECT DISEASE</string>
+    <string name="about_drawer_item">ABOUT</string>
+    <string name="privacy_policy_drawer_item">PRIVACY POLICY</string>
+    <string name="sign_in_drawer_item">Sign In</string>
+    <string name="sign_in_icon_description">Sign In Icon</string>
+    <string name="default_user_name">Jane Doe</string>
+    <string name="default_user_bio">Responsible AI Lab</string>
+    <string name="unable_to_load_image">"Unable to load image."</string>
+
+    <!-- Home Screen Strings -->
+    <string name="home_button_submit">SUBMIT</string>
+    <string name="home_button_take_picture">TAKE A PICTURE</string>
+    <string name="home_button_select_picture">SELECT A PICTURE</string>
+    <string name="home_open_drawer_description">Open drawer</string>
+    <string name="home_camera_mode_description">Camera Mode</string>
+    <string name="home_gallery_mode_description">Gallery Mode</string>
+    <string name="home_selected_image_description">Selected Image Preview</string>
+    <string name="home_clear_image_description">Clear image</string>
+    <string name="home_tap_take_picture">Tap to Take a Picture</string>
+    <string name="home_tap_select_picture">Tap to Select a Picture</string>
+    <string name="home_permission_denied">Camera permission denied</string>
+
+    <!-- Splash Screen Strings -->
+    <string name="get_started">GET STARTED</string>
+    <string name="corn_corb_image_description">Corn plants representing crops</string>
+
+    <!-- Help Screen Strings -->
+    <string name="help_title">Follow RAIL KNUST\non all\nSocial media platforms</string>
+    <string name="social_facebook_handle">Rail knust</string>
+    <string name="social_twitter_handle">Rail_knust</string>
+    <string name="social_linkedin_handle">Responsible AI Lab</string>
+    <string name="social_youtube_handle">Responsible AI Lab</string>
+    <string name="social_website_url">www.rail.knust.edu.gh</string>
+    <string name="rail_logo_description">RAIL KNUST Logo</string>
+
+
+    <!-- Login Strings -->
+    <string name="login_phone_number_hint">Phone Number</string>
+    <string name="login_password_hint">Password</string>
+    <string name="login_button_text">LOGIN</string>
+    <string name="login_title_text">"SIGN IN"</string>
+    <string name="login_no_account_prompt">Don\'t have an account?</string>
+    <string name="login_register_link">REGISTER</string>
+
+
+    <!-- Register Strings -->
+    <string name="register_username_hint">User Name</string>
+    <string name="register_button_text">REGISTER</string>
+    <string name="register_already_account_prompt">Already have an account?</string>
+    <string name="register_login_link">LOGIN</string>
+    <string name="register_title_text">SIGN UP</string>
+    <string name="username_icon_description">User Name Icon</string>
+
+
+    <!-- Profile Strings -->
+    <string name="profile_my_profile_title">MY PROFILE</string>
+    <string name="profile_success_label">SUCCESS</string>
+    <string name="profile_detections_label">DETECTIONS</string>
+    <string name="profile_sign_out_button">SIGN OUT</string>
+    <string name="profile_home_button">Home</string>
+    <string name="profile_additional_help_button">Additional Help</string>
+    <string name="profile_about_button">About</string>
+    <string name="profile_placeholder_description">Profile Silhouette</string>
+    <string name="profile_picture_description">Profile Picture</string>
+    <string name="profile_icon_description">Profile Silhouette</string>
+
+    <!-- Select Crop Screen Strings -->
+    <string name="select_crop_title">Select Crop</string>
+    <string name="select_crop_description">Please select the crop for which you want to perform analysis and disease prediction on.</string>
+    <string name="home_no_results_found">
+        No results found for the selected crop and the image provided.
+    </string>
+    <string name="crop_unknown">Unknown</string>
+    <string name="crop_corn">Corn</string>
+    <string name="crop_tomato">Tomato</string>
+    <string name="crop_pepper">Pepper</string>
+    <string name="continue_button_text">Continue</string>
+
+    <!-- Crop Image Content Descriptions -->
+    <string name="crop_corn_image_desc">Image of corn crop</string>
+    <string name="crop_tomato_image_desc">Image of tomato crop</string>
+    <string name="crop_pepper_image_desc">Image of pepper crop</string>
+
+
+
+    <!-- Other strings from your app -->
+    <string name="password_toggle_description">Toggle password visibility</string>
+    <string name="about_info_text">Plant Disease Detector is a project created by research students of KNUST under RAIL to help local farmers tackle most of the common disease that plague their crops by providing hands on remedies for the diseases detected.</string>
+    <string name="rail_partners_description">RAIL Partners Logos</string>
+    <string name="lock_icon_description">Lock Icon</string>
+    <string name="phone_icon_description">Phone Icon</string>
+
+    <!--  Detection results strings  -->
+    <string name="detected_image_content_description">Detected image with results</string>
+    <string name="close_button_content_description">Close detection results</string>
+    <string name="no_image_available">No image available for display.</string>
+    <string name="detection_details_title">Detection Details</string>
+    <string name="selected_crop_label">Selected Crop: %s</string>
+    <string name="no_image_selected_yet">No image has been selected for detection yet.</string>
+    <string name="crop_mis_match_message">Selected crop does not match the detected crop. Please select a different crop.</string>
+    <string name="no_detection_message">No detection found for this image, try a different one or take a better image.</string>
+    <string name="error_detecting_message">There was an error analysing this image, try again</string>
+
+
+
+</resources>

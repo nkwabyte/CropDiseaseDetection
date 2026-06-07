@@ -1,43 +1,48 @@
 [versions]
 agp = "9.1.0"
-coilCompose = "2.7.0"
+kotlin = "2.1.0"
+compose-multiplatform = "1.7.0"
 executorchAndroid = "0.6.0"
-kotlin = "2.3.20"
-coreKtx = "1.18.0"
+coreKtx = "1.15.0"
 junit = "4.13.2"
-junitVersion = "1.3.0"
-espressoCore = "3.7.0"
-lifecycleRuntimeKtx = "2.10.0"
-activityCompose = "1.13.0"
-composeBom = "2026.03.01"
-lottieCompose = "6.7.1"
-material = "1.13.0"
-material3 = "1.4.0"
+junitVersion = "1.2.1"
+espressoCore = "3.6.1"
+lifecycleRuntimeKtx = "2.8.3"
+activityCompose = "1.9.3"
+composeBom = "2024.11.00"
+lottieCompose = "6.6.2"
+material = "1.12.0"
+material3 = "1.3.1"
 pytorch_android = "2.1.0"
 pytorch_android_torchvision = "2.1.0"
-uiTextGoogleFonts = "1.10.6"
+uiTextGoogleFonts = "1.7.5"
 
+navCompose = "2.8.0-alpha10"
+kotlinSerialization = "2.1.0"
+kotlinxSerializationCore = "1.7.3"
+koin = "4.0.0"
+windowsizeclass = "1.3.1"
+material3Adaptive = "1.0.0"
+googleGmsGoogleServices = "4.4.2"
 
-nav3Core = "1.1.0"
-nav3Lifecycle = "2.10.0"
-kotlinSerialization = "2.3.20"
-kotlinxSerializationCore = "1.11.0"
-koin = "4.2.1"
-windowsizeclass = "1.4.0"
-material3Adaptive = "1.2.0"
-googleGmsGoogleServices = "4.4.4"
-firebaseFirestore = "26.2.0"
-firebaseAuth = "24.0.1"
-credentials = "1.6.0"
-credentialsPlayServicesAuth = "1.6.0"
-googleid = "1.2.0"
+firebaseGitLive = "2.1.0"
+firebaseBom = "33.7.0"
 
+credentials = "1.3.0"
+credentialsPlayServicesAuth = "1.3.0"
+googleid = "1.1.1"
+ktor = "3.0.0"
+buildkonfig = "0.15.1"
+coil3 = "3.0.4"
+kotlincryptoSha1 = "0.7.0"
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
 androidx-ui-text-google-fonts = { module = "androidx.compose.ui:ui-text-google-fonts", version.ref = "uiTextGoogleFonts" }
-coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
-#executorch-android = { module = "org.pytorch:executorch-android", version.ref = "executorchAndroid" }
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil3" }
+coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil3" }
+
+executorch-android = { module = "org.pytorch:executorch-android", version.ref = "executorchAndroid" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -55,30 +60,45 @@ lottie-compose = { module = "com.airbnb.android:lottie-compose", version.ref = "
 
 material = { module = "com.google.android.material:material", version.ref = "material" }
 material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
-nav3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "nav3Core" }
-nav3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "nav3Core" }
-androidx-lifecycle-viewmodel-nav3 = { module = "androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "nav3Lifecycle" }
-androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycleRuntimeKtx" }
-androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleRuntimeKtx" }
+
+nav-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navCompose" }
+androidx-lifecycle-viewmodel-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleRuntimeKtx" }
+androidx-lifecycle-runtime-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycleRuntimeKtx" }
+
 kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinxSerializationCore" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationCore" }
 koin-android = { group = "io.insert-koin", name = "koin-android", version.ref = "koin" }
 koin-core = { group = "io.insert-koin", name = "koin-core", version.ref = "koin" }
-koin-androidx-compose = { group = "io.insert-koin", name = "koin-androidx-compose", version.ref = "koin" }
-androidx-compose-material3-windowsizeclass = { module = "androidx.compose.material3:material3-window-size-class", version.ref = "windowsizeclass" }
-androidx-material3-adaptive = { module = "androidx.compose.material3.adaptive:adaptive", version.ref = "material3Adaptive" }
+koin-compose = { group = "io.insert-koin", name = "koin-compose", version.ref = "koin" }
+koin-compose-viewmodel = { group = "io.insert-koin", name = "koin-compose-viewmodel", version.ref = "koin" }
+
+androidx-compose-material3-windowsizeclass = { module = "org.jetbrains.compose.material3:material3-window-size-class", version.ref = "compose-multiplatform" }
+
 pytorch_android = { module = "org.pytorch:pytorch_android", version.ref = "pytorch_android" }
 pytorch_android_torchvision = { module = "org.pytorch:pytorch_android_torchvision", version.ref = "pytorch_android_torchvision" }
-firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore", version.ref = "firebaseFirestore" }
-firebase-auth = { group = "com.google.firebase", name = "firebase-auth", version.ref = "firebaseAuth" }
+
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
+
+firebase-firestore = { group = "dev.gitlive", name = "firebase-firestore", version.ref = "firebaseGitLive" }
+firebase-auth = { group = "dev.gitlive", name = "firebase-auth", version.ref = "firebaseGitLive" }
+
 androidx-credentials = { group = "androidx.credentials", name = "credentials", version.ref = "credentials" }
 androidx-credentials-play-services-auth = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentialsPlayServicesAuth" }
 googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleid" }
 
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
+ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+kotlincrypto-hash-sha1 = { module = "org.kotlincrypto.hash:sha1", version.ref = "kotlincryptoSha1" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 jetbrains-kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlinSerialization"}
 google-gms-google-services = { id = "com.google.gms.google-services", version.ref = "googleGmsGoogleServices" }
+buildkonfig = { id = "com.codingfeline.buildkonfig", version.ref = "buildkonfig" }
