@@ -1,6 +1,6 @@
 [versions]
-agp = "9.1.0"
-kotlin = "2.1.0"
+agp = "9.2.1"
+kotlin = "2.2.10"
 compose-multiplatform = "1.7.0"
 executorchAndroid = "0.6.0"
 coreKtx = "1.15.0"

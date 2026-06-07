@@ -19,9 +19,10 @@ actual class ObjectDetector actual constructor() {
         // Mock a single dummy detection for testing UI flow
         return listOf(
             DetectionResult(
-                label = "Healthy Crop (Mock)",
-                confidence = 0.95f,
-                boundingBox = listOf(0.1f, 0.1f, 0.9f, 0.9f)
+                classIndex = 0,
+                score = 0.95f,
+                box = floatArrayOf(0.1f, 0.1f, 0.9f, 0.9f),
+                className = "Healthy Crop (Mock)"
             )
         )
     }

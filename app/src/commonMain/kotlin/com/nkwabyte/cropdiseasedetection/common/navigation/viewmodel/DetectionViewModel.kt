@@ -29,7 +29,7 @@ class DetectionViewModel(
 
 
     init {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.Default) {
             try {
                 detector.loadModel()
                 _detectionState.update {
@@ -47,7 +47,7 @@ class DetectionViewModel(
     }
 
     fun detect(imageBytes: ByteArray, crop: String, width: Int, height: Int) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.Default) {
             try {
                 _detectionState.update { it.copy(isDetecting = true) }
 
@@ -92,7 +92,7 @@ class DetectionViewModel(
                 }
 
                 // Fire and forget image upload and sync
-                viewModelScope.launch(Dispatchers.IO) {
+                viewModelScope.launch(Dispatchers.Default) {
                     try {
                         val imageUrl = cloudinaryApi.uploadImage(imageBytes)
                         if (imageUrl != null) {

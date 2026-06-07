@@ -289,7 +289,7 @@ fun DetectionResultCard(result: DetectionResult) {
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Confidence: %.1f%%".format(result.score * 100),
+                text = "Confidence: ${((result.score * 1000).toInt() / 10.0)}%",
                 style = MaterialTheme.typography.bodyMedium
             )
         }

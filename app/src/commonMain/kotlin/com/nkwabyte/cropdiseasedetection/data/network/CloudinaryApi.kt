@@ -38,8 +38,9 @@ class CloudinaryApi {
             val apiSecret = BuildKonfig.CLOUDINARY_API_SECRET
             
             val stringToSign = "timestamp=$timestamp$apiSecret"
-            val signature = SHA1().digest(stringToSign.encodeToByteArray()).joinToString("") {
-                "%02x".format(it)
+            val signature = SHA1().digest(stringToSign.encodeToByteArray()).joinToString("") { byte ->
+                val hex = "0123456789abcdef"
+                "${hex[(byte.toInt() shr 4) and 0x0f]}${hex[byte.toInt() and 0x0f]}"
             }
 
             val response: HttpResponse = client.submitFormWithBinaryData(
