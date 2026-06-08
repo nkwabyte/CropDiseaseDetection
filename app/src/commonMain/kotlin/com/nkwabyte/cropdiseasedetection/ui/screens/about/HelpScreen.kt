@@ -61,21 +61,23 @@ fun HelpScreen(
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(
+                    top = paddingValues.calculateTopPadding()
+                )
                 .background(MaterialTheme.colorScheme.background)
         ) {
             // Top section for the RAIL logo
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(0.3f),
+                    .weight(0.2f),
                 contentAlignment = Alignment.Center
             ) {
                 Image(
                     painter = painterResource(Res.drawable.rail_logo),
                     contentDescription = stringResource(Res.string.rail_logo_description),
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize(0.7f)
+                    modifier = Modifier.fillMaxSize(0.5f)
                 )
             }
 
@@ -83,9 +85,10 @@ fun HelpScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(0.7f)
+                    .weight(0.8f)
                     .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
                     .background(MaterialTheme.colorScheme.primary)
+                    .windowInsetsPadding(WindowInsets.navigationBars)
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp),

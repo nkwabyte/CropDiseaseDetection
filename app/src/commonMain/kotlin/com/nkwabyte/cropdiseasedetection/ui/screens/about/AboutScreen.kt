@@ -132,12 +132,11 @@ fun AboutScreen(
                             )
                             .clip(RoundedCornerShape(32.dp))
                             .background(MaterialTheme.colorScheme.surface)
-                            .padding(24.dp)
                     ) {
                         Image(
                             painter = painterResource(Res.drawable.rail_partners),
                             contentDescription = stringResource(Res.string.rail_partners_description),
-                            contentScale = ContentScale.Fit,
+                            contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(120.dp)

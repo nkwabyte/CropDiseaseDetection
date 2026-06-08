@@ -166,5 +166,29 @@ fun InnerNavHost(
                 },
             )
         }
+
+        composable<HistoryScreenRoute> {
+            com.nkwabyte.cropdiseasedetection.ui.screens.history.HistoryScreen(
+                onDrawerButtonClick = {
+                    scope.launch { drawerState.open() }
+                }
+            )
+        }
+
+        composable<EncyclopediaScreenRoute> {
+            com.nkwabyte.cropdiseasedetection.ui.screens.encyclopedia.EncyclopediaScreen(
+                onDrawerButtonClick = {
+                    scope.launch { drawerState.open() }
+                }
+            )
+        }
+
+        composable<SettingsScreenRoute> {
+            com.nkwabyte.cropdiseasedetection.ui.screens.settings.SettingsScreen(
+                onDrawerButtonClick = {
+                    scope.launch { drawerState.open() }
+                }
+            )
+        }
     }
 }

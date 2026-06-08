@@ -14,12 +14,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Policy
 import androidx.compose.material.icons.outlined.SelectAll
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.MenuBook
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -46,6 +51,8 @@ import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.DetectionVi
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.ProfileViewModel
 import com.nkwabyte.cropdiseasedetection.ui.theme.CropDiseaseDetectionTheme
 import org.koin.compose.koinInject
+import dev.gitlive.firebase.Firebase
+import dev.gitlive.firebase.auth.auth
 
 
 /**
@@ -69,6 +76,7 @@ fun AppDrawer(
 //    val appState by appViewModel.appState.collectAsState()
 //    val detectionState by detectionViewModel.detectionState.collectAsState()
     val profileState by profileViewModel.userProfileState.collectAsState()
+    val firebaseUser by Firebase.auth.authStateChanged.collectAsState(initial = Firebase.auth.currentUser)
 
     ModalDrawerSheet(
         modifier = modifier.fillMaxWidth(0.9f),
@@ -95,7 +103,7 @@ fun AppDrawer(
                 Icon(
                     imageVector = Icons.Outlined.Close,
                     contentDescription = stringResource(Res.string.drawer_close_button_description),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    tint = Color.White
                 )
             }
 
@@ -109,32 +117,68 @@ fun AppDrawer(
                         onNavigate("profile")
                     },
             ) {
-                Column (
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.Start,
-                ) {
-                    Image(
-                        painter = painterResource(Res.drawable.profile_icon),
-                        contentDescription = stringResource(Res.string.profile_icon_description),
-                        modifier = Modifier.size(48.dp)
-                    )
-                }
-                Spacer(Modifier.width(12.dp))
-                Column(
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.Start,
-                ) {
-                    Text(
-                        text = profileState.userName.ifEmpty { stringResource(Res.string.default_user_name) },
-                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold, fontSize = 28.sp),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = profileState.userBio ?: stringResource(Res.string.default_user_bio),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                    )
+                if (firebaseUser == null) {
+                    Column(
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.Start,
+                    ) {
+                        Image(
+                            painter = painterResource(Res.drawable.cdd_app_logo),
+                            contentDescription = "App Logo",
+                            modifier = Modifier
+                                .size(72.dp)
+                                .clip(RoundedCornerShape(16.dp)),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        )
+                    }
+                    Spacer(Modifier.width(16.dp))
+                    Column(
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.Start,
+                    ) {
+                        Text(
+                            text = "CDD",
+                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold, fontSize = 28.sp),
+                            color = Color.White
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = "Guest User",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                    }
+                } else {
+                    Column(
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.Start,
+                    ) {
+                        Image(
+                            painter = painterResource(Res.drawable.profile_icon),
+                            contentDescription = stringResource(Res.string.profile_icon_description),
+                            modifier = Modifier
+                                .size(72.dp)
+                                .clip(RoundedCornerShape(16.dp)),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.Start,
+                    ) {
+                        Text(
+                            text = profileState.userName.ifEmpty { stringResource(Res.string.default_user_name) },
+                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold, fontSize = 28.sp),
+                            color = Color.White
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = firebaseUser?.email ?: profileState.userBio ?: stringResource(Res.string.default_user_bio),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                    }
                 }
             }
         }
@@ -143,7 +187,7 @@ fun AppDrawer(
 
         // Divider after header
         HorizontalDivider(
-            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.3f), thickness = 1.dp
+            color = Color.White.copy(alpha = 0.3f), thickness = 1.dp
         )
 
         // Main Navigation Items
@@ -152,7 +196,7 @@ fun AppDrawer(
                 label = {
                     Text(
                         stringResource(Res.string.select_crop_drawer_item_text_alt),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = Color.White
                     )
                 },
                 selected = currentRoute == "select_crop",
@@ -166,14 +210,14 @@ fun AppDrawer(
                     Icon(
                         Icons.Outlined.SelectAll,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        tint = Color.White
                     )
                },
                 colors = NavigationDrawerItemDefaults.colors(
                     selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
                     unselectedContainerColor = Color.Transparent,
-                    selectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    unselectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    selectedTextColor = Color.White,
+                    unselectedTextColor = Color.White
                 )
             )
             /// Home Item (Commented out as per the original code)
@@ -181,7 +225,7 @@ fun AppDrawer(
 //                label = {
 //                    Text(
 //                        stringResource(Res.string.home_drawer_item),
-//                        color = MaterialTheme.colorScheme.onPrimaryContainer
+//                        color = Color.White
 //                    )
 //                },
 //                selected = currentRoute == "home",
@@ -190,21 +234,113 @@ fun AppDrawer(
 //                    Icon(
 //                        Icons.Outlined.Home,
 //                        contentDescription = null,
-//                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+//                        tint = Color.White
 //                    )
 //               },
 //                colors = NavigationDrawerItemDefaults.colors(
 //                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
 //                    unselectedContainerColor = Color.Transparent,
-//                    selectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
-//                    unselectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer
+//                    selectedTextColor = Color.White,
+//                    unselectedTextColor = Color.White
 //                )
 //            )
             NavigationDrawerItem(
                 label = {
                     Text(
+                        "Scan History",
+                        color = Color.White
+                    )
+                },
+                selected = currentRoute == "history",
+                onClick = { onNavigate("history") },
+                icon = {
+                    Icon(
+                        Icons.Outlined.History,
+                        contentDescription = null,
+                        tint = Color.White
+                    )
+               },
+                colors = NavigationDrawerItemDefaults.colors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                    unselectedContainerColor = Color.Transparent,
+                    selectedTextColor = Color.White,
+                    unselectedTextColor = Color.White
+                )
+            )
+            NavigationDrawerItem(
+                label = {
+                    Text(
+                        "Disease Encyclopedia",
+                        color = Color.White
+                    )
+                },
+                selected = currentRoute == "encyclopedia",
+                onClick = { onNavigate("encyclopedia") },
+                icon = {
+                    Icon(
+                        Icons.Outlined.MenuBook,
+                        contentDescription = null,
+                        tint = Color.White
+                    )
+               },
+                colors = NavigationDrawerItemDefaults.colors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                    unselectedContainerColor = Color.Transparent,
+                    selectedTextColor = Color.White,
+                    unselectedTextColor = Color.White
+                )
+            )
+            NavigationDrawerItem(
+                label = {
+                    Text(
+                        "Settings & Preferences",
+                        color = Color.White
+                    )
+                },
+                selected = currentRoute == "settings",
+                onClick = { onNavigate("settings") },
+                icon = {
+                    Icon(
+                        Icons.Outlined.Settings,
+                        contentDescription = null,
+                        tint = Color.White
+                    )
+               },
+                colors = NavigationDrawerItemDefaults.colors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                    unselectedContainerColor = Color.Transparent,
+                    selectedTextColor = Color.White,
+                    unselectedTextColor = Color.White
+                )
+            )
+            NavigationDrawerItem(
+                label = {
+                    Text(
+                        "Help & Support",
+                        color = Color.White
+                    )
+                },
+                selected = currentRoute == "help",
+                onClick = { onNavigate("help") },
+                icon = {
+                    Icon(
+                        Icons.Outlined.HelpOutline,
+                        contentDescription = null,
+                        tint = Color.White
+                    )
+               },
+                colors = NavigationDrawerItemDefaults.colors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                    unselectedContainerColor = Color.Transparent,
+                    selectedTextColor = Color.White,
+                    unselectedTextColor = Color.White
+                )
+            )
+            NavigationDrawerItem(
+                label = {
+                    Text(
                         stringResource(Res.string.about_drawer_item),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = Color.White
                     )
                 },
                 selected = currentRoute == "about",
@@ -213,38 +349,38 @@ fun AppDrawer(
                     Icon(
                         Icons.Outlined.Info,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        tint = Color.White
                     )
                },
                 colors = NavigationDrawerItemDefaults.colors(
                     selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
                     unselectedContainerColor = Color.Transparent,
-                    selectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    unselectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    selectedTextColor = Color.White,
+                    unselectedTextColor = Color.White
                 )
             )
             NavigationDrawerItem(
-                label = { Text(stringResource(Res.string.privacy_policy_drawer_item), color = MaterialTheme.colorScheme.onPrimaryContainer) },
+                label = { Text(stringResource(Res.string.privacy_policy_drawer_item), color = Color.White) },
                 selected = currentRoute == "privacy", // Assuming "privacy" is the route for Privacy Policy
                 onClick = { onNavigate("privacy") },
                 icon = {
                     Icon(
                         Icons.Outlined.Policy,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        tint = Color.White
                     )
                },
                 colors = NavigationDrawerItemDefaults.colors(
                     selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
                     unselectedContainerColor = Color.Transparent,
-                    selectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    unselectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    selectedTextColor = Color.White,
+                    unselectedTextColor = Color.White
                 )
             )
         }
 
         // Divider before bottom section
-        HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.3f), thickness = 1.dp)
+        HorizontalDivider(color = Color.White.copy(alpha = 0.3f), thickness = 1.dp)
 
         // Spacer to push the remaining content to the bottom
         Spacer(Modifier.weight(1f))
@@ -303,13 +439,13 @@ fun AppDrawer(
                 },
                 text = stringResource(Res.string.social_website_url),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                color = Color.White.copy(alpha = 0.7f)
             )
             Spacer(Modifier.height(4.dp))
             Text(
                 text = stringResource(Res.string.copy_right_text),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.5f)
+                color = Color.White.copy(alpha = 0.5f)
             )
         }
     }

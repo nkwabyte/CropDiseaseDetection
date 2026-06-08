@@ -90,6 +90,7 @@ fun SplashScreen(
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(topStart = 48.dp, topEnd = 48.dp)) // Organic rounded shape
                             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)) // Deep green glassmorphism tint
+                            .windowInsetsPadding(WindowInsets.navigationBars)
                             .padding(horizontal = 24.dp, vertical = 48.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center

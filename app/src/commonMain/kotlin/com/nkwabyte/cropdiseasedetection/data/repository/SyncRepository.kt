@@ -65,4 +65,28 @@ class SyncRepository {
             println("Failed to save detection to Firestore: ${e.message}")
         }
     }
+
+    suspend fun anonymizeUserData() {
+        try {
+            val user = Firebase.auth.currentUser
+            val uid = user?.uid
+            if (uid == null) {
+                println("No logged-in user to anonymize.")
+                return
+            }
+
+            // Get all records belonging to this user
+            val response = firestore.collection("detections")
+                .where { "userId" equalTo uid }
+                .get()
+
+            // Update each record's userId to 'anonymous'
+            for (document in response.documents) {
+                document.reference.update("userId" to "anonymous")
+            }
+            println("Successfully anonymized user data in Firestore")
+        } catch (e: Exception) {
+            println("Failed to anonymize user data: ${e.message}")
+        }
+    }
 }

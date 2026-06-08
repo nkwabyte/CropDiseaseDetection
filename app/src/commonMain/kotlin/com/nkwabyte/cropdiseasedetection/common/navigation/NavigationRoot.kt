@@ -18,6 +18,9 @@ import com.nkwabyte.cropdiseasedetection.common.navigation.routes.PrivacyScreenR
 import com.nkwabyte.cropdiseasedetection.common.navigation.routes.ProfileScreenRoute
 import com.nkwabyte.cropdiseasedetection.common.navigation.routes.SelectCropScreenRoute
 import com.nkwabyte.cropdiseasedetection.common.navigation.routes.SplashScreenRoute
+import com.nkwabyte.cropdiseasedetection.common.navigation.routes.HistoryScreenRoute
+import com.nkwabyte.cropdiseasedetection.common.navigation.routes.EncyclopediaScreenRoute
+import com.nkwabyte.cropdiseasedetection.common.navigation.routes.SettingsScreenRoute
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AppViewModel
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.DetectionViewModel
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.ProfileViewModel
@@ -50,6 +53,9 @@ fun NavigationRoot(
         "com.nkwabyte.cropdiseasedetection.common.navigation.routes.LoginScreenRoute" -> "login"
         "com.nkwabyte.cropdiseasedetection.common.navigation.routes.ProfileScreenRoute" -> "profile"
         "com.nkwabyte.cropdiseasedetection.common.navigation.routes.HelpScreenRoute" -> "help"
+        "com.nkwabyte.cropdiseasedetection.common.navigation.routes.HistoryScreenRoute" -> "history"
+        "com.nkwabyte.cropdiseasedetection.common.navigation.routes.EncyclopediaScreenRoute" -> "encyclopedia"
+        "com.nkwabyte.cropdiseasedetection.common.navigation.routes.SettingsScreenRoute" -> "settings"
         else -> ""
     }
 
@@ -68,6 +74,9 @@ fun NavigationRoot(
                             "help" -> navController.navigate(HelpScreenRoute)
                             "privacy" -> navController.navigate(PrivacyScreenRoute)
                             "login" -> navController.navigate(LoginScreenRoute)
+                            "history" -> navController.navigate(HistoryScreenRoute)
+                            "encyclopedia" -> navController.navigate(EncyclopediaScreenRoute)
+                            "settings" -> navController.navigate(SettingsScreenRoute)
                         }
                     },
                     onCloseDrawer = { scope.launch { drawerState.close() } },

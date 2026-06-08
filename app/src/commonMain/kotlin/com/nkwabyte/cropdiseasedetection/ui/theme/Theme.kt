@@ -250,7 +250,7 @@ val unspecified_scheme = ColorFamily(
 
 @Composable
 fun CropDiseaseDetectionTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = false,
     content: @Composable () -> Unit
 ) {
   val colorScheme = if (darkTheme) darkScheme else lightScheme

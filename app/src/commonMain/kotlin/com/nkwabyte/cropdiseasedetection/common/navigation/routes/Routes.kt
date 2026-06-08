@@ -34,3 +34,12 @@ data object DetectionResultScreenRoute
 
 @Serializable
 data object ForgotPasswordScreenRoute
+
+@Serializable
+data object HistoryScreenRoute
+
+@Serializable
+data object EncyclopediaScreenRoute
+
+@Serializable
+data object SettingsScreenRoute
