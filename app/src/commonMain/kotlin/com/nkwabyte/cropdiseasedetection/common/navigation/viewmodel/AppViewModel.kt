@@ -17,7 +17,10 @@ class AppViewModel(private val settingsManager: SettingsManager): ViewModel() {
             detectionResult = emptyList(),
             isLoading = false,
             errorMessage = null,
-            selectedTheme = settingsManager.getTheme()
+            selectedTheme = settingsManager.getTheme(),
+            classifierThreshold = settingsManager.getClassifierThreshold(),
+            iouThreshold = settingsManager.getIouThreshold(),
+            detectionThreshold = settingsManager.getDetectionThreshold()
         )
     )
     val appState: StateFlow<AppData> = _appState.asStateFlow()
@@ -89,6 +92,21 @@ class AppViewModel(private val settingsManager: SettingsManager): ViewModel() {
         }
     }
 
+    fun setClassifierThreshold(value: Float) {
+        settingsManager.setClassifierThreshold(value)
+        _appState.update { it.copy(classifierThreshold = value) }
+    }
+
+    fun setIouThreshold(value: Float) {
+        settingsManager.setIouThreshold(value)
+        _appState.update { it.copy(iouThreshold = value) }
+    }
+
+    fun setDetectionThreshold(value: Float) {
+        settingsManager.setDetectionThreshold(value)
+        _appState.update { it.copy(detectionThreshold = value) }
+    }
+
     fun reset() {
         _appState.update { currentState ->
             AppData(
@@ -97,7 +115,10 @@ class AppViewModel(private val settingsManager: SettingsManager): ViewModel() {
                 detectionResult = emptyList(),
                 isLoading = false,
                 errorMessage = null,
-                selectedTheme = currentState.selectedTheme
+                selectedTheme = currentState.selectedTheme,
+                classifierThreshold = currentState.classifierThreshold,
+                iouThreshold = currentState.iouThreshold,
+                detectionThreshold = currentState.detectionThreshold
             )
         }
     }

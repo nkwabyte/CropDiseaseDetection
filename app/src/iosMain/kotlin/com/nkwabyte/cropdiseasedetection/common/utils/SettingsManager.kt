@@ -10,4 +10,31 @@ actual class SettingsManager actual constructor() {
     actual fun setTheme(theme: String) {
         NSUserDefaults.standardUserDefaults.setObject(theme, "theme_key")
     }
+
+    actual fun getClassifierThreshold(): Float {
+        val obj = NSUserDefaults.standardUserDefaults.objectForKey("classifier_threshold")
+        return if (obj != null) NSUserDefaults.standardUserDefaults.floatForKey("classifier_threshold") else 0.55f
+    }
+
+    actual fun setClassifierThreshold(value: Float) {
+        NSUserDefaults.standardUserDefaults.setFloat(value, "classifier_threshold")
+    }
+
+    actual fun getIouThreshold(): Float {
+        val obj = NSUserDefaults.standardUserDefaults.objectForKey("iou_threshold")
+        return if (obj != null) NSUserDefaults.standardUserDefaults.floatForKey("iou_threshold") else 0.10f
+    }
+
+    actual fun setIouThreshold(value: Float) {
+        NSUserDefaults.standardUserDefaults.setFloat(value, "iou_threshold")
+    }
+
+    actual fun getDetectionThreshold(): Float {
+        val obj = NSUserDefaults.standardUserDefaults.objectForKey("detection_threshold")
+        return if (obj != null) NSUserDefaults.standardUserDefaults.floatForKey("detection_threshold") else 0.50f
+    }
+
+    actual fun setDetectionThreshold(value: Float) {
+        NSUserDefaults.standardUserDefaults.setFloat(value, "detection_threshold")
+    }
 }

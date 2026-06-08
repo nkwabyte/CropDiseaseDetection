@@ -28,6 +28,15 @@ kotlin {
             baseName = "ComposeApp"
             isStatic = true
         }
+        iosTarget.compilations.getByName("main") {
+            cinterops {
+                val ExecuTorchBridge by creating {
+                    defFile(project.file("src/nativeInterop/cinterop/ExecuTorchBridge.def"))
+                    packageName("com.nkwabyte.cropdiseasedetection.bridge")
+                    includeDirs("${rootProject.projectDir}/iosApp/iosApp")
+                }
+            }
+        }
     }
 
     sourceSets {

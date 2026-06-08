@@ -27,6 +27,9 @@ import org.koin.compose.koinInject
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AuthViewModel
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 
 @Composable
 fun InnerNavHost(
@@ -39,6 +42,25 @@ fun InnerNavHost(
     profileViewModel: ProfileViewModel = koinInject(),
     authViewModel: AuthViewModel = koinInject()
 ) {
+    val firebaseUser by Firebase.auth.authStateChanged.collectAsState(initial = Firebase.auth.currentUser)
+
+    LaunchedEffect(firebaseUser) {
+        val user = firebaseUser
+        if (user != null) {
+            val email = user.email ?: ""
+            val name = user.displayName?.ifEmpty { null } 
+                ?: email.substringBefore("@").ifEmpty { "Farmer" }
+            
+            profileViewModel.updateProfile(
+                userId = user.uid,
+                userName = name,
+                userEmail = email
+            )
+        } else {
+            profileViewModel.resetProfile()
+        }
+    }
+
     NavHost(
         navController = navController,
         startDestination = SplashScreenRoute,
@@ -117,32 +139,42 @@ fun InnerNavHost(
 
         composable<LoginScreenRoute> {
             LoginScreen(
-                onDrawerButtonClick = {
-                    scope.launch { drawerState.open() }
-                },
-                onLoginClick = { _, _ ->
-                    navController.popBackStack()
-                    navController.navigate(HomeScreenRoute)
+                onLoginSuccess = {
+                    navController.navigate(SelectCropScreenRoute) {
+                        popUpTo(LoginScreenRoute) { inclusive = true }
+                    }
                 },
                 onRegisterClick = {
-                    navController.popBackStack()
-                    navController.navigate(RegisterScreenRoute)
+                    navController.navigate(RegisterScreenRoute) {
+                        popUpTo(LoginScreenRoute) { inclusive = false }
+                    }
                 },
                 onForgotPasswordClick = {
                     navController.navigate(ForgotPasswordScreenRoute)
-                }
+                },
+                onDrawerButtonClick = {
+                    scope.launch { drawerState.open() }
+                },
+                authViewModel = authViewModel
             )
         }
 
         composable<RegisterScreenRoute> {
             RegisterScreen(
+                onRegisterSuccess = {
+                    navController.navigate(SelectCropScreenRoute) {
+                        popUpTo(RegisterScreenRoute) { inclusive = true }
+                    }
+                },
+                onLoginClick = {
+                    navController.navigate(LoginScreenRoute) {
+                        popUpTo(RegisterScreenRoute) { inclusive = true }
+                    }
+                },
                 onDrawerButtonClick = {
                     scope.launch { drawerState.open() }
                 },
-                onLoginClick = { _, _ ->
-                    navController.popBackStack()
-                    navController.navigate(LoginScreenRoute)
-                }
+                authViewModel = authViewModel
             )
         }
 

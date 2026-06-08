@@ -18,6 +18,7 @@ import java.io.FileOutputStream
 
 actual class ObjectDetector actual constructor() : KoinComponent {
     private val context: Context by inject()
+    private val settingsManager: com.nkwabyte.cropdiseasedetection.common.utils.SettingsManager by inject()
     private var _module: Module? = null
     private var _classifierModule: Module? = null
 
@@ -30,21 +31,27 @@ actual class ObjectDetector actual constructor() : KoinComponent {
     actual suspend fun loadModel() {
         if (_module == null) {
             val modelPath = assetFilePath(context, "crop_disease_yolo26.pte")
+            val file = File(modelPath)
             _module = Module.load(modelPath)
+            val sizeMb = file.length() / (1024f * 1024f)
+            Log.d("ObjectDetector", "ExecuTorch detection model 'crop_disease_yolo26.pte' loaded successfully. Path: ${file.absolutePath}, Size: ${"%.2f".format(sizeMb)} MB")
         }
     }
 
     actual suspend fun loadClassifierModel() {
         if (_classifierModule == null) {
             val modelPath = assetFilePath(context, "crop_classifier.pte")
+            val file = File(modelPath)
             _classifierModule = Module.load(modelPath)
+            val sizeMb = file.length() / (1024f * 1024f)
+            Log.d("ObjectDetector", "ExecuTorch classifier model 'crop_classifier.pte' loaded successfully. Path: ${file.absolutePath}, Size: ${"%.2f".format(sizeMb)} MB")
         }
     }
 
     actual fun classify(imageBytes: ByteArray): ClassificationResult? {
         val module = _classifierModule ?: return null
         val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-            ?: throw IllegalStateException("Failed to decode image bytes for classification")
+            ?: return null
 
         val resizedBitmap = bitmap.scale(260, 260)
         
@@ -93,7 +100,7 @@ actual class ObjectDetector actual constructor() : KoinComponent {
             }
         }
 
-        val threshold = 0.55f
+        val threshold = settingsManager.getClassifierThreshold()
         val label = if (maxProb >= threshold) classes[maxIdx] else "unknown"
 
         return ClassificationResult(
@@ -105,18 +112,18 @@ actual class ObjectDetector actual constructor() : KoinComponent {
 
     actual fun detect(imageBytes: ByteArray): List<DetectionResult> {
         val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-            ?: throw IllegalStateException("Failed to decode image bytes")
-            
-        val module = _module ?: throw IllegalStateException("Model not loaded")
+            ?: return emptyList()
+        val module = _module ?: return emptyList()
 
         val resizedBitmap = bitmap.scale(640, 640)
-        
+
+        // YOLO model expects pixel/255 (i.e. mean=0, std=1 after the internal /255 in bitmapToFloat32Tensor)
         val pTensor = TensorImageUtils.bitmapToFloat32Tensor(
             resizedBitmap,
-            TensorImageUtils.TORCHVISION_NORM_MEAN_RGB,
-            TensorImageUtils.TORCHVISION_NORM_STD_RGB
+            floatArrayOf(0f, 0f, 0f),
+            floatArrayOf(1f, 1f, 1f)
         )
-        
+
         val inputTensor = Tensor.fromBlob(
             pTensor.dataAsFloatArray,
             longArrayOf(1, 3, 640, 640)
@@ -147,7 +154,7 @@ actual class ObjectDetector actual constructor() : KoinComponent {
                 }
             }
 
-            if (maxScore > 0.10f) {
+            if (maxScore > settingsManager.getDetectionThreshold()) {
                 val cx = outputArray[0 * numPredictions + i]
                 val cy = outputArray[1 * numPredictions + i]
                 val w = outputArray[2 * numPredictions + i]
@@ -169,7 +176,7 @@ actual class ObjectDetector actual constructor() : KoinComponent {
             }
         }
 
-        return nonMaxSuppression(preliminaryDetections)
+        return nonMaxSuppression(preliminaryDetections, settingsManager.getIouThreshold())
     }
 
     private fun assetFilePath(context: Context, assetName: String): String {

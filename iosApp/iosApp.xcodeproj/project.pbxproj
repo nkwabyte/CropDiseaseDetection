@@ -14,6 +14,8 @@
 		419B5E5E2A1D000000000008 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 419B5E5E2A1D000000000004 /* GoogleService-Info.plist */; };
 		445C052442747365B7CB2124 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 16D66C9411832E1B7D572C76 /* FirebaseCore */; };
 		B7C4F6137AC8345E71E92063 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 617043448F4869026C2F0BB4 /* FirebaseAuth */; };
+		BC1E7F392FD70559009B6C63 /* crop_classifier.pte in Resources */ = {isa = PBXBuildFile; fileRef = BC1E7F382FD70559009B6C63 /* crop_classifier.pte */; };
+		BC1E7F3B2FD70566009B6C63 /* crop_disease_yolo26.pte in Resources */ = {isa = PBXBuildFile; fileRef = BC1E7F3A2FD70566009B6C63 /* crop_disease_yolo26.pte */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -23,6 +25,8 @@
 		419B5E5E2A1D000000000003 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		419B5E5E2A1D000000000004 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		419B5E5E2A1D000000000005 /* iosApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iosApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BC1E7F382FD70559009B6C63 /* crop_classifier.pte */ = {isa = PBXFileReference; lastKnownFileType = file; path = crop_classifier.pte; sourceTree = "<group>"; };
+		BC1E7F3A2FD70566009B6C63 /* crop_disease_yolo26.pte */ = {isa = PBXFileReference; lastKnownFileType = file; path = crop_disease_yolo26.pte; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -55,6 +59,8 @@
 				419B5E5E2A1D000000000003 /* Info.plist */,
 				419B5E5E2A1D000000000004 /* GoogleService-Info.plist */,
 				09E825AEFB0318C83176FA6B /* Assets.xcassets */,
+				BC1E7F382FD70559009B6C63 /* crop_classifier.pte */,
+				BC1E7F3A2FD70566009B6C63 /* crop_disease_yolo26.pte */,
 			);
 			path = iosApp;
 			sourceTree = "<group>";
@@ -134,6 +140,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BC1E7F392FD70559009B6C63 /* crop_classifier.pte in Resources */,
+				BC1E7F3B2FD70566009B6C63 /* crop_disease_yolo26.pte in Resources */,
 				419B5E5E2A1D000000000008 /* GoogleService-Info.plist in Resources */,
 				0A5F4FD242A3F0FF0EBEDF7A /* Assets.xcassets in Resources */,
 			);

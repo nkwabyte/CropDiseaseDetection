@@ -47,6 +47,7 @@ data class DetectionData(
     val isDetectionSuccessful: Boolean = false,
     val isClassifierRejected: Boolean = false,
     val classifierConfidence: Float = 0f,
+    val classificationLabel: String? = null,
     val imageWidth: Int? = null,
     val imageHeight: Int? = null,
     val modelName: String? = null,

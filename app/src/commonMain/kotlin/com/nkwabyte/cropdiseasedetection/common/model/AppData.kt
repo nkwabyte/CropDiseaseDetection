@@ -9,7 +9,10 @@ data class AppData(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val selectedImageByteArray: ByteArray? = null, // Replaced Uri string with ByteArray for KMP
-    val selectedTheme: String = "System Default"
+    val selectedTheme: String = "System Default",
+    val classifierThreshold: Float = 0.55f,
+    val iouThreshold: Float = 0.10f,
+    val detectionThreshold: Float = 0.50f
 ) {
     fun isNoResult(): Boolean {
         return detectionResult.isEmpty()

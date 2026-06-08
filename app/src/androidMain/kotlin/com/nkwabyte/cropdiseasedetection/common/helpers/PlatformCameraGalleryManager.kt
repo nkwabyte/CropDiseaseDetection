@@ -7,6 +7,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -21,7 +22,7 @@ actual fun PlatformCameraGalleryManager(
     content: @Composable (takePicture: () -> Unit, selectPicture: () -> Unit) -> Unit
 ) {
     val context = LocalContext.current
-    var photoUri by remember { mutableStateOf<Uri?>(null) }
+    var photoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
 
     fun processUri(uri: Uri?) {
         if (uri == null) {

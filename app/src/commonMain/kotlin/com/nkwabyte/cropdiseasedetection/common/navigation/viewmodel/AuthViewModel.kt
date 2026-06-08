@@ -43,15 +43,20 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    fun registerWithEmail(email: String, pass: String) {
-        if (email.isBlank() || pass.isBlank()) {
-            _authState.value = AuthState.Error("Email and password cannot be empty")
+    fun registerWithEmail(email: String, pass: String, userName: String) {
+        if (email.isBlank() || pass.isBlank() || userName.isBlank()) {
+            _authState.value = AuthState.Error("Username, email, and password cannot be empty")
             return
         }
         _authState.value = AuthState.Loading
         viewModelScope.launch {
             try {
-                auth.createUserWithEmailAndPassword(email.trim(), pass)
+                val result = auth.createUserWithEmailAndPassword(email.trim(), pass)
+                try {
+                    result.user?.updateProfile(displayName = userName)
+                } catch (pe: Exception) {
+                    println("Failed to update display name: ${pe.message}")
+                }
                 _authState.value = AuthState.Success("Registered successfully")
             } catch (e: Exception) {
                 _authState.value = AuthState.Error(e.message ?: "Registration failed")

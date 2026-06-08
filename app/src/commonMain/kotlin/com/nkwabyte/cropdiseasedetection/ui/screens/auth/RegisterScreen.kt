@@ -7,7 +7,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -25,24 +24,48 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import org.jetbrains.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nkwabyte.cropdiseasedetection.generated.resources.*
 import com.nkwabyte.cropdiseasedetection.common.navigation.appbar.AppBar
-import com.nkwabyte.cropdiseasedetection.ui.theme.CropDiseaseDetectionTheme
+import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AuthState
+import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AuthViewModel
+import com.nkwabyte.cropdiseasedetection.ui.components.GradientSnackBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
-    modifier: Modifier = Modifier,
+    onRegisterSuccess: () -> Unit,
+    onLoginClick: () -> Unit,
     onDrawerButtonClick: () -> Unit = { },
-    onLoginClick: (String, String) -> Unit = { _, _ -> },
+    authViewModel: AuthViewModel,
+    modifier: Modifier = Modifier
 ) {
     var userName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+
+    val authState by authViewModel.authState.collectAsState()
+
+    var snackBarMessage by remember { mutableStateOf<String?>(null) }
+    var isErrorSnackBar by remember { mutableStateOf(false) }
+
+    LaunchedEffect(authState) {
+        when (authState) {
+            is AuthState.Success -> {
+                snackBarMessage = null
+                authViewModel.resetState()
+                onRegisterSuccess()
+            }
+            is AuthState.Error -> {
+                snackBarMessage = (authState as AuthState.Error).message
+                isErrorSnackBar = true
+                authViewModel.resetState()
+            }
+            else -> {}
+        }
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -61,6 +84,15 @@ fun RegisterScreen(
                 isHomeScreen = false,
             )
         },
+        snackbarHost = {
+            snackBarMessage?.let { msg ->
+                GradientSnackBar(
+                    message = msg,
+                    isError = isErrorSnackBar,
+                    onAction = { snackBarMessage = null }
+                )
+            }
+        }
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -96,6 +128,7 @@ fun RegisterScreen(
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
+                // Username Field
                 OutlinedTextField(
                     value = userName,
                     onValueChange = { userName = it },
@@ -120,9 +153,11 @@ fun RegisterScreen(
                     singleLine = true,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
                         color = MaterialTheme.colorScheme.onSurface
-                    )
+                    ),
+                    enabled = authState != AuthState.Loading
                 )
 
+                // Email Field
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
@@ -148,9 +183,11 @@ fun RegisterScreen(
                     singleLine = true,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
                         color = MaterialTheme.colorScheme.onSurface
-                    )
+                    ),
+                    enabled = authState != AuthState.Loading
                 )
 
+                // Password Field
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
@@ -166,7 +203,10 @@ fun RegisterScreen(
                         val image = if (passwordVisible)
                             Icons.Filled.Visibility
                         else Icons.Filled.VisibilityOff
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        IconButton(
+                            onClick = { passwordVisible = !passwordVisible },
+                            enabled = authState != AuthState.Loading
+                        ) {
                             Icon(
                                 imageVector = image,
                                 contentDescription = stringResource(Res.string.password_toggle_description),
@@ -188,14 +228,24 @@ fun RegisterScreen(
                     singleLine = true,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
                         color = MaterialTheme.colorScheme.onSurface
-                    )
+                    ),
+                    enabled = authState != AuthState.Loading
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
+                // Register Button
                 Button(
                     onClick = {
-                        println("Register clicked with $userName, $email and $password")
+                        if (userName.isBlank() || email.isBlank() || password.isBlank()) {
+                            snackBarMessage = "Username, email, and password cannot be empty"
+                            isErrorSnackBar = true
+                        } else if (password.length < 6) {
+                            snackBarMessage = "Password must be at least 6 characters"
+                            isErrorSnackBar = true
+                        } else {
+                            authViewModel.registerWithEmail(email, password, userName)
+                        }
                     },
                     modifier = Modifier.fillMaxWidth(),
                     shape = androidx.compose.foundation.shape.CircleShape,
@@ -203,19 +253,29 @@ fun RegisterScreen(
                         containerColor = MaterialTheme.colorScheme.tertiary,
                         contentColor = MaterialTheme.colorScheme.onTertiary
                     ),
-                    contentPadding = PaddingValues(vertical = 16.dp)
+                    contentPadding = PaddingValues(vertical = 16.dp),
+                    enabled = authState != AuthState.Loading
                 ) {
-                    Text(
-                        text = stringResource(Res.string.register_button_text),
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
+                    if (authState == AuthState.Loading) {
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.onTertiary,
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp
                         )
-                    )
+                    } else {
+                        Text(
+                            text = stringResource(Res.string.register_button_text),
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp
+                            )
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Already have an account? Login redirect
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
@@ -226,9 +286,8 @@ fun RegisterScreen(
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     TextButton(
-                        onClick = {
-                            onLoginClick(userName, password)
-                        },
+                        onClick = onLoginClick,
+                        enabled = authState != AuthState.Loading
                     ) {
                         Text(
                             text = stringResource(Res.string.register_login_link),
@@ -241,13 +300,5 @@ fun RegisterScreen(
                 }
             }
         }
-    }
-}
-
-@Preview
-@Composable
-fun PreviewRegisterScreen() {
-    CropDiseaseDetectionTheme {
-        RegisterScreen()
     }
 }

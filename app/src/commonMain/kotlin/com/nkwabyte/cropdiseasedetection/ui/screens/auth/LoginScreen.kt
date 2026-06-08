@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -21,12 +20,13 @@ import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import org.jetbrains.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nkwabyte.cropdiseasedetection.generated.resources.*
 import com.nkwabyte.cropdiseasedetection.common.navigation.appbar.AppBar
-import com.nkwabyte.cropdiseasedetection.ui.theme.CropDiseaseDetectionTheme
+import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AuthState
+import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AuthViewModel
+import com.nkwabyte.cropdiseasedetection.ui.components.GradientSnackBar
 
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.ui.text.input.KeyboardType
@@ -35,14 +35,36 @@ import androidx.compose.foundation.text.KeyboardOptions
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
-    onLoginClick: (String, String) -> Unit,
+    onLoginSuccess: () -> Unit,
     onRegisterClick: () -> Unit,
     onForgotPasswordClick: () -> Unit,
-    onDrawerButtonClick: () -> Unit = { }
+    onDrawerButtonClick: () -> Unit = { },
+    authViewModel: AuthViewModel
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+
+    val authState by authViewModel.authState.collectAsState()
+
+    var snackBarMessage by remember { mutableStateOf<String?>(null) }
+    var isErrorSnackBar by remember { mutableStateOf(false) }
+
+    LaunchedEffect(authState) {
+        when (authState) {
+            is AuthState.Success -> {
+                snackBarMessage = null
+                authViewModel.resetState()
+                onLoginSuccess()
+            }
+            is AuthState.Error -> {
+                snackBarMessage = (authState as AuthState.Error).message
+                isErrorSnackBar = true
+                authViewModel.resetState()
+            }
+            else -> {}
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -60,7 +82,16 @@ fun LoginScreen(
                 isHomeScreen = false,
             )
         },
-    ){ paddingValues ->
+        snackbarHost = {
+            snackBarMessage?.let { msg ->
+                GradientSnackBar(
+                    message = msg,
+                    isError = isErrorSnackBar,
+                    onAction = { snackBarMessage = null }
+                )
+            }
+        }
+    ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -125,7 +156,8 @@ fun LoginScreen(
                     singleLine = true,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
                         color = MaterialTheme.colorScheme.onSurface
-                    )
+                    ),
+                    enabled = authState != AuthState.Loading
                 )
 
                 // Password Field
@@ -148,7 +180,10 @@ fun LoginScreen(
                         val image = if (passwordVisible)
                             Icons.Filled.Visibility
                         else Icons.Filled.VisibilityOff
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        IconButton(
+                            onClick = { passwordVisible = !passwordVisible },
+                            enabled = authState != AuthState.Loading
+                        ) {
                             Icon(
                                 imageVector = image,
                                 contentDescription = stringResource(Res.string.password_toggle_description),
@@ -171,12 +206,16 @@ fun LoginScreen(
                     singleLine = true,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
                         color = MaterialTheme.colorScheme.onSurface
-                    )
+                    ),
+                    enabled = authState != AuthState.Loading
                 )
                 
                 // Forgot Password Link
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                    TextButton(onClick = onForgotPasswordClick) {
+                    TextButton(
+                        onClick = onForgotPasswordClick,
+                        enabled = authState != AuthState.Loading
+                    ) {
                         Text(
                             text = "Forgot Password?",
                             style = MaterialTheme.typography.bodyMedium.copy(
@@ -191,22 +230,38 @@ fun LoginScreen(
 
                 // Login Button
                 Button(
-                    onClick = { onLoginClick(email, password) },
+                    onClick = {
+                        if (email.isBlank() || password.isBlank()) {
+                            snackBarMessage = "Email and password cannot be empty"
+                            isErrorSnackBar = true
+                        } else {
+                            authViewModel.loginWithEmail(email, password)
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = androidx.compose.foundation.shape.CircleShape,
+                    shape = RoundedCornerShape(24.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.tertiary,
                         contentColor = MaterialTheme.colorScheme.onTertiary
                     ),
-                    contentPadding = PaddingValues(vertical = 16.dp)
+                    contentPadding = PaddingValues(vertical = 16.dp),
+                    enabled = authState != AuthState.Loading
                 ) {
-                    Text(
-                        text = stringResource(Res.string.login_button_text),
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
+                    if (authState == AuthState.Loading) {
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.onTertiary,
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp
                         )
-                    )
+                    } else {
+                        Text(
+                            text = stringResource(Res.string.login_button_text),
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp
+                            )
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -221,7 +276,10 @@ fun LoginScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onBackground
                     )
-                    TextButton(onClick = onRegisterClick) {
+                    TextButton(
+                        onClick = onRegisterClick,
+                        enabled = authState != AuthState.Loading
+                    ) {
                         Text(
                             text = stringResource(Res.string.login_register_link),
                             style = MaterialTheme.typography.bodyMedium.copy(
@@ -233,24 +291,5 @@ fun LoginScreen(
                 }
             }
         }
-    }
-}
-
-@Preview
-@Composable
-fun PreviewSignInScreen() {
-    // Define a basic MaterialTheme for the preview
-    CropDiseaseDetectionTheme {
-        LoginScreen(
-            onLoginClick = { email, password ->
-                println("Login clicked with $email and $password")
-            },
-            onRegisterClick = {
-                println("Register clicked")
-            },
-            onForgotPasswordClick = {
-                println("Forgot Password clicked")
-            }
-        )
     }
 }

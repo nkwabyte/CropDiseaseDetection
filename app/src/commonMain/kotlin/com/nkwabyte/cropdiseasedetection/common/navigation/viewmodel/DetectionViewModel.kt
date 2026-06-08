@@ -65,6 +65,7 @@ class DetectionViewModel(
                             isDetectionSuccessful = false,
                             isClassifierRejected = true,
                             classifierConfidence = classification.confidence,
+                            classificationLabel = classification.label,
                             imageWidth = width,
                             imageHeight = height,
                             results = emptyList()
@@ -87,6 +88,8 @@ class DetectionViewModel(
                             isDetected = true,
                             isDetectionSuccessful = false,
                             isCropMissMatch = false,
+                            classifierConfidence = classification?.confidence ?: 0f,
+                            classificationLabel = classification?.label,
                             imageWidth = width,
                             imageHeight = height,
                         )
@@ -109,6 +112,8 @@ class DetectionViewModel(
                         isDetected = true,
                         isDetectionSuccessful = matchingResults.isNotEmpty(),
                         isCropMissMatch = isMismatch,
+                        classifierConfidence = classification?.confidence ?: 0f,
+                        classificationLabel = classification?.label,
                         imageWidth = width,
                         imageHeight = height,
                     )

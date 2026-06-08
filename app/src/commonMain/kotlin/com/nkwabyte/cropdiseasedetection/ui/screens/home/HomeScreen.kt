@@ -215,33 +215,60 @@ fun HomeScreen(
                             animationSpec = androidx.compose.animation.core.tween(500)
                         ) { imageData ->
                             if (imageData != null) {
-                                Box(modifier = Modifier.fillMaxSize()) {
-                                    Image(
-                                        painter = rememberAsyncImagePainter(imageData),
-                                        contentDescription = stringResource(Res.string.home_selected_image_description),
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                    IconButton(
-                                        onClick = {
-                                            selectedImageData = null
-                                            appViewModel.setSelectedImageByteArray(null)
-                                            detectionViewModel.reset()
-                                        },
-                                        modifier = Modifier
-                                            .align(Alignment.TopEnd)
-                                            .padding(12.dp)
-                                            .size(36.dp)
-                                            .background(
-                                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
-                                                shape = CircleShape
+                                Column(modifier = Modifier.fillMaxSize()) {
+                                    if (detectionData.classificationLabel != null) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .background(MaterialTheme.colorScheme.primaryContainer)
+                                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(
+                                                text = "Classifier Crop: ${detectionData.classificationLabel}",
+                                                style = MaterialTheme.typography.bodyMedium.copy(
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                                )
                                             )
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Close,
-                                            contentDescription = stringResource(Res.string.home_clear_image_description),
-                                            tint = MaterialTheme.colorScheme.onSurface
+                                            Text(
+                                                text = "Confidence: ${((detectionData.classifierConfidence * 1000).toInt() / 10f)}%",
+                                                style = MaterialTheme.typography.bodyMedium.copy(
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                                )
+                                            )
+                                        }
+                                    }
+                                    Box(modifier = Modifier.fillMaxSize().weight(1f)) {
+                                        Image(
+                                            painter = rememberAsyncImagePainter(imageData),
+                                            contentDescription = stringResource(Res.string.home_selected_image_description),
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize()
                                         )
+                                        IconButton(
+                                            onClick = {
+                                                selectedImageData = null
+                                                appViewModel.setSelectedImageByteArray(null)
+                                                detectionViewModel.reset()
+                                            },
+                                            modifier = Modifier
+                                                .align(Alignment.TopEnd)
+                                                .padding(12.dp)
+                                                .size(36.dp)
+                                                .background(
+                                                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+                                                    shape = CircleShape
+                                                )
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = stringResource(Res.string.home_clear_image_description),
+                                                tint = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
                                     }
                                 }
                             } else {

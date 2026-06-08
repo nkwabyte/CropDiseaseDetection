@@ -153,6 +153,33 @@ fun SettingsScreen(
                     )
                 }
 
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Model Thresholds Section
+                SettingsSectionHeader("Model Thresholds")
+                SettingsCard {
+                    SettingsSliderRow(
+                        title = "Classifier Confidence",
+                        subtitle = "Minimum confidence to accept crop class",
+                        value = appState.classifierThreshold,
+                        onValueChange = { appViewModel.setClassifierThreshold(it) }
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    SettingsSliderRow(
+                        title = "Detection Score",
+                        subtitle = "Minimum score to detect diseases",
+                        value = appState.detectionThreshold,
+                        onValueChange = { appViewModel.setDetectionThreshold(it) }
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    SettingsSliderRow(
+                        title = "Intersection over Union (IoU)",
+                        subtitle = "Overlap threshold for duplicate boxes",
+                        value = appState.iouThreshold,
+                        onValueChange = { appViewModel.setIouThreshold(it) }
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(48.dp))
             }
         }
@@ -437,4 +464,66 @@ fun SelectionDialog(
         containerColor = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(24.dp)
     )
+}
+
+fun formatFloat(value: Float): String {
+    val rounded = ((value * 100).toInt() / 100.0)
+    val str = rounded.toString()
+    return if (str.contains(".") && str.substringAfter(".").length == 1) {
+        "${str}0"
+    } else {
+        str
+    }
+}
+
+@Composable
+fun SettingsSliderRow(
+    title: String,
+    subtitle: String,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float> = 0f..1f
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                )
+            }
+            Text(
+                text = formatFloat(value),
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            colors = SliderDefaults.colors(
+                thumbColor = MaterialTheme.colorScheme.primary,
+                activeTrackColor = MaterialTheme.colorScheme.primary,
+                inactiveTrackColor = MaterialTheme.colorScheme.primaryContainer
+            )
+        )
+    }
 }

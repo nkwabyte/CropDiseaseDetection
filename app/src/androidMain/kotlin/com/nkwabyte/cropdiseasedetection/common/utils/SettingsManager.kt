@@ -17,4 +17,28 @@ actual class SettingsManager actual constructor() : KoinComponent {
     actual fun setTheme(theme: String) {
         prefs.edit().putString("theme_key", theme).apply()
     }
+
+    actual fun getClassifierThreshold(): Float {
+        return prefs.getFloat("classifier_threshold", 0.55f)
+    }
+
+    actual fun setClassifierThreshold(value: Float) {
+        prefs.edit().putFloat("classifier_threshold", value).apply()
+    }
+
+    actual fun getIouThreshold(): Float {
+        return prefs.getFloat("iou_threshold", 0.10f)
+    }
+
+    actual fun setIouThreshold(value: Float) {
+        prefs.edit().putFloat("iou_threshold", value).apply()
+    }
+
+    actual fun getDetectionThreshold(): Float {
+        return prefs.getFloat("detection_threshold", 0.50f)
+    }
+
+    actual fun setDetectionThreshold(value: Float) {
+        prefs.edit().putFloat("detection_threshold", value).apply()
+    }
 }
