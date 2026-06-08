@@ -66,6 +66,24 @@ class SyncRepository {
         }
     }
 
+    suspend fun getDetectionRecords(): List<DetectionRecord> {
+        return try {
+            val user = Firebase.auth.currentUser
+            val uid = user?.uid ?: "anonymous"
+
+            val response = firestore.collection("detections")
+                .where { "userId" equalTo uid }
+                .get()
+
+            response.documents.map { document ->
+                document.data(DetectionRecord.serializer())
+            }.sortedByDescending { it.timestamp }
+        } catch (e: Exception) {
+            println("Failed to fetch detection records: ${e.message}")
+            emptyList()
+        }
+    }
+
     suspend fun anonymizeUserData() {
         try {
             val user = Firebase.auth.currentUser

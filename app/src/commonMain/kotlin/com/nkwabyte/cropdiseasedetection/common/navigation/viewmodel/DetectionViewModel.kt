@@ -32,6 +32,7 @@ class DetectionViewModel(
         viewModelScope.launch(Dispatchers.Default) {
             try {
                 detector.loadModel()
+                detector.loadClassifierModel()
                 _detectionState.update {
                     it.copy(
                         isModelLoading = false,
@@ -49,8 +50,30 @@ class DetectionViewModel(
     fun detect(imageBytes: ByteArray, crop: String, width: Int, height: Int) {
         viewModelScope.launch(Dispatchers.Default) {
             try {
-                _detectionState.update { it.copy(isDetecting = true) }
+                _detectionState.update { it.copy(isDetecting = true, isClassifierRejected = false) }
 
+                // Stage 1: Classifier
+                val classification = detector.classify(imageBytes)
+                println("Classifier result: $classification")
+
+                if (classification != null && !classification.isAccepted) {
+                    println("Classification rejected: Not a Corn, Pepper, or Tomato crop.")
+                    _detectionState.update {
+                        it.copy(
+                            isDetecting = false,
+                            isDetected = true,
+                            isDetectionSuccessful = false,
+                            isClassifierRejected = true,
+                            classifierConfidence = classification.confidence,
+                            imageWidth = width,
+                            imageHeight = height,
+                            results = emptyList()
+                        )
+                    }
+                    return@launch
+                }
+
+                // Stage 2: Detection
                 val results = detector.detect(imageBytes)
                 println("PyTorch detection results: $results")
 

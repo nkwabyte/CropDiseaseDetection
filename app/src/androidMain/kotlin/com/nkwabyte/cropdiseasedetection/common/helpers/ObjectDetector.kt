@@ -5,6 +5,7 @@ import android.graphics.BitmapFactory
 import android.util.Log
 import androidx.core.graphics.scale
 import com.nkwabyte.cropdiseasedetection.common.AppConstants
+import com.nkwabyte.cropdiseasedetection.common.model.ClassificationResult
 import com.nkwabyte.cropdiseasedetection.common.model.DetectionResult
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -18,15 +19,88 @@ import java.io.FileOutputStream
 actual class ObjectDetector actual constructor() : KoinComponent {
     private val context: Context by inject()
     private var _module: Module? = null
+    private var _classifierModule: Module? = null
 
     actual val isLoaded: Boolean
         get() = _module != null
+
+    actual val isClassifierLoaded: Boolean
+        get() = _classifierModule != null
 
     actual suspend fun loadModel() {
         if (_module == null) {
             val modelPath = assetFilePath(context, "crop_disease_yolo26.pte")
             _module = Module.load(modelPath)
         }
+    }
+
+    actual suspend fun loadClassifierModel() {
+        if (_classifierModule == null) {
+            val modelPath = assetFilePath(context, "crop_classifier.pte")
+            _classifierModule = Module.load(modelPath)
+        }
+    }
+
+    actual fun classify(imageBytes: ByteArray): ClassificationResult? {
+        val module = _classifierModule ?: return null
+        val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+            ?: throw IllegalStateException("Failed to decode image bytes for classification")
+
+        val resizedBitmap = bitmap.scale(260, 260)
+        
+        val pTensor = TensorImageUtils.bitmapToFloat32Tensor(
+            resizedBitmap,
+            TensorImageUtils.TORCHVISION_NORM_MEAN_RGB,
+            TensorImageUtils.TORCHVISION_NORM_STD_RGB
+        )
+        
+        val inputTensor = Tensor.fromBlob(
+            pTensor.dataAsFloatArray,
+            longArrayOf(1, 3, 260, 260)
+        )
+
+        val outputTensors = module.forward(EValue.from(inputTensor))
+        if (outputTensors == null || outputTensors.isEmpty()) {
+            return null
+        }
+        
+        val outputTensor = outputTensors[0].toTensor()
+        val outputArray = outputTensor.getDataAsFloatArray()
+        
+        if (outputArray == null || outputArray.size < 3) {
+            return null
+        }
+
+        val maxLogit = maxOf(outputArray[0], maxOf(outputArray[1], outputArray[2]))
+        val exp0 = kotlin.math.exp(outputArray[0] - maxLogit)
+        val exp1 = kotlin.math.exp(outputArray[1] - maxLogit)
+        val exp2 = kotlin.math.exp(outputArray[2] - maxLogit)
+        val sum = exp0 + exp1 + exp2
+
+        val prob0 = exp0 / sum
+        val prob1 = exp1 / sum
+        val prob2 = exp2 / sum
+
+        val probs = floatArrayOf(prob0, prob1, prob2)
+        val classes = arrayOf("Corn", "Pepper", "Tomato")
+
+        var maxProb = -1f
+        var maxIdx = -1
+        for (i in probs.indices) {
+            if (probs[i] > maxProb) {
+                maxProb = probs[i]
+                maxIdx = i
+            }
+        }
+
+        val threshold = 0.55f
+        val label = if (maxProb >= threshold) classes[maxIdx] else "unknown"
+
+        return ClassificationResult(
+            label = label,
+            confidence = maxProb,
+            isAccepted = label != "unknown"
+        )
     }
 
     actual fun detect(imageBytes: ByteArray): List<DetectionResult> {
@@ -117,6 +191,8 @@ actual class ObjectDetector actual constructor() : KoinComponent {
     actual fun release() {
         _module?.destroy()
         _module = null
+        _classifierModule?.destroy()
+        _classifierModule = null
     }
 }
 

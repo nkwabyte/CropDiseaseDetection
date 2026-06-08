@@ -25,6 +25,8 @@ import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AuthViewModel
+import dev.gitlive.firebase.Firebase
+import dev.gitlive.firebase.auth.auth
 
 @Composable
 fun InnerNavHost(
@@ -160,7 +162,28 @@ fun InnerNavHost(
             ProfileScreen(
                 modifier = modifier,
                 profileViewModel = profileViewModel,
-                onLogoutClick = {},
+                onLogoutClick = {
+                    scope.launch {
+                        try {
+                            Firebase.auth.signOut()
+                            profileViewModel.resetProfile()
+                            navController.navigate(LoginScreenRoute) {
+                                popUpTo(SelectCropScreenRoute) { inclusive = false }
+                            }
+                        } catch (e: Exception) {
+                            // Ignore signout error
+                        }
+                    }
+                },
+                onSignInClick = {
+                    navController.navigate(LoginScreenRoute)
+                },
+                onPrivacyPolicyClick = {
+                    navController.navigate(PrivacyScreenRoute)
+                },
+                onHelpSupportClick = {
+                    navController.navigate(HelpScreenRoute)
+                },
                 onDrawerButtonClick = {
                     scope.launch { drawerState.open() }
                 },
@@ -171,6 +194,12 @@ fun InnerNavHost(
             com.nkwabyte.cropdiseasedetection.ui.screens.history.HistoryScreen(
                 onDrawerButtonClick = {
                     scope.launch { drawerState.open() }
+                },
+                onSignInClick = {
+                    navController.navigate(LoginScreenRoute)
+                },
+                onStartScanClick = {
+                    navController.navigate(SelectCropScreenRoute)
                 }
             )
         }

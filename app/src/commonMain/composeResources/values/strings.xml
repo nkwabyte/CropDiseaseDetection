@@ -51,7 +51,7 @@
     <string name="login_phone_number_hint">Phone Number</string>
     <string name="login_password_hint">Password</string>
     <string name="login_button_text">LOGIN</string>
-    <string name="login_title_text">"SIGN IN"</string>
+    <string name="login_title_text">SIGN IN</string>
     <string name="login_no_account_prompt">Don\'t have an account?</string>
     <string name="login_register_link">REGISTER</string>
 
@@ -113,6 +113,7 @@
     <string name="crop_mis_match_message">Selected crop does not match the detected crop. Please select a different crop.</string>
     <string name="no_detection_message">No detection found for this image, try a different one or take a better image.</string>
     <string name="error_detecting_message">There was an error analysing this image, try again</string>
+    <string name="classifier_rejection_message">This does not appear to be a Corn, Pepper, or Tomato leaf. Please scan a valid leaf image.</string>
 
 
 

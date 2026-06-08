@@ -27,6 +27,8 @@ local.properties
 # AWS User-specific
 .idea/**/aws.xml
 
+download_disease_images.py
+
 # Generated files
 .idea/**/contentModel.xml
 

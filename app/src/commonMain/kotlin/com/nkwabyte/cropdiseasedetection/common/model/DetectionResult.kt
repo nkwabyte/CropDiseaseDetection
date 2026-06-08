@@ -31,6 +31,13 @@ data class DetectionResult(
 }
 
 @Serializable
+data class ClassificationResult(
+    val label: String,
+    val confidence: Float,
+    val isAccepted: Boolean
+)
+
+@Serializable
 data class DetectionData(
     val results: List<DetectionResult> = emptyList(),
     val isModelLoading: Boolean = false,
@@ -38,6 +45,8 @@ data class DetectionData(
     val isDetected: Boolean = false,
     val isCropMissMatch: Boolean = false,
     val isDetectionSuccessful: Boolean = false,
+    val isClassifierRejected: Boolean = false,
+    val classifierConfidence: Float = 0f,
     val imageWidth: Int? = null,
     val imageHeight: Int? = null,
     val modelName: String? = null,
