@@ -4,8 +4,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -16,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -53,7 +52,7 @@ fun AboutScreen(
                     Text(
                         text = stringResource(Res.string.app_name),
                         style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Normal,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
                         ),
                     )
@@ -62,6 +61,7 @@ fun AboutScreen(
                 isHomeScreen = false,
             )
         },
+        containerColor = MaterialTheme.colorScheme.background // Biophilic background
     ){ paddingValues ->
         Column(
             modifier = modifier
@@ -69,12 +69,11 @@ fun AboutScreen(
                 .padding(paddingValues)
                 .background(MaterialTheme.colorScheme.background),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
         ) {
             androidx.compose.animation.AnimatedVisibility(
                 visible = isVisible,
                 enter = androidx.compose.animation.slideInVertically(
-                    initialOffsetY = { 100 },
+                    initialOffsetY = { 50 },
                     animationSpec = androidx.compose.animation.core.tween(600)
                 ) + androidx.compose.animation.fadeIn(
                     animationSpec = androidx.compose.animation.core.tween(600)
@@ -83,44 +82,67 @@ fun AboutScreen(
                 // Main Content Area
                 Column(
                     modifier = Modifier
-                        .padding(horizontal = 24.dp, vertical = 16.dp)
-                        .background(MaterialTheme.colorScheme.background),
+                        .padding(horizontal = 24.dp, vertical = 24.dp)
+                        .fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    // Information Card
-                    Card(
+                    // Organic Information Container
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .wrapContentHeight(),
-                        shape = MaterialTheme.shapes.large,
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                            .shadow(
+                                elevation = 8.dp,
+                                shape = RoundedCornerShape(topStart = 48.dp, bottomEnd = 48.dp),
+                                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                            )
+                            .clip(RoundedCornerShape(topStart = 48.dp, bottomEnd = 48.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(32.dp)
                     ) {
                         Text(
                             text = stringResource(Res.string.about_info_text),
-                            modifier = Modifier.padding(24.dp),
                             style = MaterialTheme.typography.bodyLarge.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onBackground,
+                                lineHeight = 24.sp,
+                                fontWeight = FontWeight.Medium
                             ),
                             textAlign = TextAlign.Center
                         )
                     }
 
-                    // Spacer to push the image down slightly
-                    Spacer(modifier = Modifier.height(32.dp))
+                    Spacer(modifier = Modifier.height(48.dp))
 
-                    // Rail Partners Image
-                    Image(
-                        painter = painterResource(Res.drawable.rail_partners),
-                        contentDescription = stringResource(Res.string.rail_partners_description),
-                        contentScale = ContentScale.Fit,
+                    Text(
+                        text = "Our Partners",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    // Organic Image Container
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(150.dp)
-                            .clip(MaterialTheme.shapes.medium)
-                    )
+                            .shadow(
+                                elevation = 4.dp,
+                                shape = RoundedCornerShape(32.dp),
+                                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                            )
+                            .clip(RoundedCornerShape(32.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(24.dp)
+                    ) {
+                        Image(
+                            painter = painterResource(Res.drawable.rail_partners),
+                            contentDescription = stringResource(Res.string.rail_partners_description),
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(120.dp)
+                        )
+                    }
                 }
             }
         }

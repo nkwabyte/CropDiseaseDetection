@@ -104,7 +104,10 @@ class DetectionViewModel(
                                 imageWidth = width,
                                 imageHeight = height,
                                 matchingResults = matchingResults,
-                                rawResults = results
+                                rawResults = results,
+                                modelName = "ExecuTorch (PyTorch Mobile)", // Assuming hardcoded for now, or extracted from detector config
+                                modelVersion = "v1.0",
+                                platform = "iOS/Android App" // Ideally fetched via KMP platform API
                             )
                         }
                     } catch (e: Exception) {

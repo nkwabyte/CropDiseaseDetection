@@ -17,7 +17,10 @@ data class DetectionRecord(
     val imageHeight: Int,
     val timestamp: Long,
     val matchingResults: List<DetectionResult>,
-    val rawResults: List<DetectionResult>
+    val rawResults: List<DetectionResult>,
+    val modelName: String? = null,
+    val modelVersion: String? = null,
+    val platform: String? = null
 )
 
 class SyncRepository {
@@ -31,18 +34,17 @@ class SyncRepository {
         imageWidth: Int,
         imageHeight: Int,
         matchingResults: List<DetectionResult>,
-        rawResults: List<DetectionResult>
+        rawResults: List<DetectionResult>,
+        modelName: String? = null,
+        modelVersion: String? = null,
+        platform: String? = null
     ) {
         try {
             val user = Firebase.auth.currentUser
-            if (user == null) {
-                println("Cannot save detection record: user not signed in")
-                // In a real app we might allow anonymous saves or queue them.
-                return
-            }
+            val uid = user?.uid ?: "anonymous"
 
             val record = DetectionRecord(
-                userId = user.uid,
+                userId = uid,
                 cropName = cropName,
                 imageUrl = imageUrl,
                 detectionSuccessful = detectionSuccessful,
@@ -51,7 +53,10 @@ class SyncRepository {
                 imageHeight = imageHeight,
                 timestamp = io.ktor.util.date.GMTDate().timestamp,
                 matchingResults = matchingResults,
-                rawResults = rawResults
+                rawResults = rawResults,
+                modelName = modelName,
+                modelVersion = modelVersion,
+                platform = platform
             )
 
             firestore.collection("detections").add(record)
