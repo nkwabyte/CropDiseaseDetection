@@ -3,25 +3,27 @@ package com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel
 import androidx.lifecycle.ViewModel
 import com.nkwabyte.cropdiseasedetection.common.model.AppData
 import com.nkwabyte.cropdiseasedetection.common.model.DetectionResult
+import com.nkwabyte.cropdiseasedetection.common.utils.SettingsManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-class AppViewModel: ViewModel() {
-    private val _appData = AppData(
-        selectedCrop = null,
-        selectedImageByteArray = null,
-        detectionResult = emptyList(),
-        isLoading = false,
-        errorMessage = null
+class AppViewModel(private val settingsManager: SettingsManager): ViewModel() {
+    private val _appState = MutableStateFlow(
+        AppData(
+            selectedCrop = null,
+            selectedImageByteArray = null,
+            detectionResult = emptyList(),
+            isLoading = false,
+            errorMessage = null,
+            selectedTheme = settingsManager.getTheme()
+        )
     )
-    private val _appState = MutableStateFlow(_appData)
     val appState: StateFlow<AppData> = _appState.asStateFlow()
 
     init {
-        println("AppViewModel initialized with default state: $_appData")
-        reset()
+        println("AppViewModel initialized with state: ${_appState.value}")
     }
 
     fun setSelectedCrop(crop: String) {
@@ -80,14 +82,22 @@ class AppViewModel: ViewModel() {
             )
         }
     }
+    fun setSelectedTheme(theme: String) {
+        settingsManager.setTheme(theme)
+        _appState.update { currentState ->
+            currentState.copy(selectedTheme = theme)
+        }
+    }
+
     fun reset() {
-        _appState.update {
+        _appState.update { currentState ->
             AppData(
                 selectedCrop = null,
                 selectedImageByteArray = null,
                 detectionResult = emptyList(),
                 isLoading = false,
-                errorMessage = null
+                errorMessage = null,
+                selectedTheme = currentState.selectedTheme
             )
         }
     }

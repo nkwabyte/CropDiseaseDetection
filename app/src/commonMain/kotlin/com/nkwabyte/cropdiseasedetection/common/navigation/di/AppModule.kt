@@ -6,15 +6,17 @@ import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AppViewMode
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.ProfileViewModel
 import com.nkwabyte.cropdiseasedetection.data.network.CloudinaryApi
 import com.nkwabyte.cropdiseasedetection.data.repository.SyncRepository
+import com.nkwabyte.cropdiseasedetection.common.utils.SettingsManager
 import org.koin.dsl.module
 
 val appModule = module {
     single { ObjectDetector() }
     single { CloudinaryApi() }
     single { SyncRepository() }
+    single { SettingsManager() }
 
     // Shared instances
-    single { AppViewModel() }
+    single { AppViewModel(get()) }
     single {
         DetectionViewModel(
             detector = get<ObjectDetector>(),

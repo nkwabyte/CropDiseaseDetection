@@ -73,7 +73,7 @@ actual class ObjectDetector actual constructor() : KoinComponent {
                 }
             }
 
-            if (maxScore > 0.25f) {
+            if (maxScore > 0.10f) {
                 val cx = outputArray[0 * numPredictions + i]
                 val cy = outputArray[1 * numPredictions + i]
                 val w = outputArray[2 * numPredictions + i]
@@ -122,7 +122,7 @@ actual class ObjectDetector actual constructor() : KoinComponent {
 
 private fun nonMaxSuppression(
     detections: List<DetectionResult>,
-    iouThreshold: Float = 0.5f
+    iouThreshold: Float = 0.1f
 ): List<DetectionResult> {
     val sortedDetections = detections.sortedByDescending { it.score }
     val finalDetections = mutableListOf<DetectionResult>()

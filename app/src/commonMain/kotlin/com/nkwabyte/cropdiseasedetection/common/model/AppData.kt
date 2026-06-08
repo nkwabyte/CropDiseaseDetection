@@ -8,7 +8,8 @@ data class AppData(
     val detectionResult: List<DetectionResult> = emptyList(),
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
-    val selectedImageByteArray: ByteArray? = null // Replaced Uri string with ByteArray for KMP
+    val selectedImageByteArray: ByteArray? = null, // Replaced Uri string with ByteArray for KMP
+    val selectedTheme: String = "System Default"
 ) {
     fun isNoResult(): Boolean {
         return detectionResult.isEmpty()

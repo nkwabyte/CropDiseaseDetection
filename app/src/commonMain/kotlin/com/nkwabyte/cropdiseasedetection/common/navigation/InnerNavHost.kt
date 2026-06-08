@@ -187,7 +187,8 @@ fun InnerNavHost(
             com.nkwabyte.cropdiseasedetection.ui.screens.settings.SettingsScreen(
                 onDrawerButtonClick = {
                     scope.launch { drawerState.open() }
-                }
+                },
+                appViewModel = appViewModel
             )
         }
     }

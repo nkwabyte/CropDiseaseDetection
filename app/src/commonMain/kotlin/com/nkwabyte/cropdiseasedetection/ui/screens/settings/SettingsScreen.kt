@@ -25,17 +25,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nkwabyte.cropdiseasedetection.common.navigation.appbar.AppBar
 import com.nkwabyte.cropdiseasedetection.data.repository.SyncRepository
+import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AppViewModel
+import org.koin.compose.koinInject
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onDrawerButtonClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    appViewModel: AppViewModel = koinInject()
 ) {
+    val appState by appViewModel.appState.collectAsState()
+    val selectedTheme = appState.selectedTheme
+
     // Mock States for UI
     var selectedLanguage by remember { mutableStateOf("English") }
-    var selectedTheme by remember { mutableStateOf("System Default") }
     var pushNotificationsEnabled by remember { mutableStateOf(true) }
     var emailUpdatesEnabled by remember { mutableStateOf(false) }
 
@@ -169,7 +174,7 @@ fun SettingsScreen(
             title = "Select Theme",
             options = listOf("Light", "Dark", "System Default"),
             selectedOption = selectedTheme,
-            onOptionSelected = { selectedTheme = it },
+            onOptionSelected = { appViewModel.setSelectedTheme(it) },
             onDismiss = { showThemeDialog = false }
         )
     }
