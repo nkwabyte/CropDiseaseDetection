@@ -125,6 +125,7 @@
 			mainGroup = 419B5E5E2A1D000000000009;
 			packageReferences = (
 				7C4F1707FE80007C7DCEAE3C /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				BC98B09C2FD74C170039C9F1 /* XCRemoteSwiftPackageReference "executorch" */,
 			);
 			productRefGroup = 419B5E5E2A1D00000000000B /* Products */;
 			projectDirPath = "";
@@ -394,6 +395,14 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 11.0.0;
+			};
+		};
+		BC98B09C2FD74C170039C9F1 /* XCRemoteSwiftPackageReference "executorch" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pytorch/executorch";
+			requirement = {
+				branch = main;
+				kind = branch;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

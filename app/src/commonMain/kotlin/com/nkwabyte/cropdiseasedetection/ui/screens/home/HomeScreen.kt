@@ -205,70 +205,63 @@ fun HomeScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f)
-                            .padding(vertical = 16.dp)
-                            .clip(MaterialTheme.shapes.large),
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
-                        shape = MaterialTheme.shapes.large
+                            .padding(bottom = 16.dp),
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        tonalElevation = 4.dp
                     ) {
                         androidx.compose.animation.Crossfade(
                             targetState = selectedImageData,
-                            animationSpec = androidx.compose.animation.core.tween(500)
+                            animationSpec = androidx.compose.animation.core.tween(300)
                         ) { imageData ->
                             if (imageData != null) {
-                                Column(modifier = Modifier.fillMaxSize()) {
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    Image(
+                                        painter = rememberAsyncImagePainter(imageData),
+                                        contentDescription = stringResource(Res.string.home_selected_image_description),
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(MaterialTheme.shapes.large),
+                                        contentScale = ContentScale.Crop
+                                    )
                                     if (detectionData.classificationLabel != null) {
                                         Row(
                                             modifier = Modifier
-                                                .fillMaxWidth()
-                                                .background(MaterialTheme.colorScheme.primaryContainer)
-                                                .padding(horizontal = 16.dp, vertical = 10.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween
+                                                .align(Alignment.TopStart)
+                                                .padding(16.dp)
+                                                .background(
+                                                    MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.9f),
+                                                    shape = MaterialTheme.shapes.medium
+                                                )
+                                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Text(
-                                                text = "Classifier Crop: ${detectionData.classificationLabel}",
-                                                style = MaterialTheme.typography.bodyMedium.copy(
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                                )
-                                            )
-                                            Text(
-                                                text = "Confidence: ${((detectionData.classifierConfidence * 1000).toInt() / 10f)}%",
-                                                style = MaterialTheme.typography.bodyMedium.copy(
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                                )
+                                                text = detectionData.classificationLabel!!,
+                                                style = MaterialTheme.typography.titleSmall,
+                                                color = MaterialTheme.colorScheme.onSecondaryContainer
                                             )
                                         }
                                     }
-                                    Box(modifier = Modifier.fillMaxSize().weight(1f)) {
-                                        Image(
-                                            painter = rememberAsyncImagePainter(imageData),
-                                            contentDescription = stringResource(Res.string.home_selected_image_description),
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier.fillMaxSize()
-                                        )
-                                        IconButton(
-                                            onClick = {
-                                                selectedImageData = null
-                                                appViewModel.setSelectedImageByteArray(null)
-                                                detectionViewModel.reset()
-                                            },
-                                            modifier = Modifier
-                                                .align(Alignment.TopEnd)
-                                                .padding(12.dp)
-                                                .size(36.dp)
-                                                .background(
-                                                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
-                                                    shape = CircleShape
-                                                )
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Close,
-                                                contentDescription = stringResource(Res.string.home_clear_image_description),
-                                                tint = MaterialTheme.colorScheme.onSurface
+                                    IconButton(
+                                        onClick = {
+                                            appViewModel.setSelectedImageByteArray(null)
+                                            detectionViewModel.reset()
+                                            selectedImageData = null
+                                        },
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(16.dp)
+                                            .background(
+                                                MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+                                                shape = MaterialTheme.shapes.small
                                             )
-                                        }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = stringResource(Res.string.home_clear_image_description),
+                                            tint = MaterialTheme.colorScheme.onSurface
+                                        )
                                     }
                                 }
                             } else {
@@ -278,19 +271,16 @@ fun HomeScreen(
                                         .clickable { handleMainAction() },
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    androidx.compose.animation.Crossfade(
-                                        targetState = isCameraMode,
-                                        animationSpec = androidx.compose.animation.core.tween(300)
-                                    ) { isCam ->
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         Text(
-                                            text = if (isCam)
+                                            text = if (isCameraMode)
                                                 stringResource(Res.string.home_tap_take_picture)
                                             else
                                                 stringResource(Res.string.home_tap_select_picture),
                                             style = MaterialTheme.typography.titleMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             textAlign = TextAlign.Center,
-                                            modifier = Modifier.padding(24.dp)
+                                            modifier = Modifier.padding(horizontal = 24.dp)
                                         )
                                     }
                                 }

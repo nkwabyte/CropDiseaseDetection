@@ -12,7 +12,6 @@ import org.koin.core.component.inject
 import org.pytorch.executorch.EValue
 import org.pytorch.executorch.Module
 import org.pytorch.executorch.Tensor
-import org.pytorch.torchvision.TensorImageUtils
 import java.io.File
 import java.io.FileOutputStream
 
@@ -55,14 +54,14 @@ actual class ObjectDetector actual constructor() : KoinComponent {
 
         val resizedBitmap = bitmap.scale(260, 260)
         
-        val pTensor = TensorImageUtils.bitmapToFloat32Tensor(
+        val floatArray = bitmapToFloat32Array(
             resizedBitmap,
-            TensorImageUtils.TORCHVISION_NORM_MEAN_RGB,
-            TensorImageUtils.TORCHVISION_NORM_STD_RGB
+            TORCHVISION_NORM_MEAN_RGB,
+            TORCHVISION_NORM_STD_RGB
         )
         
         val inputTensor = Tensor.fromBlob(
-            pTensor.dataAsFloatArray,
+            floatArray,
             longArrayOf(1, 3, 260, 260)
         )
 
@@ -117,15 +116,15 @@ actual class ObjectDetector actual constructor() : KoinComponent {
 
         val resizedBitmap = bitmap.scale(640, 640)
 
-        // YOLO model expects pixel/255 (i.e. mean=0, std=1 after the internal /255 in bitmapToFloat32Tensor)
-        val pTensor = TensorImageUtils.bitmapToFloat32Tensor(
+        // YOLO model expects pixel/255 (i.e. mean=0, std=1 after the internal /255 in bitmapToFloat32Array)
+        val floatArray = bitmapToFloat32Array(
             resizedBitmap,
             floatArrayOf(0f, 0f, 0f),
             floatArrayOf(1f, 1f, 1f)
         )
 
         val inputTensor = Tensor.fromBlob(
-            pTensor.dataAsFloatArray,
+            floatArray,
             longArrayOf(1, 3, 640, 640)
         )
 
@@ -241,4 +240,31 @@ private fun calculateIoU(box1: FloatArray, box2: FloatArray): Float {
     val unionArea = box1Area + box2Area - intersectionArea
 
     return if (unionArea > 0) intersectionArea / unionArea else 0f
+}
+
+private val TORCHVISION_NORM_MEAN_RGB = floatArrayOf(0.485f, 0.456f, 0.406f)
+private val TORCHVISION_NORM_STD_RGB = floatArrayOf(0.229f, 0.224f, 0.225f)
+
+private fun bitmapToFloat32Array(bitmap: android.graphics.Bitmap, mean: FloatArray, std: FloatArray): FloatArray {
+    val width = bitmap.width
+    val height = bitmap.height
+    val floatArray = FloatArray(3 * width * height)
+    val pixels = IntArray(width * height)
+    bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+
+    val rOffset = 0
+    val gOffset = width * height
+    val bOffset = 2 * width * height
+
+    for (i in 0 until width * height) {
+        val pixel = pixels[i]
+        val r = ((pixel shr 16) and 0xFF) / 255.0f
+        val g = ((pixel shr 8) and 0xFF) / 255.0f
+        val b = (pixel and 0xFF) / 255.0f
+
+        floatArray[rOffset + i] = (r - mean[0]) / std[0]
+        floatArray[gOffset + i] = (g - mean[1]) / std[1]
+        floatArray[bOffset + i] = (b - mean[2]) / std[2]
+    }
+    return floatArray
 }

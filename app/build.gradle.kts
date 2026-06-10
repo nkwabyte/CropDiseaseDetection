@@ -55,8 +55,6 @@ kotlin {
 
             // ML Dependencies
             implementation(libs.executorch.android)
-            implementation(libs.pytorch.android)
-            implementation(libs.pytorch.android.torchvision)
 
             // Auth Dependencies for Android
             implementation(libs.androidx.credentials)
