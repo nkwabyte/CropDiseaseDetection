@@ -52,4 +52,5 @@ data class DetectionData(
     val imageHeight: Int? = null,
     val modelName: String? = null,
     val modelVersion: String? = null,
+    val inferenceErrorMessage: String? = null,
 )

@@ -48,7 +48,7 @@ actual class ObjectDetector actual constructor() : KoinComponent {
             println("[iOS-ObjectDetector]   Architecture : YOLO26  |  Task: object_detection")
             println("[iOS-ObjectDetector]   Input        : 640×640 RGB  |  Normalize: pixel/255")
             println("[iOS-ObjectDetector]   Classes      : 23  |  conf_threshold=0.50  iou_threshold=0.10")
-            println("[iOS-ObjectDetector]   Backend      : XNNPACK (ExecuTorch 0.6.0)")
+            println("[iOS-ObjectDetector]   Backend      : XNNPACK (ExecuTorch 1.3.1)")
         } else {
             println("[iOS-ObjectDetector] ERROR: ExecuTorch failed to load '$modelName.pte'")
         }
@@ -72,7 +72,7 @@ actual class ObjectDetector actual constructor() : KoinComponent {
             println("[iOS-ObjectDetector]   Architecture : EfficientNet-B2  |  Task: image_classification")
             println("[iOS-ObjectDetector]   Input        : 260×260 RGB  |  Normalize: ImageNet")
             println("[iOS-ObjectDetector]   Classes      : 3 (Corn, Pepper, Tomato)  |  conf_threshold=0.55")
-            println("[iOS-ObjectDetector]   Backend      : XNNPACK (ExecuTorch 0.6.0)")
+            println("[iOS-ObjectDetector]   Backend      : XNNPACK (ExecuTorch 1.3.1)")
         } else {
             println("[iOS-ObjectDetector] ERROR: ExecuTorch failed to load '$modelName.pte'")
         }
@@ -83,6 +83,11 @@ actual class ObjectDetector actual constructor() : KoinComponent {
 
         val nsData = imageBytes.toNSData() ?: return null
         val rawOutput = bridge.runClassificationWithImageData(nsData)
+        bridge.lastClassificationErrorMessage()?.let { errorMessage ->
+            if (rawOutput.isEmpty()) {
+                throw IllegalStateException(errorMessage)
+            }
+        }
         if (rawOutput.size < 3) return null
 
         val logits = FloatArray(3) { (rawOutput[it] as NSNumber).floatValue }
@@ -109,14 +114,35 @@ actual class ObjectDetector actual constructor() : KoinComponent {
 
         val nsData = imageBytes.toNSData() ?: return emptyList()
         val rawOutput = bridge.runDetectionWithImageData(nsData)
+        bridge.lastDetectionErrorMessage()?.let { errorMessage ->
+            if (rawOutput.isEmpty()) {
+                throw IllegalStateException(errorMessage)
+            }
+        }
         if (rawOutput.isEmpty()) return emptyList()
 
         // Output shape: [1, (4+numClasses), N] stored column-major as [row * N + col]
         // We infer N from total size and numClasses = 23
         val numClasses = 23
         val rowStride = numClasses + 4
+        if (rawOutput.size % rowStride != 0) {
+            throw IllegalStateException(
+                "[iOS-ObjectDetector] Unexpected detection output size=${rawOutput.size} for rowStride=$rowStride"
+            )
+        }
         val n = rawOutput.size / rowStride
         if (n <= 0) return emptyList()
+
+        val scale = bridge.lastDetectionScale().floatValue
+        val padLeft = bridge.lastDetectionPadLeft().floatValue
+        val padTop = bridge.lastDetectionPadTop().floatValue
+        val origWidth = bridge.lastDetectionOriginalWidth().floatValue
+        val origHeight = bridge.lastDetectionOriginalHeight().floatValue
+        if (scale <= 0f || origWidth <= 0f || origHeight <= 0f) {
+            throw IllegalStateException(
+                "[iOS-ObjectDetector] Missing detection preprocess metadata: scale=$scale width=$origWidth height=$origHeight"
+            )
+        }
 
         val detectionThreshold = settingsManager.getDetectionThreshold()
         val preliminary = mutableListOf<DetectionResult>()
@@ -133,10 +159,21 @@ actual class ObjectDetector actual constructor() : KoinComponent {
                 val cy = (rawOutput[1 * n + i] as NSNumber).floatValue
                 val w  = (rawOutput[2 * n + i] as NSNumber).floatValue
                 val h  = (rawOutput[3 * n + i] as NSNumber).floatValue
+
+                val x1Lb = cx - w / 2f
+                val y1Lb = cy - h / 2f
+                val x2Lb = cx + w / 2f
+                val y2Lb = cy + h / 2f
+
+                val x1 = ((x1Lb - padLeft) / scale / origWidth * 640f).coerceIn(0f, 640f)
+                val y1 = ((y1Lb - padTop) / scale / origHeight * 640f).coerceIn(0f, 640f)
+                val x2 = ((x2Lb - padLeft) / scale / origWidth * 640f).coerceIn(0f, 640f)
+                val y2 = ((y2Lb - padTop) / scale / origHeight * 640f).coerceIn(0f, 640f)
+
                 preliminary.add(DetectionResult(
                     classIndex = classId,
                     score = maxScore,
-                    box = floatArrayOf(cx - w / 2f, cy - h / 2f, cx + w / 2f, cy + h / 2f),
+                    box = floatArrayOf(x1, y1, x2, y2),
                     className = AppConstants.CLASS_LABELS.getOrElse(classId) { "Unknown" }
                 ))
             }

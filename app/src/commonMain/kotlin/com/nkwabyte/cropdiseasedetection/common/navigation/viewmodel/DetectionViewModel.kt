@@ -48,6 +48,7 @@ class DetectionViewModel(
                         isDetectionSuccessful = false,
                         isDetected = false,
                         isDetecting = false,
+                        inferenceErrorMessage = null,
                     )
                 }
             } catch (e: Exception) {
@@ -59,7 +60,13 @@ class DetectionViewModel(
     fun detect(imageBytes: ByteArray, crop: String, width: Int, height: Int) {
         viewModelScope.launch(Dispatchers.Default) {
             try {
-                _detectionState.update { it.copy(isDetecting = true, isClassifierRejected = false) }
+                _detectionState.update {
+                    it.copy(
+                        isDetecting = true,
+                        isClassifierRejected = false,
+                        inferenceErrorMessage = null
+                    )
+                }
 
                 // Stage 1: Classifier
                 val classification = detector.classify(imageBytes)
@@ -77,7 +84,8 @@ class DetectionViewModel(
                             classificationLabel = classification.label,
                             imageWidth = width,
                             imageHeight = height,
-                            results = emptyList()
+                            results = emptyList(),
+                            inferenceErrorMessage = null
                         )
                     }
                     return@launch
@@ -100,6 +108,7 @@ class DetectionViewModel(
                             classificationLabel = classification?.label,
                             imageWidth = width,
                             imageHeight = height,
+                            inferenceErrorMessage = null,
                         )
                     }
                     return@launch
@@ -124,6 +133,7 @@ class DetectionViewModel(
                         classificationLabel = classification?.label,
                         imageWidth = width,
                         imageHeight = height,
+                        inferenceErrorMessage = null,
                     )
                 }
 
@@ -152,6 +162,16 @@ class DetectionViewModel(
                 }
             } catch (e: Exception) {
                 println("PyTorch detection failed: ${e.message}")
+                _detectionState.update {
+                    it.copy(
+                        results = emptyList(),
+                        isDetected = false,
+                        isDetectionSuccessful = false,
+                        isCropMissMatch = false,
+                        isClassifierRejected = false,
+                        inferenceErrorMessage = e.message ?: "Detection failed"
+                    )
+                }
             } finally {
                 _detectionState.update {
                     it.copy(isDetecting = false)
@@ -216,7 +236,8 @@ class DetectionViewModel(
                 isDetected = false,
                 results = emptyList(),
                 imageWidth = 0,
-                imageHeight = 0
+                imageHeight = 0,
+                inferenceErrorMessage = null
             )
         }
     }

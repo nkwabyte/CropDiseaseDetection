@@ -34,7 +34,6 @@ import com.nkwabyte.cropdiseasedetection.generated.resources.home_button_take_pi
 import com.nkwabyte.cropdiseasedetection.generated.resources.home_button_select_picture
 import com.nkwabyte.cropdiseasedetection.generated.resources.no_detection_message
 import com.nkwabyte.cropdiseasedetection.generated.resources.ok_text
-import com.nkwabyte.cropdiseasedetection.generated.resources.error_detecting_message
 import com.nkwabyte.cropdiseasedetection.generated.resources.classifier_rejection_message
 import com.nkwabyte.cropdiseasedetection.generated.resources.home_permission_denied
 import com.nkwabyte.cropdiseasedetection.generated.resources.home_selected_image_description
@@ -66,10 +65,17 @@ fun HomeScreen(
 
     val noDetectionMessage = stringResource(Res.string.no_detection_message)
     val okText = stringResource(Res.string.ok_text)
-    val errorDetectingMessage = stringResource(Res.string.error_detecting_message)
     val classifierRejectionMessage = stringResource(Res.string.classifier_rejection_message)
 
     LaunchedEffect(detectionData) {
+        detectionData.inferenceErrorMessage?.let { message ->
+            snackBarHostState.showSnackbar(
+                message = message,
+                actionLabel = okText
+            )
+            return@LaunchedEffect
+        }
+
         if (detectionData.isClassifierRejected) {
             snackBarHostState.showSnackbar(
                 message = classifierRejectionMessage,
@@ -84,12 +90,6 @@ fun HomeScreen(
         if (detectionData.isDetected && detectionData.results.isEmpty()) {
             snackBarHostState.showSnackbar(
                 message = noDetectionMessage,
-                actionLabel = okText
-            )
-        }
-        if (detectionData.results.isEmpty() && (detectionData.isDetected && !detectionData.isCropMissMatch)) {
-            snackBarHostState.showSnackbar(
-                message = errorDetectingMessage,
                 actionLabel = okText
             )
         }

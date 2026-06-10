@@ -35,6 +35,19 @@ NS_ASSUME_NONNULL_BEGIN
 /** Release both models and free memory. */
 - (void)releaseModels;
 
+/** Returns the last native detection inference error, if any. */
+- (nullable NSString *)lastDetectionErrorMessage;
+
+/** Returns the last native classification inference error, if any. */
+- (nullable NSString *)lastClassificationErrorMessage;
+
+/** Metadata from the latest detection preprocessing pass. */
+- (NSNumber *)lastDetectionOriginalWidth;
+- (NSNumber *)lastDetectionOriginalHeight;
+- (NSNumber *)lastDetectionScale;
+- (NSNumber *)lastDetectionPadLeft;
+- (NSNumber *)lastDetectionPadTop;
+
 @end
 
 NS_ASSUME_NONNULL_END
