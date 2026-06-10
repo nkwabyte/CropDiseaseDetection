@@ -16,6 +16,10 @@
 		B7C4F6137AC8345E71E92063 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 617043448F4869026C2F0BB4 /* FirebaseAuth */; };
 		BC1E7F392FD70559009B6C63 /* crop_classifier.pte in Resources */ = {isa = PBXBuildFile; fileRef = BC1E7F382FD70559009B6C63 /* crop_classifier.pte */; };
 		BC1E7F3B2FD70566009B6C63 /* crop_disease_yolo26.pte in Resources */ = {isa = PBXBuildFile; fileRef = BC1E7F3A2FD70566009B6C63 /* crop_disease_yolo26.pte */; };
+		BC98B09C2FD74C170039C9F4 /* executorch in Frameworks */ = {isa = PBXBuildFile; productRef = BC98B09C2FD74C170039C9F2 /* executorch */; };
+		BCAA110000000000000001AB /* ExecuTorchBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCAA110000000000000001AA /* ExecuTorchBridge.swift */; };
+		BCAA110000000000000002AB /* backend_xnnpack in Frameworks */ = {isa = PBXBuildFile; productRef = BCAA110000000000000002AC /* backend_xnnpack */; };
+		BCAA110000000000000003AB /* kernels_portable in Frameworks */ = {isa = PBXBuildFile; productRef = BCAA110000000000000003AC /* kernels_portable */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,6 +31,8 @@
 		419B5E5E2A1D000000000005 /* iosApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iosApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BC1E7F382FD70559009B6C63 /* crop_classifier.pte */ = {isa = PBXFileReference; lastKnownFileType = file; path = crop_classifier.pte; sourceTree = "<group>"; };
 		BC1E7F3A2FD70566009B6C63 /* crop_disease_yolo26.pte */ = {isa = PBXFileReference; lastKnownFileType = file; path = crop_disease_yolo26.pte; sourceTree = "<group>"; };
+		BCAA110000000000000001AA /* ExecuTorchBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecuTorchBridge.swift; sourceTree = "<group>"; };
+		BCAA110000000000000001AC /* ExecuTorchBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ExecuTorchBridge.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -37,6 +43,9 @@
 				445C052442747365B7CB2124 /* FirebaseCore in Frameworks */,
 				B7C4F6137AC8345E71E92063 /* FirebaseAuth in Frameworks */,
 				379D4C6DBBA934A8EF44CDDE /* FirebaseFirestore in Frameworks */,
+				BC98B09C2FD74C170039C9F4 /* executorch in Frameworks */,
+				BCAA110000000000000002AB /* backend_xnnpack in Frameworks */,
+				BCAA110000000000000003AB /* kernels_portable in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -61,6 +70,8 @@
 				09E825AEFB0318C83176FA6B /* Assets.xcassets */,
 				BC1E7F382FD70559009B6C63 /* crop_classifier.pte */,
 				BC1E7F3A2FD70566009B6C63 /* crop_disease_yolo26.pte */,
+				BCAA110000000000000001AA /* ExecuTorchBridge.swift */,
+				BCAA110000000000000001AC /* ExecuTorchBridge.h */,
 			);
 			path = iosApp;
 			sourceTree = "<group>";
@@ -94,6 +105,9 @@
 				16D66C9411832E1B7D572C76 /* FirebaseCore */,
 				617043448F4869026C2F0BB4 /* FirebaseAuth */,
 				84FCD721953CC33D9035BCCD /* FirebaseFirestore */,
+				BC98B09C2FD74C170039C9F2 /* executorch */,
+				BCAA110000000000000002AC /* backend_xnnpack */,
+				BCAA110000000000000003AC /* kernels_portable */,
 			);
 			productName = iosApp;
 			productReference = 419B5E5E2A1D000000000005 /* iosApp.app */;
@@ -164,6 +178,7 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
+				"$(SRCROOT)/../app/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)/ComposeApp.framework/ComposeApp",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -178,6 +193,7 @@
 			files = (
 				419B5E5E2A1D000000000007 /* ContentView.swift in Sources */,
 				419B5E5E2A1D000000000006 /* iOSApp.swift in Sources */,
+				BCAA110000000000000001AB /* ExecuTorchBridge.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -238,7 +254,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -298,7 +314,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
@@ -328,7 +344,27 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				OTHER_LDFLAGS = "-ObjC";
+				OTHER_LDFLAGS = (
+					"-ObjC",
+				);
+				"OTHER_LDFLAGS[sdk=iphoneos*]" = (
+					"-ObjC",
+					"-force_load",
+					"$(BUILT_PRODUCTS_DIR)/libbackend_xnnpack_ios.a",
+					"-force_load",
+					"$(BUILT_PRODUCTS_DIR)/libkernels_portable_ios.a",
+					"-force_load",
+					"$(BUILT_PRODUCTS_DIR)/libexecutorch_ios.a",
+				);
+				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = (
+					"-ObjC",
+					"-force_load",
+					"$(BUILT_PRODUCTS_DIR)/libbackend_xnnpack_simulator.a",
+					"-force_load",
+					"$(BUILT_PRODUCTS_DIR)/libkernels_portable_simulator.a",
+					"-force_load",
+					"$(BUILT_PRODUCTS_DIR)/libexecutorch_simulator.a",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.nkwabyte.cropdiseasedetection;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -356,7 +392,27 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				OTHER_LDFLAGS = "-ObjC";
+				OTHER_LDFLAGS = (
+					"-ObjC",
+				);
+				"OTHER_LDFLAGS[sdk=iphoneos*]" = (
+					"-ObjC",
+					"-force_load",
+					"$(BUILT_PRODUCTS_DIR)/libbackend_xnnpack_ios.a",
+					"-force_load",
+					"$(BUILT_PRODUCTS_DIR)/libkernels_portable_ios.a",
+					"-force_load",
+					"$(BUILT_PRODUCTS_DIR)/libexecutorch_ios.a",
+				);
+				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = (
+					"-ObjC",
+					"-force_load",
+					"$(BUILT_PRODUCTS_DIR)/libbackend_xnnpack_simulator.a",
+					"-force_load",
+					"$(BUILT_PRODUCTS_DIR)/libkernels_portable_simulator.a",
+					"-force_load",
+					"$(BUILT_PRODUCTS_DIR)/libexecutorch_simulator.a",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.nkwabyte.cropdiseasedetection;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -394,15 +450,15 @@
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 11.0.0;
+				minimumVersion = 12.0.0;
 			};
 		};
 		BC98B09C2FD74C170039C9F1 /* XCRemoteSwiftPackageReference "executorch" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/pytorch/executorch";
 			requirement = {
-				branch = main;
-				kind = branch;
+				kind = revision;
+				revision = 5a47ec0aa5b42abb759d21a65fa8ff3a1e42cedb;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -422,6 +478,21 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7C4F1707FE80007C7DCEAE3C /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseFirestore;
+		};
+		BC98B09C2FD74C170039C9F2 /* executorch */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BC98B09C2FD74C170039C9F1 /* XCRemoteSwiftPackageReference "executorch" */;
+			productName = executorch;
+		};
+		BCAA110000000000000002AC /* backend_xnnpack */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BC98B09C2FD74C170039C9F1 /* XCRemoteSwiftPackageReference "executorch" */;
+			productName = backend_xnnpack;
+		};
+		BCAA110000000000000003AC /* kernels_portable */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BC98B09C2FD74C170039C9F1 /* XCRemoteSwiftPackageReference "executorch" */;
+			productName = kernels_portable;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

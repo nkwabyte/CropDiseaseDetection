@@ -1,10 +1,5 @@
 import Foundation
 import UIKit
-
-// REQUIRES: ExecuTorch Swift Package added to this Xcode target.
-// Xcode → File → Add Package Dependencies
-// URL: https://github.com/pytorch/executorch  tag: 0.6.0
-// Product to add: executorch (or ExecuTorch, depending on release)
 import ExecuTorch
 
 // @objc(ExecuTorchBridge) makes the ObjC class name exactly "ExecuTorchBridge",
@@ -22,7 +17,9 @@ public class ExecuTorchBridge: NSObject {
 
     @objc public func loadDetectionModel(atPath path: String) -> Bool {
         do {
-            detectionModule = try Module(filePath: path)
+            let module = try Module(filePath: path)
+            try module.load()
+            detectionModule = module
             return true
         } catch {
             print("[ExecuTorchBridge] Detection load failed: \(error)")
@@ -32,7 +29,9 @@ public class ExecuTorchBridge: NSObject {
 
     @objc public func loadClassifierModel(atPath path: String) -> Bool {
         do {
-            classifierModule = try Module(filePath: path)
+            let module = try Module(filePath: path)
+            try module.load()
+            classifierModule = module
             return true
         } catch {
             print("[ExecuTorchBridge] Classifier load failed: \(error)")
@@ -46,22 +45,24 @@ public class ExecuTorchBridge: NSObject {
     /// Output: raw float array flattened from [1, 27, N].
     @objc public func runDetection(withImageData imageData: Data) -> [NSNumber] {
         guard let module = detectionModule,
-              let pixels = preprocessCHW(imageData, width: 640, height: 640,
+              let data = preprocessCHW(imageData, width: 640, height: 640,
                                          mean: (0.0, 0.0, 0.0),
                                          std: (1.0, 1.0, 1.0)) else { return [] }
-        return runForward(module: module, pixels: pixels,
-                          shape: [1, 3, 640, 640], tag: "detection")
+        return runForward(module: module, data: data,
+                          shape: [NSNumber(value: Int32(1)), NSNumber(value: Int32(3)), NSNumber(value: Int32(640)), NSNumber(value: Int32(640))],
+                          tag: "detection")
     }
 
     /// EfficientNet-B2: input 260×260, ImageNet normalization.
     /// Output: logits for [Corn, Pepper, Tomato].
     @objc public func runClassification(withImageData imageData: Data) -> [NSNumber] {
         guard let module = classifierModule,
-              let pixels = preprocessCHW(imageData, width: 260, height: 260,
+              let data = preprocessCHW(imageData, width: 260, height: 260,
                                          mean: (0.485, 0.456, 0.406),
                                          std: (0.229, 0.224, 0.225)) else { return [] }
-        return runForward(module: module, pixels: pixels,
-                          shape: [1, 3, 260, 260], tag: "classification")
+        return runForward(module: module, data: data,
+                          shape: [NSNumber(value: Int32(1)), NSNumber(value: Int32(3)), NSNumber(value: Int32(260)), NSNumber(value: Int32(260))],
+                          tag: "classification")
     }
 
     @objc public func releaseModels() {
@@ -71,13 +72,18 @@ public class ExecuTorchBridge: NSObject {
 
     // MARK: - Private helpers
 
-    private func runForward(module: Module, pixels: [Float],
-                             shape: [Int64], tag: String) -> [NSNumber] {
+    private func runForward(module: Module, data: Data,
+                             shape: [NSNumber], tag: String) -> [NSNumber] {
         do {
-            let inputTensor = Tensor(shape: shape, data: pixels)
-            let outputs = try module.forward([Value(tensor: inputTensor)])
-            guard let outTensor = outputs.first?.toTensor() else { return [] }
-            return outTensor.floats.map { NSNumber(value: $0) }
+            let inputTensor = Tensor(data: data, shape: shape, dataType: .float)
+            let outputs = try module.forward(inputTensor)
+            guard let outTensor = outputs.first?.tensor else { return [] }
+            var result: [NSNumber] = []
+            outTensor.bytes { pointer, count, _ in
+                let floats = pointer.assumingMemoryBound(to: Float.self)
+                result = (0..<count).map { NSNumber(value: floats[$0]) }
+            }
+            return result
         } catch {
             print("[ExecuTorchBridge] \(tag) inference failed: \(error)")
             return []
@@ -87,7 +93,7 @@ public class ExecuTorchBridge: NSObject {
     /// Decodes JPEG/PNG bytes, resizes to (width × height), returns CHW float array.
     private func preprocessCHW(_ data: Data, width: Int, height: Int,
                                 mean: (Float, Float, Float),
-                                std: (Float, Float, Float)) -> [Float]? {
+                                std: (Float, Float, Float)) -> Data? {
         guard let uiImage = UIImage(data: data),
               let cgImage = uiImage.cgImage else { return nil }
 
@@ -103,12 +109,20 @@ public class ExecuTorchBridge: NSObject {
         ctx.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
 
         let n = width * height
-        var chw = [Float](repeating: 0, count: 3 * n)
+        let byteCount = 3 * n * MemoryLayout<Float>.stride
+        
+        let ptr = UnsafeMutableRawPointer.allocate(byteCount: byteCount, alignment: 16)
+        let floatPtr = ptr.bindMemory(to: Float.self, capacity: 3 * n)
+        
         for i in 0..<n {
-            chw[0 * n + i] = (Float(rawBytes[i * 4])     / 255.0 - mean.0) / std.0
-            chw[1 * n + i] = (Float(rawBytes[i * 4 + 1]) / 255.0 - mean.1) / std.1
-            chw[2 * n + i] = (Float(rawBytes[i * 4 + 2]) / 255.0 - mean.2) / std.2
+            floatPtr[0 * n + i] = (Float(rawBytes[i * 4])     / 255.0 - mean.0) / std.0
+            floatPtr[1 * n + i] = (Float(rawBytes[i * 4 + 1]) / 255.0 - mean.1) / std.1
+            floatPtr[2 * n + i] = (Float(rawBytes[i * 4 + 2]) / 255.0 - mean.2) / std.2
         }
-        return chw
+        
+        let alignedData = Data(bytesNoCopy: ptr, count: byteCount, deallocator: .custom { p, _ in
+            p.deallocate()
+        })
+        return alignedData
     }
 }
