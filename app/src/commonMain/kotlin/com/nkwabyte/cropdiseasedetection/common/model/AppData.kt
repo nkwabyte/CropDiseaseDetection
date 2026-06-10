@@ -12,7 +12,8 @@ data class AppData(
     val selectedTheme: String = "System Default",
     val classifierThreshold: Float = 0.55f,
     val iouThreshold: Float = 0.10f,
-    val detectionThreshold: Float = 0.50f
+    val detectionThreshold: Float = 0.10f,
+    val userRole: UserRole = UserRole.FARMER
 ) {
     fun isNoResult(): Boolean {
         return detectionResult.isEmpty()

@@ -30,6 +30,7 @@ import com.nkwabyte.cropdiseasedetection.generated.resources.*
 import com.nkwabyte.cropdiseasedetection.common.navigation.appbar.AppBar
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AuthState
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AuthViewModel
+import com.nkwabyte.cropdiseasedetection.common.model.UserRole
 import com.nkwabyte.cropdiseasedetection.ui.components.GradientSnackBar
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,6 +46,7 @@ fun RegisterScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var selectedRole by remember { mutableStateOf(UserRole.FARMER) }
 
     val authState by authViewModel.authState.collectAsState()
 
@@ -232,6 +234,35 @@ fun RegisterScreen(
                     enabled = authState != AuthState.Loading
                 )
 
+                // Role Selector
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = stringResource(Res.string.register_role_label),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = selectedRole == UserRole.FARMER,
+                            onClick = { selectedRole = UserRole.FARMER },
+                            label = { Text(stringResource(Res.string.register_role_farmer)) },
+                            modifier = Modifier.weight(1f),
+                            enabled = authState != AuthState.Loading
+                        )
+                        FilterChip(
+                            selected = selectedRole == UserRole.FIELD_AGENT,
+                            onClick = { selectedRole = UserRole.FIELD_AGENT },
+                            label = { Text(stringResource(Res.string.register_role_field_agent)) },
+                            modifier = Modifier.weight(1f),
+                            enabled = authState != AuthState.Loading
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Register Button
@@ -244,7 +275,7 @@ fun RegisterScreen(
                             snackBarMessage = "Password must be at least 6 characters"
                             isErrorSnackBar = true
                         } else {
-                            authViewModel.registerWithEmail(email, password, userName)
+                            authViewModel.registerWithEmail(email, password, userName, selectedRole)
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),

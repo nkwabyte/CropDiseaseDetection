@@ -14,6 +14,7 @@ data class UserProfile(
     val userBio: String? = null,
     val userLocation: String? = null,
     val userCrops: List<String> = emptyList(),
+    val role: UserRole = UserRole.FARMER,
 ){
     fun isValid(): Boolean {
         return userId.isNotEmpty() && userName.isNotEmpty()

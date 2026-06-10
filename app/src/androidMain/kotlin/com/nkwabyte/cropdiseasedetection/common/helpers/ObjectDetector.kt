@@ -1,6 +1,7 @@
 package com.nkwabyte.cropdiseasedetection.common.helpers
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
 import androidx.core.graphics.scale
@@ -14,6 +15,7 @@ import org.pytorch.executorch.Module
 import org.pytorch.executorch.Tensor
 import java.io.File
 import java.io.FileOutputStream
+import kotlin.math.roundToInt
 
 actual class ObjectDetector actual constructor() : KoinComponent {
     private val context: Context by inject()
@@ -114,14 +116,22 @@ actual class ObjectDetector actual constructor() : KoinComponent {
             ?: return emptyList()
         val module = _module ?: return emptyList()
 
-        val resizedBitmap = bitmap.scale(640, 640)
+        val origWidth = bitmap.width
+        val origHeight = bitmap.height
 
-        // YOLO model expects pixel/255 (i.e. mean=0, std=1 after the internal /255 in bitmapToFloat32Array)
+        // Letterbox to 640×640 maintaining aspect ratio — matches ultralytics preprocessing.
+        // Stretching (scale(640,640)) distorts the aspect ratio and causes the model to miss detections.
+        val (letterboxedBitmap, meta) = letterboxBitmap(bitmap, 640)
+        val scale = meta[0]
+        val padLeft = meta[1]
+        val padTop = meta[2]
+
         val floatArray = bitmapToFloat32Array(
-            resizedBitmap,
+            letterboxedBitmap,
             floatArrayOf(0f, 0f, 0f),
             floatArrayOf(1f, 1f, 1f)
         )
+        letterboxedBitmap.recycle()
 
         val inputTensor = Tensor.fromBlob(
             floatArray,
@@ -132,13 +142,13 @@ actual class ObjectDetector actual constructor() : KoinComponent {
         if (outputTensors == null || outputTensors.isEmpty()) {
             return emptyList()
         }
-        
+
         val outputTensor = outputTensors[0].toTensor()
         val outputArray = outputTensor.getDataAsFloatArray()
         val outputShape = outputTensor.shape()
 
-        val numClasses = outputShape[1].toInt() - 4 
-        val numPredictions = outputShape[2].toInt() 
+        val numClasses = outputShape[1].toInt() - 4
+        val numPredictions = outputShape[2].toInt()
 
         val preliminaryDetections = mutableListOf<DetectionResult>()
 
@@ -154,15 +164,23 @@ actual class ObjectDetector actual constructor() : KoinComponent {
             }
 
             if (maxScore > settingsManager.getDetectionThreshold()) {
+                // Boxes from model are in letterboxed-640×640 space.
+                // Un-letterbox to original pixel coords, then re-express in stretched-640×640
+                // space so drawBoundingBoxesOnBitmap(modelWidth=640, modelHeight=640) maps correctly.
                 val cx = outputArray[0 * numPredictions + i]
                 val cy = outputArray[1 * numPredictions + i]
-                val w = outputArray[2 * numPredictions + i]
-                val h = outputArray[3 * numPredictions + i]
+                val w  = outputArray[2 * numPredictions + i]
+                val h  = outputArray[3 * numPredictions + i]
 
-                val x1 = cx - w / 2f
-                val y1 = cy - h / 2f
-                val x2 = cx + w / 2f
-                val y2 = cy + h / 2f
+                val x1Lb = cx - w / 2f
+                val y1Lb = cy - h / 2f
+                val x2Lb = cx + w / 2f
+                val y2Lb = cy + h / 2f
+
+                val x1 = ((x1Lb - padLeft) / scale / origWidth  * 640f).coerceIn(0f, 640f)
+                val y1 = ((y1Lb - padTop)  / scale / origHeight * 640f).coerceIn(0f, 640f)
+                val x2 = ((x2Lb - padLeft) / scale / origWidth  * 640f).coerceIn(0f, 640f)
+                val y2 = ((y2Lb - padTop)  / scale / origHeight * 640f).coerceIn(0f, 640f)
 
                 preliminaryDetections.add(
                     DetectionResult(
@@ -176,6 +194,25 @@ actual class ObjectDetector actual constructor() : KoinComponent {
         }
 
         return nonMaxSuppression(preliminaryDetections, settingsManager.getIouThreshold())
+    }
+
+    private fun letterboxBitmap(source: Bitmap, targetSize: Int): Pair<Bitmap, FloatArray> {
+        val origW = source.width.toFloat()
+        val origH = source.height.toFloat()
+        val scale = minOf(targetSize / origW, targetSize / origH)
+        val scaledW = (origW * scale).roundToInt()
+        val scaledH = (origH * scale).roundToInt()
+        val padLeft = (targetSize - scaledW) / 2f
+        val padTop  = (targetSize - scaledH) / 2f
+
+        val result = Bitmap.createBitmap(targetSize, targetSize, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(result)
+        canvas.drawColor(android.graphics.Color.rgb(114, 114, 114))
+        val scaledBitmap = source.scale(scaledW, scaledH)
+        canvas.drawBitmap(scaledBitmap, padLeft, padTop, null)
+        scaledBitmap.recycle()
+
+        return Pair(result, floatArrayOf(scale, padLeft, padTop))
     }
 
     private fun assetFilePath(context: Context, assetName: String): String {

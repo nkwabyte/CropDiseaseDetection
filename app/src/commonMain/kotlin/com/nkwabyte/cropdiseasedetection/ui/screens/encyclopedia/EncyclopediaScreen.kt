@@ -63,7 +63,9 @@ fun EncyclopediaScreen(
     val filteredDiseases = remember(searchQuery, selectedCropFilter) {
         DiseaseDatabase.diseases.filter { disease ->
             val matchesCrop = selectedCropFilter == "All" || disease.crop.equals(selectedCropFilter, ignoreCase = true)
-            val matchesQuery = disease.name.contains(searchQuery, ignoreCase = true) ||
+            val matchesQuery = searchQuery.isBlank() ||
+                    disease.name.contains(searchQuery, ignoreCase = true) ||
+                    disease.localName.contains(searchQuery, ignoreCase = true) ||
                     disease.description.contains(searchQuery, ignoreCase = true) ||
                     disease.symptoms.contains(searchQuery, ignoreCase = true)
             matchesCrop && matchesQuery
@@ -456,6 +458,15 @@ fun DiseaseDetailDialog(
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                         )
+                        if (disease.localName.isNotBlank()) {
+                            Text(
+                                text = disease.localName,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                                    fontWeight = FontWeight.Medium
+                                )
+                            )
+                        }
                     }
                     
                     IconButton(
@@ -501,7 +512,16 @@ fun DiseaseDetailDialog(
                     DetailSection(title = "Description", content = disease.description)
                     DetailSection(title = "Symptoms & Identifiers", content = disease.symptoms)
                     DetailSection(title = "Pathogen & Cause", content = disease.causes)
-                    DetailSection(title = "Prevention & Remedies", content = disease.prevention)
+                    if (!disease.isHealthy) {
+                        DetailSection(title = "Effects on Crop & Yield", content = disease.effects)
+                    }
+                    DetailSection(title = "Prevention & Cultural Control", content = disease.prevention)
+                    if (!disease.isHealthy) {
+                        DetailSection(title = "Organic / Biological Control", content = disease.organicMitigation)
+                        DetailSection(title = "Chemical Control", content = disease.chemicalMitigation)
+                    } else {
+                        DetailSection(title = "Best Practices", content = disease.organicMitigation)
+                    }
 
                     Spacer(modifier = Modifier.height(16.dp))
                 }

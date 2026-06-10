@@ -1,6 +1,7 @@
 package com.nkwabyte.cropdiseasedetection.data.repository
 
 import com.nkwabyte.cropdiseasedetection.common.model.DetectionResult
+import com.nkwabyte.cropdiseasedetection.common.model.UserRole
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
 import dev.gitlive.firebase.firestore.firestore
@@ -21,6 +22,36 @@ data class DetectionRecord(
     val modelName: String? = null,
     val modelVersion: String? = null,
     val platform: String? = null
+)
+
+@Serializable
+data class UserProfileRecord(
+    val userId: String = "",
+    val userName: String = "",
+    val userEmail: String? = null,
+    val role: String = "FARMER",
+    val createdAt: Long = 0L
+)
+
+@Serializable
+data class FlaggedRecord(
+    val flaggedBy: String,
+    val flaggedByName: String,
+    val flaggedByRole: String,
+    val timestamp: Long,
+    val cropName: String,
+    val imageUrl: String,
+    val detectionResults: List<DetectionResult>,
+    val classificationLabel: String?,
+    val classifierConfidence: Float,
+    val imageWidth: Int,
+    val imageHeight: Int,
+    val notes: String?,
+    val platform: String?,
+    val modelName: String?,
+    val detectionThreshold: Float,
+    val iouThreshold: Float,
+    val classifierThreshold: Float
 )
 
 class SyncRepository {
@@ -84,6 +115,88 @@ class SyncRepository {
         }
     }
 
+    suspend fun saveUserProfile(userName: String, userEmail: String?, role: UserRole) {
+        try {
+            val user = Firebase.auth.currentUser ?: return
+            val record = UserProfileRecord(
+                userId = user.uid,
+                userName = userName,
+                userEmail = userEmail,
+                role = role.name,
+                createdAt = io.ktor.util.date.GMTDate().timestamp
+            )
+            firestore.collection("users").document(user.uid).set(record)
+            println("Successfully saved user profile to Firestore")
+        } catch (e: Exception) {
+            println("Failed to save user profile to Firestore: ${e.message}")
+        }
+    }
+
+    suspend fun getUserRole(): UserRole {
+        return try {
+            val user = Firebase.auth.currentUser ?: return UserRole.FARMER
+            val doc = firestore.collection("users").document(user.uid).get()
+            if (doc.exists) {
+                val record = doc.data(UserProfileRecord.serializer())
+                runCatching { UserRole.valueOf(record.role) }.getOrDefault(UserRole.FARMER)
+            } else {
+                UserRole.FARMER
+            }
+        } catch (e: Exception) {
+            println("Failed to fetch user role: ${e.message}")
+            UserRole.FARMER
+        }
+    }
+
+    suspend fun saveFlaggedRecord(
+        imageUrl: String,
+        cropName: String,
+        userRole: String,
+        detectionResults: List<DetectionResult>,
+        classificationLabel: String?,
+        classifierConfidence: Float,
+        imageWidth: Int,
+        imageHeight: Int,
+        notes: String?,
+        platform: String?,
+        modelName: String?,
+        detectionThreshold: Float,
+        iouThreshold: Float,
+        classifierThreshold: Float
+    ) {
+        try {
+            val user = Firebase.auth.currentUser
+            val uid = user?.uid ?: "anonymous"
+            val displayName = user?.displayName ?: "Unknown"
+
+            val record = FlaggedRecord(
+                flaggedBy = uid,
+                flaggedByName = displayName,
+                flaggedByRole = userRole,
+                timestamp = io.ktor.util.date.GMTDate().timestamp,
+                cropName = cropName,
+                imageUrl = imageUrl,
+                detectionResults = detectionResults,
+                classificationLabel = classificationLabel,
+                classifierConfidence = classifierConfidence,
+                imageWidth = imageWidth,
+                imageHeight = imageHeight,
+                notes = notes,
+                platform = platform,
+                modelName = modelName,
+                detectionThreshold = detectionThreshold,
+                iouThreshold = iouThreshold,
+                classifierThreshold = classifierThreshold
+            )
+
+            firestore.collection("flagged").add(record)
+            println("Successfully saved flagged record to Firestore")
+        } catch (e: Exception) {
+            println("Failed to save flagged record to Firestore: ${e.message}")
+            throw e
+        }
+    }
+
     suspend fun anonymizeUserData() {
         try {
             val user = Firebase.auth.currentUser
@@ -93,12 +206,10 @@ class SyncRepository {
                 return
             }
 
-            // Get all records belonging to this user
             val response = firestore.collection("detections")
                 .where { "userId" equalTo uid }
                 .get()
 
-            // Update each record's userId to 'anonymous'
             for (document in response.documents) {
                 document.reference.update("userId" to "anonymous")
             }

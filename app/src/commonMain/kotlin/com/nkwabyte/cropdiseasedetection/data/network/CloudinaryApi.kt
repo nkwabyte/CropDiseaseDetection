@@ -32,12 +32,18 @@ class CloudinaryApi {
         }
     }
 
-    suspend fun uploadImage(imageBytes: ByteArray): String? {
+    suspend fun uploadImage(imageBytes: ByteArray, folder: String? = null): String? {
         try {
             val timestamp = (GMTDate().timestamp / 1000L).toString()
             val apiSecret = BuildKonfig.CLOUDINARY_API_SECRET
-            
-            val stringToSign = "timestamp=$timestamp$apiSecret"
+
+            // Cloudinary signing: params sorted alphabetically (excluding file, api_key, resource_type, cloud_name)
+            val stringToSign = if (folder != null) {
+                "folder=$folder&timestamp=$timestamp$apiSecret"
+            } else {
+                "timestamp=$timestamp$apiSecret"
+            }
+
             val signature = SHA1().digest(stringToSign.encodeToByteArray()).joinToString("") { byte ->
                 val hex = "0123456789abcdef"
                 "${hex[(byte.toInt() shr 4) and 0x0f]}${hex[byte.toInt() and 0x0f]}"
@@ -53,6 +59,7 @@ class CloudinaryApi {
                     append("api_key", BuildKonfig.CLOUDINARY_API_KEY)
                     append("timestamp", timestamp)
                     append("signature", signature)
+                    if (folder != null) append("folder", folder)
                 }
             )
 

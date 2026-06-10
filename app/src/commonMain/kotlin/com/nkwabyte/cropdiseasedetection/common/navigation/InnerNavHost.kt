@@ -7,6 +7,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.nkwabyte.cropdiseasedetection.common.navigation.routes.*
+import com.nkwabyte.cropdiseasedetection.ui.screens.home.RecommendationScreen
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AppViewModel
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.DetectionViewModel
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.ProfileViewModel
@@ -25,6 +26,7 @@ import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AuthViewModel
+import com.nkwabyte.cropdiseasedetection.common.model.UserRole
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
 import androidx.compose.runtime.collectAsState
@@ -48,16 +50,18 @@ fun InnerNavHost(
         val user = firebaseUser
         if (user != null) {
             val email = user.email ?: ""
-            val name = user.displayName?.ifEmpty { null } 
+            val name = user.displayName?.ifEmpty { null }
                 ?: email.substringBefore("@").ifEmpty { "Farmer" }
-            
+
             profileViewModel.updateProfile(
                 userId = user.uid,
                 userName = name,
                 userEmail = email
             )
+            appViewModel.loadUserRole()
         } else {
             profileViewModel.resetProfile()
+            appViewModel.setUserRole(UserRole.FARMER)
         }
     }
 
@@ -110,6 +114,19 @@ fun InnerNavHost(
                 onCloseDetection = {
                     navController.popBackStack(route = HomeScreenRoute, inclusive = false)
                 },
+                onNavigateToRecommendations = {
+                    navController.navigate(RecommendationScreenRoute)
+                }
+            )
+        }
+
+        composable<RecommendationScreenRoute> {
+            RecommendationScreen(
+                detectionViewModel = detectionViewModel,
+                onBack = { navController.popBackStack() },
+                onDrawerButtonClick = {
+                    scope.launch { drawerState.open() }
+                }
             )
         }
 

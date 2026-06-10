@@ -35,7 +35,7 @@ actual class SettingsManager actual constructor() : KoinComponent {
     }
 
     actual fun getDetectionThreshold(): Float {
-        return prefs.getFloat("detection_threshold", 0.50f)
+        return prefs.getFloat("detection_threshold", 0.10f)
     }
 
     actual fun setDetectionThreshold(value: Float) {

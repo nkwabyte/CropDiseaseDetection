@@ -4,6 +4,7 @@ import com.nkwabyte.cropdiseasedetection.common.helpers.ObjectDetector
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.DetectionViewModel
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AppViewModel
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.ProfileViewModel
+import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AuthViewModel
 import com.nkwabyte.cropdiseasedetection.data.network.CloudinaryApi
 import com.nkwabyte.cropdiseasedetection.data.repository.SyncRepository
 import com.nkwabyte.cropdiseasedetection.common.utils.SettingsManager
@@ -15,8 +16,7 @@ val appModule = module {
     single { SyncRepository() }
     single { SettingsManager() }
 
-    // Shared instances
-    single { AppViewModel(get()) }
+    single { AppViewModel(get(), get()) }
     single {
         DetectionViewModel(
             detector = get<ObjectDetector>(),
@@ -25,5 +25,5 @@ val appModule = module {
         )
     }
     single { ProfileViewModel() }
-    single { com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AuthViewModel() }
+    single { AuthViewModel(get()) }
 }

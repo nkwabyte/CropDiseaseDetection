@@ -2,6 +2,8 @@ package com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nkwabyte.cropdiseasedetection.common.model.UserRole
+import com.nkwabyte.cropdiseasedetection.data.repository.SyncRepository
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.FirebaseAuth
 import dev.gitlive.firebase.auth.auth
@@ -17,7 +19,7 @@ sealed class AuthState {
     data class Error(val message: String) : AuthState()
 }
 
-class AuthViewModel : ViewModel() {
+class AuthViewModel(private val syncRepository: SyncRepository) : ViewModel() {
     private val auth: FirebaseAuth = Firebase.auth
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
@@ -43,7 +45,7 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    fun registerWithEmail(email: String, pass: String, userName: String) {
+    fun registerWithEmail(email: String, pass: String, userName: String, role: UserRole = UserRole.FARMER) {
         if (email.isBlank() || pass.isBlank() || userName.isBlank()) {
             _authState.value = AuthState.Error("Username, email, and password cannot be empty")
             return
@@ -57,6 +59,7 @@ class AuthViewModel : ViewModel() {
                 } catch (pe: Exception) {
                     println("Failed to update display name: ${pe.message}")
                 }
+                syncRepository.saveUserProfile(userName, email.trim(), role)
                 _authState.value = AuthState.Success("Registered successfully")
             } catch (e: Exception) {
                 _authState.value = AuthState.Error(e.message ?: "Registration failed")

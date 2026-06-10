@@ -1,15 +1,22 @@
 package com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.nkwabyte.cropdiseasedetection.common.model.AppData
 import com.nkwabyte.cropdiseasedetection.common.model.DetectionResult
+import com.nkwabyte.cropdiseasedetection.common.model.UserRole
 import com.nkwabyte.cropdiseasedetection.common.utils.SettingsManager
+import com.nkwabyte.cropdiseasedetection.data.repository.SyncRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
-class AppViewModel(private val settingsManager: SettingsManager): ViewModel() {
+class AppViewModel(
+    private val settingsManager: SettingsManager,
+    private val syncRepository: SyncRepository
+) : ViewModel() {
     private val _appState = MutableStateFlow(
         AppData(
             selectedCrop = null,
@@ -29,6 +36,17 @@ class AppViewModel(private val settingsManager: SettingsManager): ViewModel() {
         println("AppViewModel initialized with state: ${_appState.value}")
     }
 
+    fun loadUserRole() {
+        viewModelScope.launch {
+            val role = syncRepository.getUserRole()
+            _appState.update { it.copy(userRole = role) }
+        }
+    }
+
+    fun setUserRole(role: UserRole) {
+        _appState.update { it.copy(userRole = role) }
+    }
+
     fun setSelectedCrop(crop: String) {
         _appState.update { currentState ->
             currentState.copy(
@@ -38,6 +56,7 @@ class AppViewModel(private val settingsManager: SettingsManager): ViewModel() {
             )
         }
     }
+
     fun setDetectionResult(result: List<DetectionResult>) {
         _appState.update { currentState ->
             currentState.copy(
@@ -47,6 +66,7 @@ class AppViewModel(private val settingsManager: SettingsManager): ViewModel() {
             )
         }
     }
+
     fun setSelectedImageByteArray(byteArray: ByteArray?) {
         _appState.update { currentState ->
             currentState.copy(
@@ -73,18 +93,20 @@ class AppViewModel(private val settingsManager: SettingsManager): ViewModel() {
         _appState.update { currentState ->
             currentState.copy(
                 isLoading = isLoading,
-                errorMessage = null // Reset error message when loading starts
+                errorMessage = null
             )
         }
     }
+
     fun setErrorMessage(errorMessage: String?) {
         _appState.update { currentState ->
             currentState.copy(
                 errorMessage = errorMessage,
-                isLoading = false // Reset loading state when an error occurs
+                isLoading = false
             )
         }
     }
+
     fun setSelectedTheme(theme: String) {
         settingsManager.setTheme(theme)
         _appState.update { currentState ->
@@ -118,7 +140,8 @@ class AppViewModel(private val settingsManager: SettingsManager): ViewModel() {
                 selectedTheme = currentState.selectedTheme,
                 classifierThreshold = currentState.classifierThreshold,
                 iouThreshold = currentState.iouThreshold,
-                detectionThreshold = currentState.detectionThreshold
+                detectionThreshold = currentState.detectionThreshold,
+                userRole = currentState.userRole
             )
         }
     }

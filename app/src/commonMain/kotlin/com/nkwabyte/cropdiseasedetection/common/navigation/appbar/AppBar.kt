@@ -36,18 +36,23 @@ fun AppBar(
     onCheckedChange: (Boolean) -> Unit = {},
     colors: TopAppBarColors? = null,
     menuIconColor: Color? = null,
+    navigationIcon: (@Composable () -> Unit)? = null,
 ) {
 
     TopAppBar(
         modifier = modifier,
         title = title,
         navigationIcon = {
-            IconButton(onClick = onDrawerButtonClick) {
-                Icon(
-                    imageVector = Icons.Default.Menu,
-                    contentDescription = stringResource(Res.string.home_open_drawer_description),
-                    tint = menuIconColor ?: MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            if (navigationIcon != null) {
+                navigationIcon()
+            } else {
+                IconButton(onClick = onDrawerButtonClick) {
+                    Icon(
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = stringResource(Res.string.home_open_drawer_description),
+                        tint = menuIconColor ?: MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         },
         actions = {

@@ -31,7 +31,7 @@ actual class SettingsManager actual constructor() {
 
     actual fun getDetectionThreshold(): Float {
         val obj = NSUserDefaults.standardUserDefaults.objectForKey("detection_threshold")
-        return if (obj != null) NSUserDefaults.standardUserDefaults.floatForKey("detection_threshold") else 0.50f
+        return if (obj != null) NSUserDefaults.standardUserDefaults.floatForKey("detection_threshold") else 0.10f
     }
 
     actual fun setDetectionThreshold(value: Float) {

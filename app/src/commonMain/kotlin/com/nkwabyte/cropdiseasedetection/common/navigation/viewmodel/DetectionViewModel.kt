@@ -10,11 +10,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+sealed class FlagState {
+    object Idle : FlagState()
+    object Loading : FlagState()
+    data class Success(val message: String = "Detection flagged successfully") : FlagState()
+    data class Error(val message: String) : FlagState()
+}
+
 class DetectionViewModel(
     private val detector: ObjectDetector,
     private val cloudinaryApi: CloudinaryApi,
     private val syncRepository: SyncRepository
-): ViewModel() {
+) : ViewModel() {
     private val detectionData = DetectionData(
         isModelLoading = true,
         isDetecting = false,
@@ -27,6 +34,8 @@ class DetectionViewModel(
     private val _detectionState = MutableStateFlow(detectionData)
     val detectionState = _detectionState.asStateFlow()
 
+    private val _flagState = MutableStateFlow<FlagState>(FlagState.Idle)
+    val flagState = _flagState.asStateFlow()
 
     init {
         viewModelScope.launch(Dispatchers.Default) {
@@ -80,7 +89,6 @@ class DetectionViewModel(
 
                 if (results.isEmpty()) {
                     println("No detection results found")
-                    // No detection made at all
                     _detectionState.update {
                         it.copy(
                             results = emptyList(),
@@ -133,9 +141,9 @@ class DetectionViewModel(
                                 imageHeight = height,
                                 matchingResults = matchingResults,
                                 rawResults = results,
-                                modelName = "ExecuTorch (PyTorch Mobile)", // Assuming hardcoded for now, or extracted from detector config
+                                modelName = "ExecuTorch (PyTorch Mobile)",
                                 modelVersion = "v1.0",
-                                platform = "iOS/Android App" // Ideally fetched via KMP platform API
+                                platform = "iOS/Android App"
                             )
                         }
                     } catch (e: Exception) {
@@ -150,6 +158,52 @@ class DetectionViewModel(
                 }
             }
         }
+    }
+
+    fun flagDetection(
+        imageBytes: ByteArray,
+        cropName: String,
+        userRole: String,
+        notes: String?,
+        detectionThreshold: Float,
+        iouThreshold: Float,
+        classifierThreshold: Float
+    ) {
+        val state = _detectionState.value
+        _flagState.value = FlagState.Loading
+        viewModelScope.launch(Dispatchers.Default) {
+            try {
+                val imageUrl = cloudinaryApi.uploadImage(imageBytes, folder = "flagged")
+                if (imageUrl == null) {
+                    _flagState.value = FlagState.Error("Image upload failed")
+                    return@launch
+                }
+                syncRepository.saveFlaggedRecord(
+                    imageUrl = imageUrl,
+                    cropName = cropName,
+                    userRole = userRole,
+                    detectionResults = state.results,
+                    classificationLabel = state.classificationLabel,
+                    classifierConfidence = state.classifierConfidence,
+                    imageWidth = state.imageWidth ?: 0,
+                    imageHeight = state.imageHeight ?: 0,
+                    notes = notes,
+                    platform = "iOS/Android App",
+                    modelName = "ExecuTorch (PyTorch Mobile)",
+                    detectionThreshold = detectionThreshold,
+                    iouThreshold = iouThreshold,
+                    classifierThreshold = classifierThreshold
+                )
+                _flagState.value = FlagState.Success()
+            } catch (e: Exception) {
+                println("Flag workflow failed: ${e.message}")
+                _flagState.value = FlagState.Error(e.message ?: "Flag submission failed")
+            }
+        }
+    }
+
+    fun resetFlagState() {
+        _flagState.value = FlagState.Idle
     }
 
     fun reset() {

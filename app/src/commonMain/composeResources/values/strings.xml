@@ -108,12 +108,27 @@
     <string name="close_button_content_description">Close detection results</string>
     <string name="no_image_available">No image available for display.</string>
     <string name="detection_details_title">Detection Details</string>
-    <string name="selected_crop_label">Selected Crop: %s</string>
+    <string name="selected_crop_label">Selected Crop: %1$s</string>
     <string name="no_image_selected_yet">No image has been selected for detection yet.</string>
     <string name="crop_mis_match_message">Selected crop does not match the detected crop. Please select a different crop.</string>
     <string name="no_detection_message">No detection found for this image, try a different one or take a better image.</string>
     <string name="error_detecting_message">There was an error analysing this image, try again</string>
     <string name="classifier_rejection_message">This does not appear to be a Corn, Pepper, or Tomato leaf. Please scan a valid leaf image.</string>
+
+    <!-- Flag functionality strings -->
+    <string name="flag_button_text">Flag</string>
+    <string name="flag_dialog_title">Flag Detection</string>
+    <string name="flag_dialog_message">As a field agent, you can flag this detection for expert review. Add any relevant notes below.</string>
+    <string name="flag_notes_hint">Notes (optional)</string>
+    <string name="flag_submit_button">Submit Flag</string>
+    <string name="flag_cancel_button">Cancel</string>
+    <string name="flag_success_message">Detection flagged successfully</string>
+    <string name="flag_error_prefix">Flag failed: %1$s</string>
+
+    <!-- Register role selection strings -->
+    <string name="register_role_label">I am a...</string>
+    <string name="register_role_farmer">Farmer</string>
+    <string name="register_role_field_agent">Field Agent</string>
 
 
 

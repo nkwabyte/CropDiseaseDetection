@@ -4,8 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,7 +17,12 @@ import androidx.compose.ui.unit.dp
 import com.nkwabyte.cropdiseasedetection.common.navigation.appbar.AppBar
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AppViewModel
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.DetectionViewModel
+import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.FlagState
 import com.nkwabyte.cropdiseasedetection.common.model.DetectionResult
+import com.nkwabyte.cropdiseasedetection.common.model.UserRole
+import com.nkwabyte.cropdiseasedetection.common.data.DiseaseDatabase
+import com.nkwabyte.cropdiseasedetection.common.data.DiseaseInfo
+import com.nkwabyte.cropdiseasedetection.ui.screens.encyclopedia.DiseaseDetailDialog
 import kotlinx.coroutines.launch
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
@@ -28,6 +33,13 @@ import com.nkwabyte.cropdiseasedetection.generated.resources.detected_image_cont
 import com.nkwabyte.cropdiseasedetection.generated.resources.detection_details_title
 import com.nkwabyte.cropdiseasedetection.generated.resources.selected_crop_label
 import com.nkwabyte.cropdiseasedetection.generated.resources.no_detection_message
+import com.nkwabyte.cropdiseasedetection.generated.resources.flag_button_text
+import com.nkwabyte.cropdiseasedetection.generated.resources.flag_dialog_title
+import com.nkwabyte.cropdiseasedetection.generated.resources.flag_dialog_message
+import com.nkwabyte.cropdiseasedetection.generated.resources.flag_notes_hint
+import com.nkwabyte.cropdiseasedetection.generated.resources.flag_submit_button
+import com.nkwabyte.cropdiseasedetection.generated.resources.flag_cancel_button
+import com.nkwabyte.cropdiseasedetection.generated.resources.flag_success_message
 import org.jetbrains.compose.resources.stringResource
 import com.nkwabyte.cropdiseasedetection.common.utils.BoundingBoxImage
 
@@ -37,14 +49,17 @@ fun DetectionResultScreen(
     modifier: Modifier = Modifier,
     onDrawerButtonClick: () -> Unit = { },
     onCloseDetection: () -> Unit,
+    onNavigateToRecommendations: () -> Unit = {},
     detectionViewModel: DetectionViewModel,
     appViewModel: AppViewModel,
 ) {
     val snackBarHostState = remember { SnackbarHostState() }
     val appState by appViewModel.appState.collectAsState()
     val detectionState by detectionViewModel.detectionState.collectAsState()
+    val flagState by detectionViewModel.flagState.collectAsState()
+    var selectedDisease by remember { mutableStateOf<DiseaseInfo?>(null) }
+    var showFlagDialog by remember { mutableStateOf(false) }
 
-    // Filter results to only include detections relevant to the selected crop
     val detectionResults by remember(detectionState.results, appState.selectedCrop) {
         derivedStateOf {
             val selectedCrop = appState.selectedCrop
@@ -66,6 +81,21 @@ fun DetectionResultScreen(
     )
     val scope = rememberCoroutineScope()
 
+    val flagSuccessMessage = stringResource(Res.string.flag_success_message)
+
+    LaunchedEffect(flagState) {
+        when (val state = flagState) {
+            is FlagState.Success -> {
+                snackBarHostState.showSnackbar(flagSuccessMessage)
+                detectionViewModel.resetFlagState()
+            }
+            is FlagState.Error -> {
+                snackBarHostState.showSnackbar("Flag failed: ${state.message}")
+                detectionViewModel.resetFlagState()
+            }
+            else -> {}
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -94,7 +124,6 @@ fun DetectionResultScreen(
                 .fillMaxSize()
                 .padding(contentPadding)
         ) {
-            // --- 1. Image Display Area (Fixed at the top) ---
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -107,7 +136,7 @@ fun DetectionResultScreen(
                             .fillMaxSize()
                             .padding(horizontal = 8.0.dp),
                         contentAlignment = Alignment.Center
-                    ){
+                    ) {
                         BoundingBoxImage(
                             imageBytes = selectedImageBytes,
                             results = detectionResults,
@@ -120,7 +149,6 @@ fun DetectionResultScreen(
                         )
                     }
                 } else {
-                    // Loading indicator
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
@@ -130,7 +158,6 @@ fun DetectionResultScreen(
                 }
             }
 
-            // --- 2. Modal Bottom Sheet for Scrollable Content ---
             ModalBottomSheet(
                 onDismissRequest = {
                     scope.launch { sheetState.partialExpand() }
@@ -145,10 +172,7 @@ fun DetectionResultScreen(
                         .fillMaxSize()
                         .padding(horizontal = 12.dp)
                 ) {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        // Header item with the close button
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
                         item {
                             Row(
                                 modifier = Modifier
@@ -188,7 +212,6 @@ fun DetectionResultScreen(
                             }
                         }
 
-                        // List of detection result cards
                         if (detectionResults.isEmpty()) {
                             item {
                                 Text(
@@ -200,18 +223,19 @@ fun DetectionResultScreen(
                             }
                         } else {
                             items(detectionResults) { result ->
-                                DetectionResultCard(result = result)
+                                DetectionResultCard(
+                                    result = result,
+                                    onClick = {
+                                        selectedDisease = DiseaseDatabase.diseases.getOrNull(result.classIndex)
+                                    }
+                                )
                                 Spacer(modifier = Modifier.height(12.0.dp))
                             }
                         }
 
-                        // --- New: Row with "Flag" and "Recommendations" buttons ---
-                        if(detectionResults.isNotEmpty()){
+                        if (detectionResults.isNotEmpty()) {
                             item {
-                                Box(
-                                    modifier = Modifier
-                                        .height(15.0.dp)
-                                ){}
+                                Box(modifier = Modifier.height(15.0.dp)) {}
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -219,34 +243,35 @@ fun DetectionResultScreen(
                                     horizontalArrangement = Arrangement.SpaceAround,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Button(
-                                        onClick = {
-                                            scope.launch {
-                                                snackBarHostState.showSnackbar(
-                                                    "Flagging process initiated"
+                                    if (appState.userRole == UserRole.FIELD_AGENT) {
+                                        Button(
+                                            onClick = { showFlagDialog = true },
+                                            modifier = Modifier.weight(1f).padding(end = 4.dp),
+                                            enabled = flagState !is FlagState.Loading
+                                        ) {
+                                            if (flagState is FlagState.Loading) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(18.dp),
+                                                    strokeWidth = 2.dp,
+                                                    color = MaterialTheme.colorScheme.onPrimary
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = stringResource(Res.string.flag_button_text),
+                                                    style = MaterialTheme.typography.labelLarge.copy(
+                                                        textAlign = TextAlign.Center,
+                                                        color = MaterialTheme.colorScheme.onPrimary,
+                                                    ),
+                                                    maxLines = 1,
                                                 )
                                             }
-                                        },
-                                        modifier = Modifier.weight(1f).padding(end = 4.dp)
-                                    ) {
-                                        Text(
-                                            text = "Flag",
-                                            style = MaterialTheme.typography.labelLarge.copy(
-                                                textAlign = TextAlign.Center,
-                                                color = MaterialTheme.colorScheme.onPrimary,
-                                            ),
-                                            maxLines = 1,
-                                        )
+                                        }
                                     }
                                     Button(
-                                        onClick = {
-                                            scope.launch {
-                                                snackBarHostState.showSnackbar(
-                                                    "Recommendations button clicked!"
-                                                )
-                                            }
-                                        },
-                                        modifier = Modifier.weight(1f).padding(start = 4.dp)
+                                        onClick = onNavigateToRecommendations,
+                                        modifier = Modifier.weight(1f).padding(
+                                            start = if (appState.userRole == UserRole.FIELD_AGENT) 4.dp else 0.dp
+                                        )
                                     ) {
                                         Text(
                                             text = "Recommendations",
@@ -260,18 +285,85 @@ fun DetectionResultScreen(
                                 }
                             }
                         }
-                        // --- End of New Buttons ---
                     }
                 }
             }
         }
     }
+
+    selectedDisease?.let { disease ->
+        DiseaseDetailDialog(
+            disease = disease,
+            onDismiss = { selectedDisease = null }
+        )
+    }
+
+    if (showFlagDialog) {
+        FlagDetectionDialog(
+            onDismiss = { showFlagDialog = false },
+            onConfirm = { notes ->
+                showFlagDialog = false
+                val imageBytes = appState.selectedImageByteArray ?: return@FlagDetectionDialog
+                detectionViewModel.flagDetection(
+                    imageBytes = imageBytes,
+                    cropName = appState.selectedCrop ?: "Unknown",
+                    userRole = appState.userRole.name,
+                    notes = notes.ifBlank { null },
+                    detectionThreshold = appState.detectionThreshold,
+                    iouThreshold = appState.iouThreshold,
+                    classifierThreshold = appState.classifierThreshold
+                )
+            }
+        )
+    }
 }
 
+@Composable
+private fun FlagDetectionDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (notes: String) -> Unit
+) {
+    var notes by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.flag_dialog_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = stringResource(Res.string.flag_dialog_message),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                OutlinedTextField(
+                    value = notes,
+                    onValueChange = { notes = it },
+                    placeholder = { Text(stringResource(Res.string.flag_notes_hint)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3,
+                    maxLines = 5
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onConfirm(notes) }) {
+                Text(stringResource(Res.string.flag_submit_button))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(Res.string.flag_cancel_button))
+            }
+        }
+    )
+}
 
 @Composable
-fun DetectionResultCard(result: DetectionResult) {
+fun DetectionResultCard(
+    result: DetectionResult,
+    onClick: () -> Unit = {}
+) {
     Card(
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         elevation = CardDefaults.cardElevation(defaultElevation = 1.0.dp),
@@ -279,18 +371,30 @@ fun DetectionResultCard(result: DetectionResult) {
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = result.className ?: "Unknown",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Confidence: ${((result.score * 1000).toInt() / 10.0)}%",
-                style = MaterialTheme.typography.bodyMedium
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = result.className ?: "Unknown",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Confidence: ${((result.score * 1000).toInt() / 10.0)}%",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = "View disease details",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(20.dp)
             )
         }
     }

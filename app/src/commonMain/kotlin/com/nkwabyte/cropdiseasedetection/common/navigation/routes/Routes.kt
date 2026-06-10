@@ -43,3 +43,6 @@ data object EncyclopediaScreenRoute
 
 @Serializable
 data object SettingsScreenRoute
+
+@Serializable
+data object RecommendationScreenRoute
