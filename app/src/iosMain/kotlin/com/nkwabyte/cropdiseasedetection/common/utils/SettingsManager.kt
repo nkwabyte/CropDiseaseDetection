@@ -37,4 +37,12 @@ actual class SettingsManager actual constructor() {
     actual fun setDetectionThreshold(value: Float) {
         NSUserDefaults.standardUserDefaults.setFloat(value, "detection_threshold")
     }
+
+    actual fun getRecommendationLanguage(): String {
+        return NSUserDefaults.standardUserDefaults.stringForKey("recommendation_language") ?: "ENGLISH"
+    }
+
+    actual fun setRecommendationLanguage(value: String) {
+        NSUserDefaults.standardUserDefaults.setObject(value, "recommendation_language")
+    }
 }

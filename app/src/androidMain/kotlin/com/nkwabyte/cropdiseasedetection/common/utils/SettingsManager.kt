@@ -41,4 +41,12 @@ actual class SettingsManager actual constructor() : KoinComponent {
     actual fun setDetectionThreshold(value: Float) {
         prefs.edit().putFloat("detection_threshold", value).apply()
     }
+
+    actual fun getRecommendationLanguage(): String {
+        return prefs.getString("recommendation_language", "ENGLISH") ?: "ENGLISH"
+    }
+
+    actual fun setRecommendationLanguage(value: String) {
+        prefs.edit().putString("recommendation_language", value).apply()
+    }
 }

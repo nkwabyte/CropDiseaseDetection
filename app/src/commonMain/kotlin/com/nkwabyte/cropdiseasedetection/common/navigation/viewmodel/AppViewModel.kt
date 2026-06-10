@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nkwabyte.cropdiseasedetection.common.model.AppData
 import com.nkwabyte.cropdiseasedetection.common.model.DetectionResult
+import com.nkwabyte.cropdiseasedetection.common.model.RecommendationLanguage
 import com.nkwabyte.cropdiseasedetection.common.model.UserRole
 import com.nkwabyte.cropdiseasedetection.common.utils.SettingsManager
 import com.nkwabyte.cropdiseasedetection.data.repository.SyncRepository
@@ -27,7 +28,10 @@ class AppViewModel(
             selectedTheme = settingsManager.getTheme(),
             classifierThreshold = settingsManager.getClassifierThreshold(),
             iouThreshold = settingsManager.getIouThreshold(),
-            detectionThreshold = settingsManager.getDetectionThreshold()
+            detectionThreshold = settingsManager.getDetectionThreshold(),
+            recommendationLanguage = runCatching {
+                RecommendationLanguage.valueOf(settingsManager.getRecommendationLanguage())
+            }.getOrDefault(RecommendationLanguage.ENGLISH)
         )
     )
     val appState: StateFlow<AppData> = _appState.asStateFlow()
@@ -45,6 +49,11 @@ class AppViewModel(
 
     fun setUserRole(role: UserRole) {
         _appState.update { it.copy(userRole = role) }
+    }
+
+    fun setRecommendationLanguage(language: RecommendationLanguage) {
+        settingsManager.setRecommendationLanguage(language.name)
+        _appState.update { it.copy(recommendationLanguage = language) }
     }
 
     fun setSelectedCrop(crop: String) {
@@ -141,7 +150,8 @@ class AppViewModel(
                 classifierThreshold = currentState.classifierThreshold,
                 iouThreshold = currentState.iouThreshold,
                 detectionThreshold = currentState.detectionThreshold,
-                userRole = currentState.userRole
+                userRole = currentState.userRole,
+                recommendationLanguage = currentState.recommendationLanguage
             )
         }
     }

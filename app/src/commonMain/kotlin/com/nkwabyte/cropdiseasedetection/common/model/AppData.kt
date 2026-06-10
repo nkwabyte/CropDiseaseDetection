@@ -13,7 +13,8 @@ data class AppData(
     val classifierThreshold: Float = 0.55f,
     val iouThreshold: Float = 0.10f,
     val detectionThreshold: Float = 0.10f,
-    val userRole: UserRole = UserRole.FARMER
+    val userRole: UserRole = UserRole.FARMER,
+    val recommendationLanguage: RecommendationLanguage = RecommendationLanguage.ENGLISH
 ) {
     fun isNoResult(): Boolean {
         return detectionResult.isEmpty()

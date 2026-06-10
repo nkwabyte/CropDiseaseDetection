@@ -1,22 +1,27 @@
 package com.nkwabyte.cropdiseasedetection.ui.screens.home
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.layout.ContentScale
-import org.jetbrains.compose.resources.painterResource
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Eco
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,27 +30,33 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nkwabyte.cropdiseasedetection.common.data.DiseaseDatabase
 import com.nkwabyte.cropdiseasedetection.common.data.DiseaseInfo
+import com.nkwabyte.cropdiseasedetection.common.model.RecommendationLanguage
 import com.nkwabyte.cropdiseasedetection.common.navigation.appbar.AppBar
+import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AppViewModel
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.DetectionViewModel
 import com.nkwabyte.cropdiseasedetection.ui.screens.encyclopedia.getCropTheme
 import com.nkwabyte.cropdiseasedetection.ui.screens.encyclopedia.getDiseaseDrawable
+import org.jetbrains.compose.resources.painterResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecommendationScreen(
     detectionViewModel: DetectionViewModel,
+    appViewModel: AppViewModel,
     onBack: () -> Unit,
     onDrawerButtonClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val detectionState by detectionViewModel.detectionState.collectAsState()
+    val appState by appViewModel.appState.collectAsState()
+    val selectedLanguage = appState.recommendationLanguage
 
-    // Build list of unique detected diseases sorted by detection frequency
     val detectedDiseases: List<Pair<DiseaseInfo, Int>> = remember(detectionState.results) {
         detectionState.results
             .groupBy { it.classIndex }
@@ -58,7 +69,6 @@ fun RecommendationScreen(
             .sortedByDescending { it.second }
     }
 
-    // Auto-select if only one unique disease; otherwise null = show picker
     var selectedDisease by remember(detectedDiseases) {
         mutableStateOf(if (detectedDiseases.size == 1) detectedDiseases.first().first else null)
     }
@@ -89,56 +99,161 @@ fun RecommendationScreen(
             )
         }
     ) { contentPadding ->
-        if (detectedDiseases.isEmpty()) {
-            Box(
-                modifier = modifier.fillMaxSize().padding(contentPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.padding(32.dp)
-                ) {
-                    Text("No detection data available.", style = MaterialTheme.typography.bodyLarge)
-                    Text(
-                        "Run a detection first, then come back for recommendations.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                    )
-                    OutlinedButton(onClick = onBack) { Text("Go Back") }
-                }
-            }
-            return@Scaffold
-        }
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(contentPadding)
+        ) {
+            // ── Sticky language selector ────────────────────────────────────────
+            LanguageSelectorBar(
+                selectedLanguage = selectedLanguage,
+                onSelect = { appViewModel.setRecommendationLanguage(it) }
+            )
 
-        AnimatedContent(
-            targetState = selectedDisease,
-            transitionSpec = { fadeIn() togetherWith fadeOut() },
-            modifier = modifier.fillMaxSize().padding(contentPadding)
-        ) { disease ->
-            if (disease == null) {
-                // Disease picker view
-                DiseasePicker(
-                    detectedDiseases = detectedDiseases,
-                    onSelect = { selectedDisease = it }
-                )
+            if (detectedDiseases.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(32.dp)
+                    ) {
+                        Text("No detection data available.", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "Run a detection first, then come back for recommendations.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                        OutlinedButton(onClick = onBack) { Text("Go Back") }
+                    }
+                }
             } else {
-                // Recommendation detail view
-                DiseaseRecommendationDetail(
-                    disease = disease,
-                    detectionCount = detectedDiseases.find { it.first.id == disease.id }?.second ?: 1,
-                    totalDetections = detectionState.results.size,
-                    showBackToList = detectedDiseases.size > 1,
-                    onBackToList = { selectedDisease = null }
-                )
+                AnimatedContent(
+                    targetState = selectedDisease,
+                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                    modifier = Modifier.weight(1f).fillMaxWidth()
+                ) { disease ->
+                    if (disease == null) {
+                        DiseasePicker(
+                            detectedDiseases = detectedDiseases,
+                            selectedLanguage = selectedLanguage,
+                            onSelect = { selectedDisease = it }
+                        )
+                    } else {
+                        DiseaseRecommendationDetail(
+                            disease = disease,
+                            selectedLanguage = selectedLanguage,
+                            detectionCount = detectedDiseases.find { it.first.id == disease.id }?.second ?: 1,
+                            totalDetections = detectionState.results.size,
+                            showBackToList = detectedDiseases.size > 1,
+                            onBackToList = { selectedDisease = null }
+                        )
+                    }
+                }
             }
         }
     }
 }
 
+// ── Language selector ──────────────────────────────────────────────────────────
+
+@Composable
+private fun LanguageSelectorBar(
+    selectedLanguage: RecommendationLanguage,
+    onSelect: (RecommendationLanguage) -> Unit
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 1.dp
+    ) {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Language,
+                    contentDescription = "Language",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+                RecommendationLanguage.entries.forEach { language ->
+                    FilterChip(
+                        selected = selectedLanguage == language,
+                        onClick = { onSelect(language) },
+                        label = {
+                            Text(
+                                text = "${language.flag} ${language.displayName}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    )
+                }
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+        }
+    }
+}
+
+// ── Translation pending banner ─────────────────────────────────────────────────
+
+@Composable
+private fun TranslationPendingBanner(language: RecommendationLanguage) {
+    AnimatedVisibility(
+        visible = language != RecommendationLanguage.ENGLISH,
+        enter = expandVertically() + fadeIn(),
+        exit = shrinkVertically() + fadeOut()
+    ) {
+        Card(
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8E1)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 4.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Translate,
+                    contentDescription = null,
+                    tint = Color(0xFFE65100),
+                    modifier = Modifier.size(20.dp)
+                )
+                Column {
+                    Text(
+                        text = "${language.flag} ${language.nativeName} — Translation coming soon",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFBF360C)
+                        )
+                    )
+                    Text(
+                        text = "Content is currently displayed in English.",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = Color(0xFFE65100)
+                        )
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ── Disease picker (multi-disease) ─────────────────────────────────────────────
+
 @Composable
 private fun DiseasePicker(
     detectedDiseases: List<Pair<DiseaseInfo, Int>>,
+    selectedLanguage: RecommendationLanguage,
     onSelect: (DiseaseInfo) -> Unit
 ) {
     val total = detectedDiseases.sumOf { it.second }
@@ -148,6 +263,8 @@ private fun DiseasePicker(
             .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        TranslationPendingBanner(selectedLanguage)
+
         Text(
             text = "Multiple conditions detected",
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
@@ -230,9 +347,12 @@ private fun DiseasePickerCard(
     }
 }
 
+// ── Detail view ────────────────────────────────────────────────────────────────
+
 @Composable
 private fun DiseaseRecommendationDetail(
     disease: DiseaseInfo,
+    selectedLanguage: RecommendationLanguage,
     detectionCount: Int,
     totalDetections: Int,
     showBackToList: Boolean,
@@ -246,7 +366,12 @@ private fun DiseaseRecommendationDetail(
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Back to list button (if multiple diseases)
+        // Translation banner (only when non-English is selected)
+        item {
+            TranslationPendingBanner(selectedLanguage)
+        }
+
+        // Back to list button
         if (showBackToList) {
             item {
                 TextButton(
@@ -264,7 +389,7 @@ private fun DiseaseRecommendationDetail(
             }
         }
 
-        // Disease header card
+        // Disease header card with image
         item {
             Card(
                 shape = RoundedCornerShape(20.dp),
@@ -361,7 +486,6 @@ private fun DiseaseRecommendationDetail(
         }
 
         if (!disease.isHealthy) {
-            // Cause section
             item {
                 RecommendationSection(
                     icon = Icons.Default.WarningAmber,
@@ -371,8 +495,6 @@ private fun DiseaseRecommendationDetail(
                     containerColor = Color(0xFFFFF3E0)
                 )
             }
-
-            // Effects section
             item {
                 RecommendationSection(
                     icon = Icons.Default.WarningAmber,
@@ -382,8 +504,6 @@ private fun DiseaseRecommendationDetail(
                     containerColor = Color(0xFFFFEBEE)
                 )
             }
-
-            // Organic mitigation
             item {
                 RecommendationSection(
                     icon = Icons.Default.Eco,
@@ -393,8 +513,6 @@ private fun DiseaseRecommendationDetail(
                     containerColor = Color(0xFFE8F5E9)
                 )
             }
-
-            // Chemical mitigation
             item {
                 RecommendationSection(
                     icon = Icons.Default.Science,
@@ -404,8 +522,6 @@ private fun DiseaseRecommendationDetail(
                     containerColor = Color(0xFFE3F2FD)
                 )
             }
-
-            // Prevention
             item {
                 RecommendationSection(
                     icon = Icons.Default.CheckCircle,
@@ -416,7 +532,6 @@ private fun DiseaseRecommendationDetail(
                 )
             }
         } else {
-            // Healthy plant: show best practices
             item {
                 RecommendationSection(
                     icon = Icons.Default.CheckCircle,
@@ -446,13 +561,10 @@ private fun DiseaseRecommendationDetail(
             }
         }
 
-        // Disclaimer
         item {
             Card(
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                ),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
@@ -469,6 +581,8 @@ private fun DiseaseRecommendationDetail(
         item { Spacer(Modifier.height(32.dp)) }
     }
 }
+
+// ── Shared section card ────────────────────────────────────────────────────────
 
 @Composable
 private fun RecommendationSection(

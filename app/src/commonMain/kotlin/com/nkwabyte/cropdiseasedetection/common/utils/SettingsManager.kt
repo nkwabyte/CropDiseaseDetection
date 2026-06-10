@@ -9,4 +9,6 @@ expect class SettingsManager() {
     fun setIouThreshold(value: Float)
     fun getDetectionThreshold(): Float
     fun setDetectionThreshold(value: Float)
+    fun getRecommendationLanguage(): String
+    fun setRecommendationLanguage(value: String)
 }

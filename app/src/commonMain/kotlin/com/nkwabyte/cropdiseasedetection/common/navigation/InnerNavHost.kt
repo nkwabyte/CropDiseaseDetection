@@ -123,6 +123,7 @@ fun InnerNavHost(
         composable<RecommendationScreenRoute> {
             RecommendationScreen(
                 detectionViewModel = detectionViewModel,
+                appViewModel = appViewModel,
                 onBack = { navController.popBackStack() },
                 onDrawerButtonClick = {
                     scope.launch { drawerState.open() }
