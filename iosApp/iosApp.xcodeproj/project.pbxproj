@@ -345,25 +345,24 @@
 				);
 				MARKETING_VERSION = 1.0;
 				OTHER_LDFLAGS = (
+					"$(inherited)",
 					"-ObjC",
 				);
 				"OTHER_LDFLAGS[sdk=iphoneos*]" = (
+					"$(inherited)",
 					"-ObjC",
 					"-force_load",
-					"$(BUILT_PRODUCTS_DIR)/libbackend_xnnpack_ios.a",
+					"$(BUILD_DIR)/../../SourcePackages/artifacts/executorch/backend_xnnpack/backend_xnnpack.xcframework/ios-arm64/libbackend_xnnpack_ios.a",
 					"-force_load",
-					"$(BUILT_PRODUCTS_DIR)/libkernels_portable_ios.a",
-					"-force_load",
-					"$(BUILT_PRODUCTS_DIR)/libexecutorch_ios.a",
+					"$(BUILD_DIR)/../../SourcePackages/artifacts/executorch/kernels_portable/kernels_portable.xcframework/ios-arm64/libkernels_portable_ios.a",
 				);
 				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = (
+					"$(inherited)",
 					"-ObjC",
 					"-force_load",
-					"$(BUILT_PRODUCTS_DIR)/libbackend_xnnpack_simulator.a",
+					"$(BUILD_DIR)/../../SourcePackages/artifacts/executorch/backend_xnnpack/backend_xnnpack.xcframework/ios-arm64-simulator/libbackend_xnnpack_simulator.a",
 					"-force_load",
-					"$(BUILT_PRODUCTS_DIR)/libkernels_portable_simulator.a",
-					"-force_load",
-					"$(BUILT_PRODUCTS_DIR)/libexecutorch_simulator.a",
+					"$(BUILD_DIR)/../../SourcePackages/artifacts/executorch/kernels_portable/kernels_portable.xcframework/ios-arm64-simulator/libkernels_portable_simulator.a",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.nkwabyte.cropdiseasedetection;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -393,25 +392,24 @@
 				);
 				MARKETING_VERSION = 1.0;
 				OTHER_LDFLAGS = (
+					"$(inherited)",
 					"-ObjC",
 				);
 				"OTHER_LDFLAGS[sdk=iphoneos*]" = (
+					"$(inherited)",
 					"-ObjC",
 					"-force_load",
-					"$(BUILT_PRODUCTS_DIR)/libbackend_xnnpack_ios.a",
+					"$(BUILD_DIR)/../../SourcePackages/artifacts/executorch/backend_xnnpack/backend_xnnpack.xcframework/ios-arm64/libbackend_xnnpack_ios.a",
 					"-force_load",
-					"$(BUILT_PRODUCTS_DIR)/libkernels_portable_ios.a",
-					"-force_load",
-					"$(BUILT_PRODUCTS_DIR)/libexecutorch_ios.a",
+					"$(BUILD_DIR)/../../SourcePackages/artifacts/executorch/kernels_portable/kernels_portable.xcframework/ios-arm64/libkernels_portable_ios.a",
 				);
 				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = (
+					"$(inherited)",
 					"-ObjC",
 					"-force_load",
-					"$(BUILT_PRODUCTS_DIR)/libbackend_xnnpack_simulator.a",
+					"$(BUILD_DIR)/../../SourcePackages/artifacts/executorch/backend_xnnpack/backend_xnnpack.xcframework/ios-arm64-simulator/libbackend_xnnpack_simulator.a",
 					"-force_load",
-					"$(BUILT_PRODUCTS_DIR)/libkernels_portable_simulator.a",
-					"-force_load",
-					"$(BUILT_PRODUCTS_DIR)/libexecutorch_simulator.a",
+					"$(BUILD_DIR)/../../SourcePackages/artifacts/executorch/kernels_portable/kernels_portable.xcframework/ios-arm64-simulator/libkernels_portable_simulator.a",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.nkwabyte.cropdiseasedetection;
 				PRODUCT_NAME = "$(TARGET_NAME)";
