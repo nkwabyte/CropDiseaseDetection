@@ -1,17 +1,34 @@
 import SwiftUI
-import ComposeApp
-
-struct ComposeView: UIViewControllerRepresentable {
-    func makeUIViewController(context: Context) -> UIViewController {
-        MainViewControllerKt.MainViewController()
-    }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
-}
 
 struct ContentView: View {
     var body: some View {
-        ComposeView()
-            .ignoresSafeArea(.all)
+        TabView {
+            HomeView()
+                .tabItem {
+                    Label("Diagnostics", systemImage: "waveform.path.ecg")
+                }
+            
+            EncyclopediaView()
+                .tabItem {
+                    Label("Encyclopedia", systemImage: "book.fill")
+                }
+            
+            HistoryView()
+                .tabItem {
+                    Label("History", systemImage: "clock.arrow.circlepath")
+                }
+            
+            SettingsView()
+                .tabItem {
+                    Label("Settings", systemImage: "gearshape.fill")
+                }
+            
+            ProfileView()
+                .tabItem {
+                    Label("Account", systemImage: "person.crop.circle.fill")
+                }
+        }
+        .accentColor(.green)
     }
 }
+

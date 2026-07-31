@@ -49,4 +49,28 @@ actual class SettingsManager actual constructor() : KoinComponent {
     actual fun setRecommendationLanguage(value: String) {
         prefs.edit().putString("recommendation_language", value).apply()
     }
+
+    actual fun getDetectionModel(): String {
+        return prefs.getString("detection_model", "YOLO26") ?: "YOLO26"
+    }
+
+    actual fun setDetectionModel(model: String) {
+        prefs.edit().putString("detection_model", model).apply()
+    }
+
+    actual fun getAppVersion(): String {
+        return try {
+            val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            val versionName = pInfo.versionName ?: "1.0.0"
+            val versionCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                pInfo.longVersionCode
+            } else {
+                @Suppress("DEPRECATION")
+                pInfo.versionCode.toLong()
+            }
+            "v$versionName ($versionCode)"
+        } catch (e: Exception) {
+            "v1.0.0 (1)"
+        }
+    }
 }

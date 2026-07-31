@@ -45,4 +45,19 @@ actual class SettingsManager actual constructor() {
     actual fun setRecommendationLanguage(value: String) {
         NSUserDefaults.standardUserDefaults.setObject(value, "recommendation_language")
     }
+
+    actual fun getDetectionModel(): String {
+        return NSUserDefaults.standardUserDefaults.stringForKey("detection_model") ?: "YOLO26"
+    }
+
+    actual fun setDetectionModel(model: String) {
+        NSUserDefaults.standardUserDefaults.setObject(model, "detection_model")
+    }
+
+    actual fun getAppVersion(): String {
+        val dict = platform.Foundation.NSBundle.mainBundle.infoDictionary
+        val version = dict?.get("CFBundleShortVersionString") as? String ?: "1.0.0"
+        val build = dict?.get("CFBundleVersion") as? String ?: "1"
+        return "v$version ($build)"
+    }
 }

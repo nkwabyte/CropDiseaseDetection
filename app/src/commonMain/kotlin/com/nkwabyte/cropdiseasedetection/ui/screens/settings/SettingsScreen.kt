@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nkwabyte.cropdiseasedetection.common.navigation.appbar.AppBar
+import com.nkwabyte.cropdiseasedetection.common.model.RecommendationLanguage
 import com.nkwabyte.cropdiseasedetection.data.repository.SyncRepository
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AppViewModel
 import org.koin.compose.koinInject
@@ -47,11 +49,14 @@ fun SettingsScreen(
     // Dialog States
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showModelDialog by remember { mutableStateOf(false) }
     // Action States
     var showClearCacheDialog by remember { mutableStateOf(false) }
     var showDeleteDataDialog by remember { mutableStateOf(false) }
 
     // Helpers
+    val settingsManager: com.nkwabyte.cropdiseasedetection.common.utils.SettingsManager = koinInject()
+    val appVersion = remember { settingsManager.getAppVersion() }
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val syncRepository = remember { SyncRepository() }
@@ -97,7 +102,7 @@ fun SettingsScreen(
                     SettingsClickableRow(
                         icon = Icons.Default.Language,
                         title = "Language",
-                        subtitle = selectedLanguage,
+                        subtitle = "${appState.recommendationLanguage.flag} ${appState.recommendationLanguage.displayName}",
                         onClick = { showLanguageDialog = true }
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
@@ -155,6 +160,23 @@ fun SettingsScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
+                // Disease Detection Model Section
+                SettingsSectionHeader("Disease Detection Model")
+                SettingsCard {
+                    SettingsClickableRow(
+                        icon = Icons.Default.DarkMode,
+                        title = "Select Object Detection Model",
+                        subtitle = when (appState.selectedDetectionModel) {
+                            "FasterRCNN" -> "Faster R-CNN (Under Training)"
+                            "VisionTransformer" -> "Vision Transformer (ViT) (Under Training)"
+                            else -> "YOLO26 (Active / Default)"
+                        },
+                        onClick = { showModelDialog = true }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
                 // Model Thresholds Section
                 SettingsSectionHeader("Model Thresholds")
                 SettingsCard {
@@ -180,6 +202,42 @@ fun SettingsScreen(
                     )
                 }
 
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // App Info Section
+                SettingsSectionHeader("App Info")
+                SettingsCard {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "App Info",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(
+                            text = "App Version",
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            ),
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            text = appVersion,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(48.dp))
             }
         }
@@ -187,11 +245,18 @@ fun SettingsScreen(
 
     // Dialogs
     if (showLanguageDialog) {
+        val langMap = RecommendationLanguage.entries.associateBy { "${it.flag} ${it.displayName}" }
+        val currentDisplay = "${appState.recommendationLanguage.flag} ${appState.recommendationLanguage.displayName}"
+        
         SelectionDialog(
             title = "Select Language",
-            options = listOf("English", "French (Français)", "Twi"),
-            selectedOption = selectedLanguage,
-            onOptionSelected = { selectedLanguage = it },
+            options = langMap.keys.toList(),
+            selectedOption = currentDisplay,
+            onOptionSelected = { selectedKey ->
+                langMap[selectedKey]?.let { selectedLang ->
+                    appViewModel.setRecommendationLanguage(selectedLang)
+                }
+            },
             onDismiss = { showLanguageDialog = false }
         )
     }
@@ -203,6 +268,27 @@ fun SettingsScreen(
             selectedOption = selectedTheme,
             onOptionSelected = { appViewModel.setSelectedTheme(it) },
             onDismiss = { showThemeDialog = false }
+        )
+    }
+
+    if (showModelDialog) {
+        val optionsMap = mapOf(
+            "YOLO26 (Active)" to "YOLO26",
+            "Faster R-CNN (Under Training)" to "FasterRCNN",
+            "Vision Transformer (ViT) (Under Training)" to "VisionTransformer"
+        )
+        val currentDisplay = optionsMap.entries.firstOrNull { it.value == appState.selectedDetectionModel }?.key ?: "YOLO26 (Active)"
+        
+        SelectionDialog(
+            title = "Select Disease Detection Model",
+            options = optionsMap.keys.toList(),
+            selectedOption = currentDisplay,
+            onOptionSelected = { selectedKey ->
+                optionsMap[selectedKey]?.let { modelKey ->
+                    appViewModel.setSelectedDetectionModel(modelKey)
+                }
+            },
+            onDismiss = { showModelDialog = false }
         )
     }
 

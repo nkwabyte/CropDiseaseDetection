@@ -393,4 +393,10 @@ object DiseaseDatabase {
             imageUrl = "https://upload.wikimedia.org/wikipedia/commons/6/6f/Septoria_lycopersici_on_tomato.jpg"
         )
     )
+
+    fun getDiseaseInfo(diseaseName: String): DiseaseInfo {
+        return diseases.firstOrNull { it.name.equals(diseaseName, ignoreCase = true) }
+            ?: diseases.firstOrNull { it.name.contains(diseaseName, ignoreCase = true) }
+            ?: diseases.first()
+    }
 }

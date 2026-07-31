@@ -11,4 +11,7 @@ expect class SettingsManager() {
     fun setDetectionThreshold(value: Float)
     fun getRecommendationLanguage(): String
     fun setRecommendationLanguage(value: String)
+    fun getDetectionModel(): String
+    fun setDetectionModel(model: String)
+    fun getAppVersion(): String
 }

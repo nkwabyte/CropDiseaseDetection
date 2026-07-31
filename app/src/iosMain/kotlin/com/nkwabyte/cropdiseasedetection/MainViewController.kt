@@ -1,7 +1,6 @@
 package com.nkwabyte.cropdiseasedetection
 
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.ComposeUIViewController
 import com.nkwabyte.cropdiseasedetection.common.navigation.NavigationRoot
@@ -15,6 +14,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import org.koin.compose.koinInject
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AppViewModel
+
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
+import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AuthViewModel
+import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.DetectionViewModel
+import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.ProfileViewModel
+import com.nkwabyte.cropdiseasedetection.common.utils.SettingsManager
 
 private var koinInitialized = false
 
@@ -38,4 +44,18 @@ fun initKoin() {
         }
         koinInitialized = true
     }
+}
+
+object KoinDependencies : KoinComponent {
+    val appViewModel: AppViewModel by inject()
+    val authViewModel: AuthViewModel by inject()
+    val detectionViewModel: DetectionViewModel by inject()
+    val profileViewModel: ProfileViewModel by inject()
+    val settingsManager: SettingsManager by inject()
+
+    fun getAppViewModel(): AppViewModel = appViewModel
+    fun getAuthViewModel(): AuthViewModel = authViewModel
+    fun getDetectionViewModel(): DetectionViewModel = detectionViewModel
+    fun getProfileViewModel(): ProfileViewModel = profileViewModel
+    fun getSettingsManager(): SettingsManager = settingsManager
 }

@@ -9,8 +9,8 @@ enum class RecommendationLanguage(
     val flag: String
 ) {
     ENGLISH("English", "English", "🇬🇧"),
-    ASANTE_TWI("Asante Twi", "Twi (Asante)", "🇬🇭"),
-    AKUAPEM_TWI("Akuapem Twi", "Twi (Akuapem)", "🇬🇭"),
+    HAUSA("Hausa", "Hausa", "🇬🇭"),
     EWE("Ewe", "Eʋegbe", "🇬🇭"),
-    HAUSA("Hausa", "Hausa", "🇬🇭")
+    ASANTE_TWI("Asante Twi", "Twi (Asante)", "🇬🇭"),
+    GA("Ga", "Ga", "🇬🇭")
 }

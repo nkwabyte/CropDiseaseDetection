@@ -31,7 +31,8 @@ class AppViewModel(
             detectionThreshold = settingsManager.getDetectionThreshold(),
             recommendationLanguage = runCatching {
                 RecommendationLanguage.valueOf(settingsManager.getRecommendationLanguage())
-            }.getOrDefault(RecommendationLanguage.ENGLISH)
+            }.getOrDefault(RecommendationLanguage.ENGLISH),
+            selectedDetectionModel = settingsManager.getDetectionModel()
         )
     )
     val appState: StateFlow<AppData> = _appState.asStateFlow()
@@ -138,6 +139,11 @@ class AppViewModel(
         _appState.update { it.copy(detectionThreshold = value) }
     }
 
+    fun setSelectedDetectionModel(model: String) {
+        settingsManager.setDetectionModel(model)
+        _appState.update { it.copy(selectedDetectionModel = model) }
+    }
+
     fun reset() {
         _appState.update { currentState ->
             AppData(
@@ -151,7 +157,8 @@ class AppViewModel(
                 iouThreshold = currentState.iouThreshold,
                 detectionThreshold = currentState.detectionThreshold,
                 userRole = currentState.userRole,
-                recommendationLanguage = currentState.recommendationLanguage
+                recommendationLanguage = currentState.recommendationLanguage,
+                selectedDetectionModel = currentState.selectedDetectionModel
             )
         }
     }

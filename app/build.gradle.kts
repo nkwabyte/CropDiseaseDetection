@@ -10,6 +10,7 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.serialization)
     alias(libs.plugins.google.gms.google.services)
     alias(libs.plugins.buildkonfig)
+    alias(libs.plugins.skie)
 }
 
 kotlin {

@@ -14,7 +14,8 @@ data class AppData(
     val iouThreshold: Float = 0.10f,
     val detectionThreshold: Float = 0.10f,
     val userRole: UserRole = UserRole.FARMER,
-    val recommendationLanguage: RecommendationLanguage = RecommendationLanguage.ENGLISH
+    val recommendationLanguage: RecommendationLanguage = RecommendationLanguage.ENGLISH,
+    val selectedDetectionModel: String = "YOLO26"
 ) {
     fun isNoResult(): Boolean {
         return detectionResult.isEmpty()
