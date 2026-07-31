@@ -22,7 +22,7 @@ public struct SettingsView: View {
     private let languages: [LanguageOption] = [
         LanguageOption(code: "ENGLISH", displayName: "English 🇬🇧"),
         LanguageOption(code: "HAUSA", displayName: "Hausa 🇬🇭"),
-        LanguageOption(code: "EWE", displayName: "Ewe (Eʋegbe) 🇬🇭"),
+        LanguageOption(code: "EWE", displayName: "Ewe (Eʋe) 🇬🇭"),
         LanguageOption(code: "ASANTE_TWI", displayName: "Asante Twi 🇬🇭"),
         LanguageOption(code: "GA", displayName: "Ga 🇬🇭")
     ]

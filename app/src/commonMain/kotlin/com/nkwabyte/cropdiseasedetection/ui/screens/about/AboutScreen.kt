@@ -99,18 +99,31 @@ fun AboutScreen(
                             .background(MaterialTheme.colorScheme.surface)
                             .padding(32.dp)
                     ) {
-                        Text(
-                            text = stringResource(Res.string.about_info_text),
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                color = MaterialTheme.colorScheme.onBackground,
-                                lineHeight = 24.sp,
-                                fontWeight = FontWeight.Medium
-                            ),
-                            textAlign = TextAlign.Center
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Image(
+                                painter = painterResource(Res.drawable.rail_logo),
+                                contentDescription = "RAIL Logo",
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .padding(bottom = 16.dp)
+                            )
+                            
+                            Text(
+                                text = stringResource(Res.string.about_info_text),
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    lineHeight = 24.sp,
+                                    fontWeight = FontWeight.Medium
+                                ),
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
 
-                    Spacer(modifier = Modifier.height(48.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
 
                     Text(
                         text = "Our Partners",
@@ -127,19 +140,20 @@ fun AboutScreen(
                             .fillMaxWidth()
                             .shadow(
                                 elevation = 4.dp,
-                                shape = RoundedCornerShape(32.dp),
+                                shape = RoundedCornerShape(24.dp),
                                 spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
                             )
-                            .clip(RoundedCornerShape(32.dp))
+                            .clip(RoundedCornerShape(24.dp))
                             .background(MaterialTheme.colorScheme.surface)
+                            .padding(12.dp)
                     ) {
                         Image(
                             painter = painterResource(Res.drawable.rail_partners),
                             contentDescription = stringResource(Res.string.rail_partners_description),
-                            contentScale = ContentScale.Crop,
+                            contentScale = ContentScale.Fit,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(120.dp)
+                                .height(140.dp)
                         )
                     }
                 }

@@ -71,16 +71,16 @@ public struct AboutView: View {
                             .font(.headline)
                     }
                     
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack(spacing: 12) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 10)
-                                    .fill(Color.green.opacity(0.15))
-                                    .frame(width: 44, height: 44)
-                                Text("RAIL")
-                                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                                    .foregroundColor(.green)
-                            }
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 14) {
+                            Image("rail_logo")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 52, height: 52)
+                                .padding(4)
+                                .background(Color.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
                             
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("RAIL KNUST")
@@ -95,6 +95,24 @@ public struct AboutView: View {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .lineSpacing(3)
+                        
+                        Divider()
+                            .padding(.vertical, 2)
+                        
+                        Text("Partner Institutions")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary)
+                        
+                        Image("rail_partners")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 130)
+                            .padding(8)
+                            .background(Color.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 2)
                     }
                 }
                 .padding()

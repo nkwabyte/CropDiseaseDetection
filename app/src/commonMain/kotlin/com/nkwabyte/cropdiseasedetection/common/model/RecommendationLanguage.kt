@@ -10,7 +10,7 @@ enum class RecommendationLanguage(
 ) {
     ENGLISH("English", "English", "🇬🇧"),
     HAUSA("Hausa", "Hausa", "🇬🇭"),
-    EWE("Ewe", "Eʋegbe", "🇬🇭"),
+    EWE("Ewe", "Eʋe", "🇬🇭"),
     ASANTE_TWI("Asante Twi", "Twi (Asante)", "🇬🇭"),
     GA("Ga", "Ga", "🇬🇭")
 }
