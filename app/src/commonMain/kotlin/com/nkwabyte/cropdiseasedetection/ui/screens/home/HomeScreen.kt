@@ -141,9 +141,8 @@ fun HomeScreen(
                 submitText -> {
                     selectedImageData?.let { bytes ->
                         appViewModel.setSelectedImageByteArray(bytes)
-                        appState.selectedCrop?.let {
-                            detectionViewModel.detect(bytes, it, 640, 640)
-                        }
+                        val targetCrop = appState.selectedCrop ?: ""
+                        detectionViewModel.detect(bytes, targetCrop, 640, 640)
                     } ?: run {
                         scope.launch {
                             snackBarHostState.showSnackbar(

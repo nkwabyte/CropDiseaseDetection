@@ -79,11 +79,17 @@ actual class ObjectDetector actual constructor() : KoinComponent {
     }
 
     actual fun classify(imageBytes: ByteArray): ClassificationResult? {
-        if (!_isClassifierLoaded) return null
+        if (!_isClassifierLoaded) {
+            println("[iOS-ObjectDetector] Classifier model not loaded")
+            return null
+        }
 
         val nsData = imageBytes.toNSData() ?: return null
         val rawOutput = bridge.runClassificationWithImageData(nsData)
-        if (rawOutput.size < 3) return null
+        if (rawOutput.size < 3) {
+            println("[iOS-ObjectDetector] Classification raw output size invalid: ${rawOutput.size}")
+            return null
+        }
 
         val logits = FloatArray(3) { (rawOutput[it] as NSNumber).floatValue }
         val maxLogit = logits.max()
@@ -97,6 +103,7 @@ actual class ObjectDetector actual constructor() : KoinComponent {
 
         val threshold = settingsManager.getClassifierThreshold()
         val label = if (maxProb >= threshold) classes[maxIdx] else "unknown"
+        println("[iOS-ObjectDetector] Classifier probs: ${probs.joinToString()} -> Top: ${classes[maxIdx]} (${maxProb}), Threshold: $threshold, Label: $label")
         return ClassificationResult(
             label = label,
             confidence = maxProb,
@@ -105,14 +112,18 @@ actual class ObjectDetector actual constructor() : KoinComponent {
     }
 
     actual fun detect(imageBytes: ByteArray): List<DetectionResult> {
-        if (!_isLoaded) return emptyList()
+        if (!_isLoaded) {
+            println("[iOS-ObjectDetector] Detection model not loaded")
+            return emptyList()
+        }
 
         val nsData = imageBytes.toNSData() ?: return emptyList()
         val rawOutput = bridge.runDetectionWithImageData(nsData)
-        if (rawOutput.isEmpty()) return emptyList()
+        if (rawOutput.isEmpty()) {
+            println("[iOS-ObjectDetector] Detection raw output empty")
+            return emptyList()
+        }
 
-        // Output shape: [1, (4+numClasses), N] stored column-major as [row * N + col]
-        // We infer N from total size and numClasses = 23
         val numClasses = 23
         val rowStride = numClasses + 4
         val n = rawOutput.size / rowStride
@@ -141,7 +152,9 @@ actual class ObjectDetector actual constructor() : KoinComponent {
                 ))
             }
         }
-        return nonMaxSuppression(preliminary, settingsManager.getIouThreshold())
+        val finalDetections = nonMaxSuppression(preliminary, settingsManager.getIouThreshold())
+        println("[iOS-ObjectDetector] Detections count: ${finalDetections.size} (preliminary: ${preliminary.size}, threshold: $detectionThreshold)")
+        return finalDetections
     }
 
     actual fun release() {

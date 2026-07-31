@@ -47,25 +47,9 @@ public struct EncyclopediaView: View {
                         DiseaseDetailView(disease: disease)
                     } label: {
                         HStack(spacing: 14) {
-                            AsyncImage(url: URL(string: disease.imageUrl)) { phase in
-                                switch phase {
-                                case .success(let image):
-                                    image
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                case .failure, .empty:
-                                    ZStack {
-                                        Color.green.opacity(0.12)
-                                        Image(systemName: "leaf.fill")
-                                            .font(.title3)
-                                            .foregroundColor(.green)
-                                    }
-                                @unknown default:
-                                    Color.green.opacity(0.12)
-                                }
-                            }
-                            .frame(width: 60, height: 60)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            DiseaseImageView(disease: disease)
+                                .frame(width: 64, height: 64)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
                             
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(disease.name)
@@ -105,28 +89,11 @@ struct DiseaseDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 // Disease Image Banner
-                AsyncImage(url: URL(string: disease.imageUrl)) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    case .failure, .empty:
-                        ZStack {
-                            Rectangle()
-                                .fill(Color.green.opacity(0.12))
-                            Image(systemName: "leaf.fill")
-                                .font(.system(size: 48))
-                                .foregroundColor(.green)
-                        }
-                    @unknown default:
-                        EmptyView()
-                    }
-                }
-                .frame(height: 220)
-                .frame(maxWidth: .infinity)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .shadow(color: Color.black.opacity(0.1), radius: 6, x: 0, y: 3)
+                DiseaseImageView(disease: disease)
+                    .frame(height: 220)
+                    .frame(maxWidth: .infinity)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .shadow(color: Color.black.opacity(0.1), radius: 6, x: 0, y: 3)
                 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(disease.name)

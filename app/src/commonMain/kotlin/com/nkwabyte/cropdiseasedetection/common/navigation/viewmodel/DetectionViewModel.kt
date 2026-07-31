@@ -61,11 +61,16 @@ class DetectionViewModel(
             try {
                 _detectionState.update { it.copy(isDetecting = true, isClassifierRejected = false) }
 
+                // Stage 2: Detection
+                val results = detector.detect(imageBytes)
+                println("PyTorch detection results: $results")
+
                 // Stage 1: Classifier
                 val classification = detector.classify(imageBytes)
                 println("Classifier result: $classification")
 
-                if (classification != null && !classification.isAccepted) {
+                // If detector found nothing AND classifier rejected the image as not a crop leaf:
+                if (results.isEmpty() && classification != null && !classification.isAccepted) {
                     println("Classification rejected: Not a Corn, Pepper, or Tomato crop.")
                     _detectionState.update {
                         it.copy(
@@ -82,10 +87,6 @@ class DetectionViewModel(
                     }
                     return@launch
                 }
-
-                // Stage 2: Detection
-                val results = detector.detect(imageBytes)
-                println("PyTorch detection results: $results")
 
                 if (results.isEmpty()) {
                     println("No detection results found")
@@ -105,8 +106,12 @@ class DetectionViewModel(
                     return@launch
                 }
 
-                val matchingResults = results.filter {
-                    it.className?.contains(crop, ignoreCase = true) == true
+                val matchingResults = if (crop.isBlank()) {
+                    results
+                } else {
+                    results.filter {
+                        it.className?.contains(crop, ignoreCase = true) == true
+                    }
                 }
                 println("Matching results: $matchingResults")
 

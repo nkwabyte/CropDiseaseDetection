@@ -14,7 +14,7 @@ private struct PreprocessResult {
 extension UIImage {
     func fixOrientation() -> UIImage {
         if imageOrientation == .up { return self }
-        UIGraphicsBeginImageContextWithOptions(size, false, scale)
+        UIGraphicsBeginImageContextWithOptions(size, false, 1.0)
         draw(in: CGRect(origin: .zero, size: size))
         let normalizedImage = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()
@@ -210,7 +210,7 @@ public class ExecuTorchBridge: NSObject {
             bitsPerComponent: 8,
             bytesPerRow: width * 4,
             space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
+            bitmapInfo: CGBitmapInfo.byteOrder32Big.rawValue | CGImageAlphaInfo.noneSkipLast.rawValue
         ) else { return nil }
 
         ctx.translateBy(x: 0, y: CGFloat(height))
