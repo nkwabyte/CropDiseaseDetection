@@ -167,3 +167,34 @@ extension String {
         self.compare(other, options: .caseInsensitive) == .orderedSame
     }
 }
+
+struct DiseaseImageView: View {
+    let disease: DiseaseInfo
+    
+    var body: some View {
+        let imageName = "disease_\(disease.id)"
+        if UIImage(named: imageName) != nil {
+            Image(imageName)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+        } else {
+            AsyncImage(url: URL(string: disease.imageUrl)) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                case .failure, .empty:
+                    ZStack {
+                        Color.green.opacity(0.12)
+                        Image(systemName: "leaf.fill")
+                            .font(.title3)
+                            .foregroundColor(.green)
+                    }
+                @unknown default:
+                    Color.green.opacity(0.12)
+                }
+            }
+        }
+    }
+}

@@ -37,7 +37,7 @@ public class ExecuTorchBridge: NSObject {
 
     @objc public func loadDetectionModel(atPath path: String) -> Bool {
         do {
-            let module = try Module(filePath: path)
+            let module = try Module(filePath: path, loadMode: .mmap)
             try module.load()
             detectionModule = module
             return true
@@ -49,7 +49,7 @@ public class ExecuTorchBridge: NSObject {
 
     @objc public func loadClassifierModel(atPath path: String) -> Bool {
         do {
-            let module = try Module(filePath: path)
+            let module = try Module(filePath: path, loadMode: .mmap)
             try module.load()
             classifierModule = module
             return true
@@ -99,8 +99,8 @@ public class ExecuTorchBridge: NSObject {
             
             let x1 = min(max(0.0, ((x1Lb - padLeft) / scale / origWidth) * 640.0), 640.0)
             let y1 = min(max(0.0, ((y1Lb - padTop) / scale / origHeight) * 640.0), 640.0)
-            let x2 = min(max(0.0, ((x1Lb + w - padLeft) / scale / origWidth) * 640.0), 640.0)
-            let y2 = min(max(0.0, ((y1Lb + h - padTop) / scale / origHeight) * 640.0), 640.0)
+            let x2 = min(max(0.0, ((x2Lb - padLeft) / scale / origWidth) * 640.0), 640.0)
+            let y2 = min(max(0.0, ((y2Lb - padTop) / scale / origHeight) * 640.0), 640.0)
             
             let newCx = (x1 + x2) / 2.0
             let newCy = (y1 + y2) / 2.0
@@ -213,8 +213,6 @@ public class ExecuTorchBridge: NSObject {
             bitmapInfo: CGBitmapInfo.byteOrder32Big.rawValue | CGImageAlphaInfo.noneSkipLast.rawValue
         ) else { return nil }
 
-        ctx.translateBy(x: 0, y: CGFloat(height))
-        ctx.scaleBy(x: 1.0, y: -1.0)
         ctx.draw(cgImage, in: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)))
 
         let n = width * height
