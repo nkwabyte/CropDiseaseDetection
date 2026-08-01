@@ -48,7 +48,7 @@ actual class ObjectDetector actual constructor() : KoinComponent {
             println("[iOS-ObjectDetector]   Architecture : YOLO26  |  Task: object_detection")
             println("[iOS-ObjectDetector]   Input        : 640×640 RGB  |  Normalize: pixel/255")
             println("[iOS-ObjectDetector]   Classes      : 23  |  conf_threshold=0.50  iou_threshold=0.10")
-            println("[iOS-ObjectDetector]   Backend      : XNNPACK (ExecuTorch 0.6.0)")
+            println("[iOS-ObjectDetector]   Backend      : XNNPACK (ExecuTorch 1.3.1)")
         } else {
             println("[iOS-ObjectDetector] ERROR: ExecuTorch failed to load '$modelName.pte'")
         }
@@ -72,7 +72,7 @@ actual class ObjectDetector actual constructor() : KoinComponent {
             println("[iOS-ObjectDetector]   Architecture : EfficientNet-B2  |  Task: image_classification")
             println("[iOS-ObjectDetector]   Input        : 260×260 RGB  |  Normalize: ImageNet")
             println("[iOS-ObjectDetector]   Classes      : 3 (Corn, Pepper, Tomato)  |  conf_threshold=0.55")
-            println("[iOS-ObjectDetector]   Backend      : XNNPACK (ExecuTorch 0.6.0)")
+            println("[iOS-ObjectDetector]   Backend      : XNNPACK (ExecuTorch 1.3.1)")
         } else {
             println("[iOS-ObjectDetector] ERROR: ExecuTorch failed to load '$modelName.pte'")
         }

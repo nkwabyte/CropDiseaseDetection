@@ -37,7 +37,7 @@ public class ExecuTorchBridge: NSObject {
 
     @objc public func loadDetectionModel(atPath path: String) -> Bool {
         do {
-            let module = try Module(filePath: path, loadMode: .mmap)
+            let module = Module(filePath: path, loadMode: .mmap)
             try module.load()
             detectionModule = module
             return true
@@ -49,7 +49,7 @@ public class ExecuTorchBridge: NSObject {
 
     @objc public func loadClassifierModel(atPath path: String) -> Bool {
         do {
-            let module = try Module(filePath: path, loadMode: .mmap)
+            let module = Module(filePath: path, loadMode: .mmap)
             try module.load()
             classifierModule = module
             return true
@@ -71,7 +71,7 @@ public class ExecuTorchBridge: NSObject {
                                         isLetterbox: true) else { return [] }
         
         var rawOutput = runForward(module: module, data: prep.data,
-                                  shape: [NSNumber(value: Int32(1)), NSNumber(value: Int32(3)), NSNumber(value: Int32(640)), NSNumber(value: Int32(640))],
+                                  shape: [1, 3, 640, 640],
                                   tag: "detection")
         if rawOutput.isEmpty { return [] }
         
@@ -125,7 +125,7 @@ public class ExecuTorchBridge: NSObject {
                                         std: (0.229, 0.224, 0.225),
                                         isLetterbox: false) else { return [] }
         return runForward(module: module, data: prep.data,
-                          shape: [NSNumber(value: Int32(1)), NSNumber(value: Int32(3)), NSNumber(value: Int32(260)), NSNumber(value: Int32(260))],
+                          shape: [1, 3, 260, 260],
                           tag: "classification")
     }
 
@@ -137,17 +137,17 @@ public class ExecuTorchBridge: NSObject {
     // MARK: - Private helpers
 
     private func runForward(module: Module, data: Data,
-                             shape: [NSNumber], tag: String) -> [NSNumber] {
+                             shape: [Int], tag: String) -> [NSNumber] {
         do {
-            let inputTensor = Tensor(data: data, shape: shape, dataType: .float)
+            let inputTensor = Tensor<Float>(data: data, shape: shape)
             let outputs = try module.forward(inputTensor)
-            guard let outTensor = outputs.first?.tensor else { return [] }
-            var result: [NSNumber] = []
-            outTensor.bytes { pointer, count, _ in
-                let floats = pointer.assumingMemoryBound(to: Float.self)
-                result = (0..<count).map { NSNumber(value: floats[$0]) }
+            guard let outTensor: Tensor<Float> = outputs.first?.tensor() else {
+                print("[ExecuTorchBridge] \(tag) produced no float tensor output")
+                return []
             }
-            return result
+            return outTensor.withUnsafeBytes { buffer in
+                buffer.map { NSNumber(value: $0) }
+            }
         } catch {
             print("[ExecuTorchBridge] \(tag) inference failed: \(error)")
             return []

@@ -28,7 +28,7 @@
 		BC98B09C2FD74C170039C9F4 /* executorch in Frameworks */ = {isa = PBXBuildFile; productRef = BC98B09C2FD74C170039C9F2 /* executorch */; };
 		BCAA110000000000000001AB /* ExecuTorchBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCAA110000000000000001AA /* ExecuTorchBridge.swift */; };
 		BCAA110000000000000002AB /* backend_xnnpack in Frameworks */ = {isa = PBXBuildFile; productRef = BCAA110000000000000002AC /* backend_xnnpack */; };
-		BCAA110000000000000003AB /* kernels_portable in Frameworks */ = {isa = PBXBuildFile; productRef = BCAA110000000000000003AC /* kernels_portable */; };
+		BCAA110000000000000003AB /* kernels_optimized in Frameworks */ = {isa = PBXBuildFile; productRef = BCAA110000000000000003AC /* kernels_optimized */; };
 		D61E33C028F78DBA3DA14B78 /* EncyclopediaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FD2359243684D780B4CFDF9 /* EncyclopediaView.swift */; };
 		DE5B96ADE68BB5C9688C9D91 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5802EC2B28D9A185EF551B /* ProfileView.swift */; };
 		FB30DAA9D02B50D7D5F9F3B9 /* KoinHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C8AD6ACCD666C5758B0D82B /* KoinHelper.swift */; };
@@ -69,7 +69,7 @@
 				379D4C6DBBA934A8EF44CDDE /* FirebaseFirestore in Frameworks */,
 				BC98B09C2FD74C170039C9F4 /* executorch in Frameworks */,
 				BCAA110000000000000002AB /* backend_xnnpack in Frameworks */,
-				BCAA110000000000000003AB /* kernels_portable in Frameworks */,
+				BCAA110000000000000003AB /* kernels_optimized in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -224,7 +224,7 @@
 				84FCD721953CC33D9035BCCD /* FirebaseFirestore */,
 				BC98B09C2FD74C170039C9F2 /* executorch */,
 				BCAA110000000000000002AC /* backend_xnnpack */,
-				BCAA110000000000000003AC /* kernels_portable */,
+				BCAA110000000000000003AC /* kernels_optimized */,
 			);
 			productName = iosApp;
 			productReference = 419B5E5E2A1D000000000005 /* iosApp.app */;
@@ -483,7 +483,7 @@
 					"-force_load",
 					"$(BUILD_DIR)/../../SourcePackages/artifacts/executorch/backend_xnnpack/backend_xnnpack.xcframework/ios-arm64/libbackend_xnnpack_ios.a",
 					"-force_load",
-					"$(BUILD_DIR)/../../SourcePackages/artifacts/executorch/kernels_portable/kernels_portable.xcframework/ios-arm64/libkernels_portable_ios.a",
+					"$(BUILD_DIR)/../../SourcePackages/artifacts/executorch/kernels_optimized/kernels_optimized.xcframework/ios-arm64/libkernels_optimized_ios.a",
 				);
 				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = (
 					"$(inherited)",
@@ -491,7 +491,7 @@
 					"-force_load",
 					"$(BUILD_DIR)/../../SourcePackages/artifacts/executorch/backend_xnnpack/backend_xnnpack.xcframework/ios-arm64-simulator/libbackend_xnnpack_simulator.a",
 					"-force_load",
-					"$(BUILD_DIR)/../../SourcePackages/artifacts/executorch/kernels_portable/kernels_portable.xcframework/ios-arm64-simulator/libkernels_portable_simulator.a",
+					"$(BUILD_DIR)/../../SourcePackages/artifacts/executorch/kernels_optimized/kernels_optimized.xcframework/ios-arm64-simulator/libkernels_optimized_simulator.a",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.nkwabyte.cropdiseasedetection;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -530,7 +530,7 @@
 					"-force_load",
 					"$(BUILD_DIR)/../../SourcePackages/artifacts/executorch/backend_xnnpack/backend_xnnpack.xcframework/ios-arm64/libbackend_xnnpack_ios.a",
 					"-force_load",
-					"$(BUILD_DIR)/../../SourcePackages/artifacts/executorch/kernels_portable/kernels_portable.xcframework/ios-arm64/libkernels_portable_ios.a",
+					"$(BUILD_DIR)/../../SourcePackages/artifacts/executorch/kernels_optimized/kernels_optimized.xcframework/ios-arm64/libkernels_optimized_ios.a",
 				);
 				"OTHER_LDFLAGS[sdk=iphonesimulator*]" = (
 					"$(inherited)",
@@ -538,7 +538,7 @@
 					"-force_load",
 					"$(BUILD_DIR)/../../SourcePackages/artifacts/executorch/backend_xnnpack/backend_xnnpack.xcframework/ios-arm64-simulator/libbackend_xnnpack_simulator.a",
 					"-force_load",
-					"$(BUILD_DIR)/../../SourcePackages/artifacts/executorch/kernels_portable/kernels_portable.xcframework/ios-arm64-simulator/libkernels_portable_simulator.a",
+					"$(BUILD_DIR)/../../SourcePackages/artifacts/executorch/kernels_optimized/kernels_optimized.xcframework/ios-arm64-simulator/libkernels_optimized_simulator.a",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.nkwabyte.cropdiseasedetection;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -584,8 +584,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/pytorch/executorch";
 			requirement = {
-				kind = revision;
-				revision = 5a47ec0aa5b42abb759d21a65fa8ff3a1e42cedb;
+				branch = "swiftpm-1.3.1";
+				kind = branch;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -616,10 +616,10 @@
 			package = BC98B09C2FD74C170039C9F1 /* XCRemoteSwiftPackageReference "executorch" */;
 			productName = backend_xnnpack;
 		};
-		BCAA110000000000000003AC /* kernels_portable */ = {
+		BCAA110000000000000003AC /* kernels_optimized */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = BC98B09C2FD74C170039C9F1 /* XCRemoteSwiftPackageReference "executorch" */;
-			productName = kernels_portable;
+			productName = kernels_optimized;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
