@@ -66,7 +66,21 @@ public struct RecommendationView: View {
                             .foregroundColor(.secondary)
                             .padding()
                     } else {
-                        let items = results.enumerated().map { IdentifiedDetection(id: $0.offset, result: $0.element) }
+                        let distinctResults: [DetectionResult] = {
+                            var dict = [String: DetectionResult]()
+                            for det in results {
+                                let key = det.className ?? "\(det.classIndex)"
+                                if let existing = dict[key] {
+                                    if det.score > existing.score {
+                                        dict[key] = det
+                                    }
+                                } else {
+                                    dict[key] = det
+                                }
+                            }
+                            return dict.values.sorted(by: { $0.score > $1.score })
+                        }()
+                        let items = distinctResults.enumerated().map { IdentifiedDetection(id: $0.offset, result: $0.element) }
                         ForEach(items) { item in
                             RecommendationCardView(det: item.result)
                         }

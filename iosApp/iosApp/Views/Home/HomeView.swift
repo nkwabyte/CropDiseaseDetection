@@ -194,9 +194,18 @@ public struct HomeView: View {
                     }
                 }
             }
-            .sheet(isPresented: $isResultPresented) {
+            .navigationDestination(isPresented: $isResultPresented) {
                 if let uiImg = selectedUIImage, let bytes = selectedByteArray {
-                    DetectionResultView(image: uiImg, imageBytes: bytes)
+                    DetectionResultView(
+                        image: uiImg,
+                        imageBytes: bytes,
+                        onDone: {
+                            clearHomeScreen()
+                        }
+                    )
+                    .onDisappear {
+                        clearHomeScreen()
+                    }
                 }
             }
             .sheet(isPresented: $isCameraPresented) {
@@ -206,6 +215,15 @@ public struct HomeView: View {
                 }
             }
         }
+    }
+    
+    private func clearHomeScreen() {
+        selectedPhotoItem = nil
+        selectedUIImage = nil
+        selectedByteArray = nil
+        isResultPresented = false
+        KoinHelper.detectionViewModel.reset()
+        KoinHelper.appViewModel.reset()
     }
 }
 

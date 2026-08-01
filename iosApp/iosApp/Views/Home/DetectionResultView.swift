@@ -9,6 +9,7 @@ private struct IdentifiedDetection: Identifiable {
 public struct DetectionResultView: View {
     public let image: UIImage
     public let imageBytes: [UInt8]
+    public var onDone: (() -> Void)? = nil
     
     @StateObject private var detectionStateObs = ObservableFlow(KoinHelper.detectionViewModel.detectionState)
     @Environment(\.dismiss) private var dismiss
@@ -17,8 +18,7 @@ public struct DetectionResultView: View {
     @State private var flagNotes: String = ""
     
     public var body: some View {
-        NavigationStack {
-            ScrollView {
+        ScrollView {
                 VStack(spacing: 20) {
                     let state = detectionStateObs.value
                     
@@ -83,22 +83,46 @@ public struct DetectionResultView: View {
                             Divider()
                             
                             let rawList = state.results as? [DetectionResult] ?? []
-                            let items = rawList.enumerated().map { IdentifiedDetection(id: $0.offset, result: $0.element) }
+                            let distinctList: [DetectionResult] = {
+                                var dict = [String: DetectionResult]()
+                                for det in rawList {
+                                    let key = det.className ?? "\(det.classIndex)"
+                                    if let existing = dict[key] {
+                                        if det.score > existing.score {
+                                            dict[key] = det
+                                        }
+                                    } else {
+                                        dict[key] = det
+                                    }
+                                }
+                                return dict.values.sorted(by: { $0.score > $1.score })
+                            }()
+                            let items = distinctList.enumerated().map { IdentifiedDetection(id: $0.offset, result: $0.element) }
                             ForEach(items) { item in
                                 let det = item.result
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(det.className ?? "Unknown")
-                                            .font(.body)
-                                            .fontWeight(.semibold)
-                                        Text("Confidence: \(Int(det.score * 100))%")
+                                NavigationLink {
+                                    let info = DiseaseDatabase.shared.getDiseaseInfo(diseaseName: det.className ?? "Unknown")
+                                    DiseaseDetailView(disease: info)
+                                } label: {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(det.className ?? "Unknown")
+                                                .font(.body)
+                                                .fontWeight(.semibold)
+                                                .foregroundColor(.primary)
+                                            Text("Confidence: \(Int(det.score * 100))%")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        Spacer()
+                                        ProgressView(value: Double(det.score))
+                                            .frame(width: 80)
+                                            .accentColor(det.score > 0.6 ? .green : .orange)
+                                        Image(systemName: "chevron.right")
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                     }
-                                    Spacer()
-                                    ProgressView(value: Double(det.score))
-                                        .frame(width: 80)
-                                        .accentColor(det.score > 0.6 ? .green : .orange)
+                                    .contentShape(Rectangle())
                                 }
                             }
                         }
@@ -153,7 +177,10 @@ public struct DetectionResultView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") { dismiss() }
+                    Button("Done") {
+                        onDone?()
+                        dismiss()
+                    }
                 }
             }
             .sheet(isPresented: $isRecommendationPresented) {
@@ -199,6 +226,5 @@ public struct DetectionResultView: View {
                 .padding()
                 .presentationDetents([.medium])
             }
-        }
     }
 }

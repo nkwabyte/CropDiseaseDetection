@@ -73,6 +73,16 @@ fun DetectionResultScreen(
         }
     }
 
+    val distinctDetectionResults by remember(detectionResults) {
+        derivedStateOf {
+            detectionResults
+                .groupBy { it.className ?: it.classIndex.toString() }
+                .mapValues { (_, list) -> list.maxByOrNull { it.score }!! }
+                .values
+                .sortedByDescending { it.score }
+        }
+    }
+
     val selectedImageBytes = appState.selectedImageByteArray
 
     val sheetState = rememberStandardBottomSheetState(
@@ -222,11 +232,13 @@ fun DetectionResultScreen(
                                 )
                             }
                         } else {
-                            items(detectionResults) { result ->
+                            items(distinctDetectionResults) { result ->
                                 DetectionResultCard(
                                     result = result,
                                     onClick = {
-                                        selectedDisease = DiseaseDatabase.diseases.getOrNull(result.classIndex)
+                                        selectedDisease = DiseaseDatabase.diseases.find { disease ->
+                                            result.className?.let { disease.name.contains(it, ignoreCase = true) } == true
+                                        } ?: DiseaseDatabase.diseases.getOrNull(result.classIndex)
                                     }
                                 )
                                 Spacer(modifier = Modifier.height(12.0.dp))
