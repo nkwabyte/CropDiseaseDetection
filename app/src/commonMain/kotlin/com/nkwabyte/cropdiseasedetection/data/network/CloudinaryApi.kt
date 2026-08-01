@@ -33,30 +33,48 @@ class CloudinaryApi {
     }
 
     suspend fun uploadImage(imageBytes: ByteArray, folder: String? = null): String? {
+        val apiKey = BuildKonfig.CLOUDINARY_API_KEY
+        val apiSecret = BuildKonfig.CLOUDINARY_API_SECRET
+        val cloudName = BuildKonfig.CLOUDINARY_CLOUD_NAME.ifBlank { "dxdun6eym" }
+        val uploadPreset = "crop_diseases"
+
+        if (apiKey.isNotBlank() && apiSecret.isNotBlank()) {
+            val signedResult = trySignedUpload(imageBytes, cloudName, apiKey, apiSecret, folder)
+            if (signedResult != null) return signedResult
+        }
+
+        // Fallback to unsigned upload
+        return tryUnsignedUpload(imageBytes, cloudName, uploadPreset, folder)
+    }
+
+    private suspend fun trySignedUpload(
+        imageBytes: ByteArray,
+        cloudName: String,
+        apiKey: String,
+        apiSecret: String,
+        folder: String?
+    ): String? {
         try {
             val timestamp = (GMTDate().timestamp / 1000L).toString()
-            val apiSecret = BuildKonfig.CLOUDINARY_API_SECRET
-
-            // Cloudinary signing: params sorted alphabetically (excluding file, api_key, resource_type, cloud_name)
             val stringToSign = if (folder != null) {
                 "folder=$folder&timestamp=$timestamp$apiSecret"
             } else {
                 "timestamp=$timestamp$apiSecret"
             }
 
-            val signature = SHA1().digest(stringToSign.encodeToByteArray()).joinToString("") { byte ->
-                val hex = "0123456789abcdef"
-                "${hex[(byte.toInt() shr 4) and 0x0f]}${hex[byte.toInt() and 0x0f]}"
+            val digest = SHA1().digest(stringToSign.encodeToByteArray())
+            val signature = digest.joinToString("") { b ->
+                (b.toInt() and 0xff).toString(16).padStart(2, '0')
             }
 
             val response: HttpResponse = client.submitFormWithBinaryData(
-                url = "https://api.cloudinary.com/v1_1/${BuildKonfig.CLOUDINARY_CLOUD_NAME}/image/upload",
+                url = "https://api.cloudinary.com/v1_1/$cloudName/image/upload",
                 formData = formData {
                     append("file", imageBytes, Headers.build {
                         append(HttpHeaders.ContentType, "image/jpeg")
                         append(HttpHeaders.ContentDisposition, "filename=\"upload.jpg\"")
                     })
-                    append("api_key", BuildKonfig.CLOUDINARY_API_KEY)
+                    append("api_key", apiKey)
                     append("timestamp", timestamp)
                     append("signature", signature)
                     if (folder != null) append("folder", folder)
@@ -65,11 +83,43 @@ class CloudinaryApi {
 
             val uploadResponse = response.body<CloudinaryUploadResponse>()
             if (uploadResponse.error != null) {
-                println("Cloudinary error: ${uploadResponse.error.message}")
+                println("Cloudinary signed error: ${uploadResponse.error.message}")
+                return null
             }
             return uploadResponse.secure_url
         } catch (e: Exception) {
-            println("Cloudinary upload failed: ${e.message}")
+            println("Cloudinary signed upload failed: ${e.message}")
+            return null
+        }
+    }
+
+    private suspend fun tryUnsignedUpload(
+        imageBytes: ByteArray,
+        cloudName: String,
+        preset: String,
+        folder: String?
+    ): String? {
+        try {
+            val response: HttpResponse = client.submitFormWithBinaryData(
+                url = "https://api.cloudinary.com/v1_1/$cloudName/image/upload",
+                formData = formData {
+                    append("file", imageBytes, Headers.build {
+                        append(HttpHeaders.ContentType, "image/jpeg")
+                        append(HttpHeaders.ContentDisposition, "filename=\"upload.jpg\"")
+                    })
+                    append("upload_preset", preset)
+                    if (folder != null) append("folder", folder)
+                }
+            )
+
+            val uploadResponse = response.body<CloudinaryUploadResponse>()
+            if (uploadResponse.error != null) {
+                println("Cloudinary unsigned error: ${uploadResponse.error.message}")
+                return null
+            }
+            return uploadResponse.secure_url
+        } catch (e: Exception) {
+            println("Cloudinary unsigned upload failed: ${e.message}")
             return null
         }
     }

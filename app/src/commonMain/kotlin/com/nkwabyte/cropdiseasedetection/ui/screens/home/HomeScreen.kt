@@ -111,6 +111,8 @@ fun HomeScreen(
         }
     }
 
+    var showCropRequiredDialog by remember { mutableStateOf(false) }
+
     PlatformCameraGalleryManager(
         onImageBytesReceived = { bytes ->
             selectedImageData = bytes
@@ -139,16 +141,20 @@ fun HomeScreen(
                 takePictureText -> takePicture()
                 selectPictureText -> selectPicture()
                 submitText -> {
-                    selectedImageData?.let { bytes ->
-                        appViewModel.setSelectedImageByteArray(bytes)
-                        val targetCrop = appState.selectedCrop ?: ""
-                        detectionViewModel.detect(bytes, targetCrop, 640, 640)
-                    } ?: run {
-                        scope.launch {
-                            snackBarHostState.showSnackbar(
-                                message = unableToLoadMsg,
-                                actionLabel = okText
-                            )
+                    if (appState.selectedCrop.isNullOrEmpty()) {
+                        showCropRequiredDialog = true
+                    } else {
+                        selectedImageData?.let { bytes ->
+                            appViewModel.setSelectedImageByteArray(bytes)
+                            val targetCrop = appState.selectedCrop ?: ""
+                            detectionViewModel.detect(bytes, targetCrop, 640, 640)
+                        } ?: run {
+                            scope.launch {
+                                snackBarHostState.showSnackbar(
+                                    message = unableToLoadMsg,
+                                    actionLabel = okText
+                                )
+                            }
                         }
                     }
                 }
@@ -313,6 +319,28 @@ fun HomeScreen(
                 }
                 if(detectionData.isDetecting){
                     LoadingDialog()
+                }
+                if (showCropRequiredDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showCropRequiredDialog = false },
+                        title = {
+                            Text(
+                                text = "Select Target Crop",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                            )
+                        },
+                        text = {
+                            Text(
+                                text = "Please select a target crop type (Corn, Pepper, or Tomato) before running disease analysis.",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        },
+                        confirmButton = {
+                            Button(onClick = { showCropRequiredDialog = false }) {
+                                Text(okText)
+                            }
+                        }
+                    )
                 }
             }
         )

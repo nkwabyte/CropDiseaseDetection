@@ -12,6 +12,7 @@ public struct HomeView: View {
     @State private var isCameraPresented: Bool = false
     @State private var isResultPresented: Bool = false
     @State private var isCropPickerPresented: Bool = false
+    @State private var isCropAlertPresented: Bool = false
     
     private let crops = [
         ("Corn", "🌽", "Maize Crops"),
@@ -149,7 +150,12 @@ public struct HomeView: View {
                     // Run Detection Action Button
                     if selectedUIImage != nil {
                         Button {
-                            if let bytes = selectedByteArray, let crop = appStateObs.value.selectedCrop {
+                            let selectedCrop = appStateObs.value.selectedCrop
+                            if selectedCrop == nil || selectedCrop?.isEmpty == true {
+                                isCropAlertPresented = true
+                                return
+                            }
+                            if let bytes = selectedByteArray, let crop = selectedCrop {
                                 let ktByteArray = KotlinByteArray(size: Int32(bytes.count))
                                 for (idx, byte) in bytes.enumerated() {
                                     ktByteArray.set(index: Int32(idx), value: Int8(bitPattern: byte))
@@ -203,9 +209,11 @@ public struct HomeView: View {
                             clearHomeScreen()
                         }
                     )
-                    .onDisappear {
-                        clearHomeScreen()
-                    }
+                }
+            }
+            .onChange(of: isResultPresented) { isPresented in
+                if !isPresented {
+                    clearHomeScreen()
                 }
             }
             .sheet(isPresented: $isCameraPresented) {
@@ -213,6 +221,11 @@ public struct HomeView: View {
                     self.selectedUIImage = image
                     self.selectedByteArray = data
                 }
+            }
+            .alert("Select Target Crop", isPresented: $isCropAlertPresented) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("Please select a target crop type (Corn, Pepper, or Tomato) before running disease diagnostics.")
             }
         }
     }

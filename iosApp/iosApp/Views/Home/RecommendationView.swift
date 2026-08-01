@@ -9,14 +9,31 @@ private struct IdentifiedDetection: Identifiable {
 extension DiseaseDatabase {
     func getDiseaseInfo(diseaseName: String) -> DiseaseInfo {
         let target = diseaseName.lowercased()
-        let list = self.diseases as? [DiseaseInfo] ?? []
+        let list = (self.diseases as? [DiseaseInfo]) ?? []
         if let found = list.first(where: { $0.name.lowercased() == target }) {
             return found
         }
         if let found = list.first(where: { $0.name.lowercased().contains(target) }) {
             return found
         }
-        return list.first!
+        if let first = list.first {
+            return first
+        }
+        return DiseaseInfo(
+            id: 0,
+            name: diseaseName,
+            localName: "",
+            crop: "Crop",
+            isHealthy: false,
+            description: "No details available",
+            symptoms: "N/A",
+            causes: "N/A",
+            effects: "N/A",
+            prevention: "N/A",
+            organicMitigation: "N/A",
+            chemicalMitigation: "N/A",
+            imageUrl: ""
+        )
     }
 }
 
@@ -55,47 +72,39 @@ private struct RecommendationCardView: View {
 
 public struct RecommendationView: View {
     public let results: [DetectionResult]
-    @Environment(\.dismiss) private var dismiss
     
     public var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    if results.isEmpty {
-                        Text("No disease information required.")
-                            .foregroundColor(.secondary)
-                            .padding()
-                    } else {
-                        let distinctResults: [DetectionResult] = {
-                            var dict = [String: DetectionResult]()
-                            for det in results {
-                                let key = det.className ?? "\(det.classIndex)"
-                                if let existing = dict[key] {
-                                    if det.score > existing.score {
-                                        dict[key] = det
-                                    }
-                                } else {
+        ScrollView {
+            VStack(spacing: 20) {
+                if results.isEmpty {
+                    Text("No disease information required.")
+                        .foregroundColor(.secondary)
+                        .padding()
+                } else {
+                    let distinctResults: [DetectionResult] = {
+                        var dict = [String: DetectionResult]()
+                        for det in results {
+                            let key = det.className ?? "\(det.classIndex)"
+                            if let existing = dict[key] {
+                                if det.score > existing.score {
                                     dict[key] = det
                                 }
+                            } else {
+                                dict[key] = det
                             }
-                            return dict.values.sorted(by: { $0.score > $1.score })
-                        }()
-                        let items = distinctResults.enumerated().map { IdentifiedDetection(id: $0.offset, result: $0.element) }
-                        ForEach(items) { item in
-                            RecommendationCardView(det: item.result)
                         }
+                        return dict.values.sorted(by: { $0.score > $1.score })
+                    }()
+                    let items = distinctResults.enumerated().map { IdentifiedDetection(id: $0.offset, result: $0.element) }
+                    ForEach(items) { item in
+                        RecommendationCardView(det: item.result)
                     }
                 }
-                .padding()
             }
-            .navigationTitle("Treatment Guidelines")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Close") { dismiss() }
-                }
-            }
+            .padding()
         }
+        .navigationTitle("Treatment Guidelines")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

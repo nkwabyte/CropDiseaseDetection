@@ -149,8 +149,8 @@ public struct DetectionResultView: View {
                     // Action Buttons
                     VStack(spacing: 12) {
                         if state.isDetectionSuccessful {
-                            Button {
-                                isRecommendationPresented = true
+                            NavigationLink {
+                                RecommendationView(results: detectionStateObs.value.results as? [DetectionResult] ?? [])
                             } label: {
                                 Label("View Treatment Guidelines", systemImage: "book.pages.fill")
                                     .font(.headline)
@@ -182,9 +182,6 @@ public struct DetectionResultView: View {
                         dismiss()
                     }
                 }
-            }
-            .sheet(isPresented: $isRecommendationPresented) {
-                RecommendationView(results: detectionStateObs.value.results as? [DetectionResult] ?? [])
             }
             .sheet(isPresented: $isFlagSheetPresented) {
                 VStack(spacing: 16) {

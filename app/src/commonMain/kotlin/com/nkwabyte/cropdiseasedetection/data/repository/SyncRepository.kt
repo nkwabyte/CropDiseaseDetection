@@ -6,6 +6,8 @@ import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
 import dev.gitlive.firebase.firestore.firestore
 import kotlinx.serialization.Serializable
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 @Serializable
 data class DetectionRecord(
@@ -54,8 +56,187 @@ data class FlaggedRecord(
     val classifierThreshold: Float
 )
 
+@Serializable
+data class PendingDetectionRecord(
+    val id: String,
+    val imageBase64: String,
+    val cropName: String,
+    val detectionSuccessful: Boolean,
+    val isCropMismatch: Boolean,
+    val imageWidth: Int,
+    val imageHeight: Int,
+    val timestamp: Long,
+    val matchingResults: List<DetectionResult>,
+    val rawResults: List<DetectionResult>,
+    val modelName: String? = null,
+    val modelVersion: String? = null,
+    val platform: String? = null
+)
+
+@Serializable
+data class PendingFlaggedRecord(
+    val id: String,
+    val imageBase64: String,
+    val cropName: String,
+    val userRole: String,
+    val detectionResults: List<DetectionResult>,
+    val classificationLabel: String?,
+    val classifierConfidence: Float,
+    val imageWidth: Int,
+    val imageHeight: Int,
+    val notes: String?,
+    val platform: String?,
+    val modelName: String?,
+    val detectionThreshold: Float,
+    val iouThreshold: Float,
+    val classifierThreshold: Float,
+    val timestamp: Long
+)
+
 class SyncRepository {
     private val firestore = Firebase.firestore
+    private val pendingDetections = mutableListOf<PendingDetectionRecord>()
+    private val pendingFlagged = mutableListOf<PendingFlaggedRecord>()
+
+    @OptIn(ExperimentalEncodingApi::class)
+    fun queuePendingDetectionRecord(
+        imageBytes: ByteArray,
+        cropName: String,
+        detectionSuccessful: Boolean,
+        isCropMismatch: Boolean,
+        imageWidth: Int,
+        imageHeight: Int,
+        matchingResults: List<DetectionResult>,
+        rawResults: List<DetectionResult>,
+        modelName: String? = null,
+        modelVersion: String? = null,
+        platform: String? = null
+    ) {
+        val base64 = Base64.encode(imageBytes)
+        val now = io.ktor.util.date.GMTDate().timestamp
+        val record = PendingDetectionRecord(
+            id = now.toString(),
+            imageBase64 = base64,
+            cropName = cropName,
+            detectionSuccessful = detectionSuccessful,
+            isCropMismatch = isCropMismatch,
+            imageWidth = imageWidth,
+            imageHeight = imageHeight,
+            timestamp = now,
+            matchingResults = matchingResults,
+            rawResults = rawResults,
+            modelName = modelName,
+            modelVersion = modelVersion,
+            platform = platform
+        )
+        pendingDetections.add(record)
+        println("Offline: Queued detection record locally (${pendingDetections.size} pending)")
+    }
+
+    @OptIn(ExperimentalEncodingApi::class)
+    fun queuePendingFlaggedRecord(
+        imageBytes: ByteArray,
+        cropName: String,
+        userRole: String,
+        detectionResults: List<DetectionResult>,
+        classificationLabel: String?,
+        classifierConfidence: Float,
+        imageWidth: Int,
+        imageHeight: Int,
+        notes: String?,
+        platform: String?,
+        modelName: String?,
+        detectionThreshold: Float,
+        iouThreshold: Float,
+        classifierThreshold: Float
+    ) {
+        val base64 = Base64.encode(imageBytes)
+        val now = io.ktor.util.date.GMTDate().timestamp
+        val record = PendingFlaggedRecord(
+            id = now.toString(),
+            imageBase64 = base64,
+            cropName = cropName,
+            userRole = userRole,
+            detectionResults = detectionResults,
+            classificationLabel = classificationLabel,
+            classifierConfidence = classifierConfidence,
+            imageWidth = imageWidth,
+            imageHeight = imageHeight,
+            notes = notes,
+            platform = platform,
+            modelName = modelName,
+            detectionThreshold = detectionThreshold,
+            iouThreshold = iouThreshold,
+            classifierThreshold = classifierThreshold,
+            timestamp = now
+        )
+        pendingFlagged.add(record)
+        println("Offline: Queued flagged record locally (${pendingFlagged.size} pending)")
+    }
+
+    @OptIn(ExperimentalEncodingApi::class)
+    suspend fun processPendingQueue(cloudinaryApi: com.nkwabyte.cropdiseasedetection.data.network.CloudinaryApi) {
+        if (pendingDetections.isEmpty() && pendingFlagged.isEmpty()) return
+
+        println("Processing pending offline queue: ${pendingDetections.size} detections, ${pendingFlagged.size} flagged")
+
+        val detectionsCopy = pendingDetections.toList()
+        for (pending in detectionsCopy) {
+            try {
+                val bytes = Base64.decode(pending.imageBase64)
+                val url = cloudinaryApi.uploadImage(bytes)
+                if (url != null) {
+                    saveDetectionRecord(
+                        cropName = pending.cropName,
+                        imageUrl = url,
+                        detectionSuccessful = pending.detectionSuccessful,
+                        isCropMismatch = pending.isCropMismatch,
+                        imageWidth = pending.imageWidth,
+                        imageHeight = pending.imageHeight,
+                        matchingResults = pending.matchingResults,
+                        rawResults = pending.rawResults,
+                        modelName = pending.modelName,
+                        modelVersion = pending.modelVersion,
+                        platform = pending.platform
+                    )
+                    pendingDetections.remove(pending)
+                    println("Successfully uploaded pending detection record!")
+                }
+            } catch (e: Exception) {
+                println("Failed to process pending detection: ${e.message}")
+            }
+        }
+
+        val flaggedCopy = pendingFlagged.toList()
+        for (pending in flaggedCopy) {
+            try {
+                val bytes = Base64.decode(pending.imageBase64)
+                val url = cloudinaryApi.uploadImage(bytes, folder = "flagged")
+                if (url != null) {
+                    saveFlaggedRecord(
+                        imageUrl = url,
+                        cropName = pending.cropName,
+                        userRole = pending.userRole,
+                        detectionResults = pending.detectionResults,
+                        classificationLabel = pending.classificationLabel,
+                        classifierConfidence = pending.classifierConfidence,
+                        imageWidth = pending.imageWidth,
+                        imageHeight = pending.imageHeight,
+                        notes = pending.notes,
+                        platform = pending.platform,
+                        modelName = pending.modelName,
+                        detectionThreshold = pending.detectionThreshold,
+                        iouThreshold = pending.iouThreshold,
+                        classifierThreshold = pending.classifierThreshold
+                    )
+                    pendingFlagged.remove(pending)
+                    println("Successfully uploaded pending flagged record!")
+                }
+            } catch (e: Exception) {
+                println("Failed to process pending flagged record: ${e.message}")
+            }
+        }
+    }
 
     suspend fun saveDetectionRecord(
         cropName: String,
@@ -98,7 +279,7 @@ class SyncRepository {
     }
 
     suspend fun getDetectionRecords(): List<DetectionRecord> {
-        return try {
+        val remoteRecords = try {
             val user = Firebase.auth.currentUser
             val uid = user?.uid ?: "anonymous"
 
@@ -108,11 +289,31 @@ class SyncRepository {
 
             response.documents.map { document ->
                 document.data(DetectionRecord.serializer())
-            }.sortedByDescending { it.timestamp }
+            }
         } catch (e: Exception) {
             println("Failed to fetch detection records: ${e.message}")
             emptyList()
         }
+
+        val localRecords = pendingDetections.map { pending ->
+            DetectionRecord(
+                userId = Firebase.auth.currentUser?.uid ?: "anonymous",
+                cropName = pending.cropName,
+                imageUrl = "data:image/jpeg;base64,${pending.imageBase64}",
+                detectionSuccessful = pending.detectionSuccessful,
+                isCropMismatch = pending.isCropMismatch,
+                imageWidth = pending.imageWidth,
+                imageHeight = pending.imageHeight,
+                timestamp = pending.timestamp,
+                matchingResults = pending.matchingResults,
+                rawResults = pending.rawResults,
+                modelName = pending.modelName,
+                modelVersion = pending.modelVersion,
+                platform = pending.platform
+            )
+        }
+
+        return (remoteRecords + localRecords).sortedByDescending { it.timestamp }
     }
 
     suspend fun saveUserProfile(userName: String, userEmail: String?, role: UserRole) {

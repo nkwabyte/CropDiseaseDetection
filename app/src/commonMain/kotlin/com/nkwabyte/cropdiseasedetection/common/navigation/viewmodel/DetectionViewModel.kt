@@ -150,7 +150,22 @@ class DetectionViewModel(
                                 modelVersion = "v1.0",
                                 platform = "iOS/Android App"
                             )
+                        } else {
+                            syncRepository.queuePendingDetectionRecord(
+                                imageBytes = imageBytes,
+                                cropName = crop,
+                                detectionSuccessful = matchingResults.isNotEmpty(),
+                                isCropMismatch = isMismatch,
+                                imageWidth = width,
+                                imageHeight = height,
+                                matchingResults = matchingResults,
+                                rawResults = results,
+                                modelName = "ExecuTorch (PyTorch Mobile)",
+                                modelVersion = "v1.0",
+                                platform = "iOS/Android App"
+                            )
                         }
+                        syncRepository.processPendingQueue(cloudinaryApi)
                     } catch (e: Exception) {
                         println("Sync workflow failed: ${e.message}")
                     }
@@ -179,26 +194,42 @@ class DetectionViewModel(
         viewModelScope.launch(Dispatchers.Default) {
             try {
                 val imageUrl = cloudinaryApi.uploadImage(imageBytes, folder = "flagged")
-                if (imageUrl == null) {
-                    _flagState.value = FlagState.Error("Image upload failed")
-                    return@launch
+                if (imageUrl != null) {
+                    syncRepository.saveFlaggedRecord(
+                        imageUrl = imageUrl,
+                        cropName = cropName,
+                        userRole = userRole,
+                        detectionResults = state.results,
+                        classificationLabel = state.classificationLabel,
+                        classifierConfidence = state.classifierConfidence,
+                        imageWidth = state.imageWidth ?: 0,
+                        imageHeight = state.imageHeight ?: 0,
+                        notes = notes,
+                        platform = "iOS/Android App",
+                        modelName = "ExecuTorch (PyTorch Mobile)",
+                        detectionThreshold = detectionThreshold,
+                        iouThreshold = iouThreshold,
+                        classifierThreshold = classifierThreshold
+                    )
+                } else {
+                    syncRepository.queuePendingFlaggedRecord(
+                        imageBytes = imageBytes,
+                        cropName = cropName,
+                        userRole = userRole,
+                        detectionResults = state.results,
+                        classificationLabel = state.classificationLabel,
+                        classifierConfidence = state.classifierConfidence,
+                        imageWidth = state.imageWidth ?: 0,
+                        imageHeight = state.imageHeight ?: 0,
+                        notes = notes,
+                        platform = "iOS/Android App",
+                        modelName = "ExecuTorch (PyTorch Mobile)",
+                        detectionThreshold = detectionThreshold,
+                        iouThreshold = iouThreshold,
+                        classifierThreshold = classifierThreshold
+                    )
                 }
-                syncRepository.saveFlaggedRecord(
-                    imageUrl = imageUrl,
-                    cropName = cropName,
-                    userRole = userRole,
-                    detectionResults = state.results,
-                    classificationLabel = state.classificationLabel,
-                    classifierConfidence = state.classifierConfidence,
-                    imageWidth = state.imageWidth ?: 0,
-                    imageHeight = state.imageHeight ?: 0,
-                    notes = notes,
-                    platform = "iOS/Android App",
-                    modelName = "ExecuTorch (PyTorch Mobile)",
-                    detectionThreshold = detectionThreshold,
-                    iouThreshold = iouThreshold,
-                    classifierThreshold = classifierThreshold
-                )
+                syncRepository.processPendingQueue(cloudinaryApi)
                 _flagState.value = FlagState.Success()
             } catch (e: Exception) {
                 println("Flag workflow failed: ${e.message}")
