@@ -3,18 +3,72 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users can read/write their own profiles
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // Anyone can create a detection record (authenticated or anonymous).
-    // Authenticated users can only read their own records.
-    match /detections/{docId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if true;
+    // SyncRepository stamps records with the caller's uid, falling back to the
+    // literal "anonymous" when nobody is signed in. Pinning writes to this value
+    // keeps the signed-out flow working while preventing a client from forging
+    // records that belong to another account.
+    function callerId() {
+      return isSignedIn() ? request.auth.uid : 'anonymous';
     }
-    
+
+    // Cheap payload guards. Images live in Cloudinary, so only the URL is stored.
+    function hasValidImageUrl() {
+      return request.resource.data.imageUrl is string
+        && request.resource.data.imageUrl.size() <= 2048;
+    }
+
+    function isValidRole(role) {
+      return role in ['FARMER', 'FIELD_AGENT'];
+    }
+
+    // One profile document per account, readable and writable only by its owner.
+    match /users/{userId} {
+      allow read, delete: if isSignedIn() && request.auth.uid == userId;
+      allow create, update: if isSignedIn()
+        && request.auth.uid == userId
+        && request.resource.data.userId == userId
+        && isValidRole(request.resource.data.role);
+    }
+
+    // Detection history. Signed-out users may contribute records but cannot read
+    // the shared "anonymous" pool back, so the query in getDetectionRecords()
+    // returns nothing for them and the UI falls back to the local pending list.
+    match /detections/{docId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+
+      allow create: if request.resource.data.userId == callerId()
+        && hasValidImageUrl()
+        && request.resource.data.timestamp is number
+        && request.resource.data.cropName is string;
+
+      // Supports anonymizeUserData(): the owner may detach their records by
+      // rewriting userId to "anonymous", and may change nothing else.
+      allow update: if isSignedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == 'anonymous'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userId']);
+
+      allow delete: if false;
+    }
+
+    // Expert feedback submitted from the flag-detection dialog. Write-only from
+    // the app; reviewed out of band via the console or a trusted backend.
+    match /flagged/{docId} {
+      allow read: if isSignedIn() && resource.data.flaggedBy == request.auth.uid;
+
+      allow create: if request.resource.data.flaggedBy == callerId()
+        && hasValidImageUrl()
+        && request.resource.data.timestamp is number
+        && request.resource.data.cropName is string
+        && isValidRole(request.resource.data.flaggedByRole);
+
+      allow update, delete: if false;
+    }
+
     // Deny all other access by default
     match /{document=**} {
       allow read, write: if false;
