@@ -1,12 +1,15 @@
 package com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.nkwabyte.cropdiseasedetection.common.model.UserProfile
+import com.nkwabyte.cropdiseasedetection.data.repository.SyncRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
-class ProfileViewModel: ViewModel() {
+class ProfileViewModel(private val syncRepository: SyncRepository? = null): ViewModel() {
     private val _userData = UserProfile(
         userId = "user123",
         userName = "Jane Doe",
@@ -22,6 +25,16 @@ class ProfileViewModel: ViewModel() {
     )
     private val _userProfileState = MutableStateFlow(_userData)
     val userProfileState = _userProfileState.asStateFlow()
+
+    fun deleteUserData() {
+        viewModelScope.launch {
+            try {
+                syncRepository?.anonymizeUserData()
+            } catch (e: Exception) {
+                println("Failed to anonymize data: ${e.message}")
+            }
+        }
+    }
 
     fun setSelectedProfile(profile: UserProfile) {
         _userProfileState.update { currentState ->

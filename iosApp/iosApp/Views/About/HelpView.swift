@@ -90,6 +90,59 @@ public struct HelpView: View {
                 .background(Color(uiColor: .secondarySystemBackground))
                 .cornerRadius(16)
                 
+                // Contact Us Card
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack {
+                        Image(systemName: "envelope.badge.fill")
+                            .foregroundColor(.green)
+                        Text("Contact Us")
+                            .font(.headline)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Responsible Artificial Intelligence Lab (RAIL)")
+                            .font(.subheadline)
+                            .fontWeight(.bold)
+                            .foregroundColor(.primary)
+
+                        Text("Kwame Nkrumah University of Science and Technology (KNUST)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        ContactInfoRow(
+                            icon: "phone.fill",
+                            title: "Phone",
+                            value: "+233 20 753 4396",
+                            url: "tel:+233207534396"
+                        )
+                        ContactInfoRow(
+                            icon: "envelope.fill",
+                            title: "Email",
+                            value: "rail@knust.edu.gh",
+                            url: "mailto:rail@knust.edu.gh"
+                        )
+                        ContactInfoRow(
+                            icon: "mappin.and.ellipse",
+                            title: "Location",
+                            value: "College of Engineering, Research Hill, KNUST, Kumasi, Ghana",
+                            url: nil
+                        )
+                        ContactInfoRow(
+                            icon: "globe",
+                            title: "Website",
+                            value: "rail.knust.edu.gh",
+                            url: "https://rail.knust.edu.gh"
+                        )
+                    }
+                }
+                .padding()
+                .background(Color(uiColor: .secondarySystemBackground))
+                .cornerRadius(16)
+
                 // Social Media Connections Section
                 VStack(alignment: .leading, spacing: 14) {
                     HStack {
@@ -185,5 +238,51 @@ private struct GuideStepRow: View {
                     .foregroundColor(.secondary)
             }
         }
+    }
+}
+
+private struct ContactInfoRow: View {
+    @Environment(\.openURL) private var openURL
+    let icon: String
+    let title: String
+    let value: String
+    let url: String?
+
+    var body: some View {
+        Button {
+            if let urlStr = url, let targetURL = URL(string: urlStr) {
+                openURL(targetURL)
+            }
+        } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(Color.green.opacity(0.15))
+                        .frame(width: 32, height: 32)
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.green)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text(value)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+                }
+
+                Spacer()
+
+                if url != nil {
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .buttonStyle(.plain)
     }
 }

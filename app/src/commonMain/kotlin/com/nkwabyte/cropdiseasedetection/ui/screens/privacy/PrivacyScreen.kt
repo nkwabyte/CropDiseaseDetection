@@ -12,9 +12,21 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import com.nkwabyte.cropdiseasedetection.common.navigation.appbar.AppBar
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -120,10 +132,7 @@ fun PrivacyScreen(
                     content = "We may update this Privacy Policy from time to time to reflect changes in our practices or for other operational, legal, or regulatory reasons. We will notify you of any changes by posting the new Privacy Policy on this page and updating the “Last Updated” date at the top.\n\nWe encourage you to review this Privacy Policy periodically to stay informed about how we are protecting your information."
                 )
 
-                PrivacySection(
-                    title = "10. Contact Us",
-                    content = "If you have any questions, concerns, or requests regarding this Privacy Policy or our data practices, please contact us at:\n\nResponsible Artificial Intelligence Lab (RAIL)\nEmail: rail@knust.edu.gh\nAddress: KNUST, College of Engineering, Research Hill, Kumasi, Ghana"
-                )
+                PrivacyContactCard()
 
                 Spacer(modifier = Modifier.height(48.dp))
             }
@@ -149,12 +158,217 @@ fun PrivacySection(title: String, content: String) {
             ),
             modifier = Modifier.padding(bottom = 12.dp)
         )
+        FormattedPrivacyContent(content = content)
+    }
+}
+
+@Composable
+fun FormattedPrivacyContent(content: String) {
+    val lines = content.split("\n")
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        lines.forEach { line ->
+            when {
+                // 1. Sub-section markers like "a) ", "b) "
+                line.matches(Regex("^[a-z]\\).*")) -> {
+                    val badge = line.substringBefore(")").trim() + ")"
+                    val text = line.substringAfter(")").trim()
+
+                    Row(
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(top = 4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(MaterialTheme.colorScheme.primaryContainer)
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = badge,
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            )
+                        }
+                        Text(
+                            text = text,
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        )
+                    }
+                }
+
+                // 2. Bullet points starting with "• " or "- "
+                line.startsWith("•") || line.startsWith("-") -> {
+                    val cleanLine = line.replace(Regex("^[•\\-]\\s*"), "")
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.padding(start = 4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .padding(top = 8.dp)
+                                .size(6.dp)
+                                .clip(androidx.compose.foundation.shape.CircleShape)
+                                .background(MaterialTheme.colorScheme.primary)
+                        )
+
+                        val annotatedString = buildAnnotatedString {
+                            if (cleanLine.contains(":")) {
+                                val bulletTitle = cleanLine.substringBefore(":").trim()
+                                val bulletDesc = cleanLine.substringAfter(":").trim()
+
+                                withStyle(
+                                    style = SpanStyle(
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                ) {
+                                    append("$bulletTitle: ")
+                                }
+                                withStyle(
+                                    style = SpanStyle(
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                                    )
+                                ) {
+                                    append(bulletDesc)
+                                }
+                            } else {
+                                append(cleanLine)
+                            }
+                        }
+
+                        Text(
+                            text = annotatedString,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                lineHeight = 22.sp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+                            )
+                        )
+                    }
+                }
+
+                // 3. Regular paragraph
+                else -> {
+                    Text(
+                        text = line,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            lineHeight = 22.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+                        )
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PrivacyContactCard() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         Text(
-            text = content,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                lineHeight = 22.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+            text = "10. Contact Us",
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
             )
         )
+
+        Text(
+            text = "Responsible Artificial Intelligence Lab (RAIL)",
+            style = MaterialTheme.typography.bodyLarge.copy(
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        )
+
+        Text(
+            text = "Kwame Nkrumah University of Science and Technology (KNUST)",
+            style = MaterialTheme.typography.bodySmall.copy(
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+        )
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+        PrivacyContactItem(
+            icon = Icons.Default.Phone,
+            label = "Phone",
+            value = "+233 20 753 4396"
+        )
+        PrivacyContactItem(
+            icon = Icons.Default.Email,
+            label = "Email",
+            value = "rail@knust.edu.gh"
+        )
+        PrivacyContactItem(
+            icon = Icons.Default.LocationOn,
+            label = "Location",
+            value = "College of Engineering, Research Hill, KNUST, Kumasi, Ghana"
+        )
+        PrivacyContactItem(
+            icon = Icons.Default.Language,
+            label = "Website",
+            value = "rail.knust.edu.gh"
+        )
+    }
+}
+
+@Composable
+private fun PrivacyContactItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    value: String
+) {
+    Row(
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = androidx.compose.ui.Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+
+        Column {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            )
+        }
     }
 }

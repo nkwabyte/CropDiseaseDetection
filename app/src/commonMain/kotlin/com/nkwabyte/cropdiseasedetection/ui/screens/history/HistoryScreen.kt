@@ -35,12 +35,15 @@ import androidx.compose.ui.window.DialogProperties
 import coil3.compose.rememberAsyncImagePainter
 import com.nkwabyte.cropdiseasedetection.common.data.DiseaseDatabase
 import com.nkwabyte.cropdiseasedetection.common.navigation.appbar.AppBar
+import com.nkwabyte.cropdiseasedetection.data.network.CloudinaryApi
 import com.nkwabyte.cropdiseasedetection.data.repository.DetectionRecord
 import com.nkwabyte.cropdiseasedetection.data.repository.SyncRepository
 import com.nkwabyte.cropdiseasedetection.ui.components.StatCard
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.auth
-import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
+
+import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.HistoryViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,25 +53,16 @@ fun HistoryScreen(
     onStartScanClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val firebaseUser by Firebase.auth.authStateChanged.collectAsState(initial = Firebase.auth.currentUser)
-    val isGuest = firebaseUser == null
-
-    var isLoading by remember { mutableStateOf(false) }
-    var historyRecords by remember { mutableStateOf<List<DetectionRecord>>(emptyList()) }
+    val historyViewModel: HistoryViewModel = koinInject()
+    val state by historyViewModel.historyState.collectAsState()
     var selectedRecord by remember { mutableStateOf<DetectionRecord?>(null) }
 
-    val syncRepository = remember { SyncRepository() }
-    val scope = rememberCoroutineScope()
+    val isGuest = state.isGuest
+    val isLoading = state.isLoading
+    val historyRecords = state.records
 
-    // Reload history records whenever auth state changes (sign-in status updates)
-    LaunchedEffect(firebaseUser) {
-        if (!isGuest) {
-            isLoading = true
-            historyRecords = syncRepository.getDetectionRecords()
-            isLoading = false
-        } else {
-            historyRecords = emptyList()
-        }
+    LaunchedEffect(Unit) {
+        historyViewModel.loadHistory()
     }
 
     Scaffold(
@@ -158,7 +152,9 @@ fun HistoryScreen(
                         }
                     }
 
-                    items(historyRecords, key = { it.timestamp }) { record ->
+                    // Timestamp alone is not unique enough: a queued record and its
+                    // uploaded twin share one, and LazyColumn crashes on duplicate keys.
+                    items(historyRecords, key = { "${it.timestamp}-${it.imageUrl.hashCode()}" }) { record ->
                         HistoryRecordCard(
                             record = record,
                             onClick = { selectedRecord = record }

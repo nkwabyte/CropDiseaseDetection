@@ -82,4 +82,22 @@ class AuthViewModel(private val syncRepository: SyncRepository) : ViewModel() {
             }
         }
     }
+
+    fun deleteAccount() {
+        val user = auth.currentUser
+        if (user == null) {
+            _authState.value = AuthState.Error("No logged in user to delete")
+            return
+        }
+        _authState.value = AuthState.Loading
+        viewModelScope.launch {
+            try {
+                syncRepository.anonymizeUserData()
+                user.delete()
+                _authState.value = AuthState.Success("Account deleted successfully")
+            } catch (e: Exception) {
+                _authState.value = AuthState.Error(e.message ?: "Failed to delete account")
+            }
+        }
+    }
 }

@@ -21,4 +21,8 @@ public struct KoinHelper {
     public static var settingsManager: SettingsManager {
         KoinDependencies.shared.getSettingsManager()
     }
+
+    public static var historyViewModel: HistoryViewModel {
+        KoinDependencies.shared.getHistoryViewModel()
+    }
 }

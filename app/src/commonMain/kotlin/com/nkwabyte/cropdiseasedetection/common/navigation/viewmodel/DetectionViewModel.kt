@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nkwabyte.cropdiseasedetection.common.helpers.ObjectDetector
 import com.nkwabyte.cropdiseasedetection.common.model.DetectionData
+import com.nkwabyte.cropdiseasedetection.common.model.DetectionResult
 import com.nkwabyte.cropdiseasedetection.data.network.CloudinaryApi
 import com.nkwabyte.cropdiseasedetection.data.repository.SyncRepository
 import kotlinx.coroutines.Dispatchers
@@ -85,6 +86,16 @@ class DetectionViewModel(
                             results = emptyList()
                         )
                     }
+                    syncDetection(
+                        imageBytes = imageBytes,
+                        crop = crop,
+                        width = width,
+                        height = height,
+                        matchingResults = emptyList(),
+                        rawResults = results,
+                        detectionSuccessful = false,
+                        isCropMismatch = false
+                    )
                     return@launch
                 }
 
@@ -103,6 +114,16 @@ class DetectionViewModel(
                             imageHeight = height,
                         )
                     }
+                    syncDetection(
+                        imageBytes = imageBytes,
+                        crop = crop,
+                        width = width,
+                        height = height,
+                        matchingResults = emptyList(),
+                        rawResults = results,
+                        detectionSuccessful = false,
+                        isCropMismatch = false
+                    )
                     return@launch
                 }
 
@@ -132,50 +153,76 @@ class DetectionViewModel(
                     )
                 }
 
-                // Fire and forget image upload and sync
-                viewModelScope.launch(Dispatchers.Default) {
-                    try {
-                        val imageUrl = cloudinaryApi.uploadImage(imageBytes)
-                        if (imageUrl != null) {
-                            syncRepository.saveDetectionRecord(
-                                cropName = crop,
-                                imageUrl = imageUrl,
-                                detectionSuccessful = matchingResults.isNotEmpty(),
-                                isCropMismatch = isMismatch,
-                                imageWidth = width,
-                                imageHeight = height,
-                                matchingResults = matchingResults,
-                                rawResults = results,
-                                modelName = "ExecuTorch (PyTorch Mobile)",
-                                modelVersion = "v1.0",
-                                platform = "iOS/Android App"
-                            )
-                        } else {
-                            syncRepository.queuePendingDetectionRecord(
-                                imageBytes = imageBytes,
-                                cropName = crop,
-                                detectionSuccessful = matchingResults.isNotEmpty(),
-                                isCropMismatch = isMismatch,
-                                imageWidth = width,
-                                imageHeight = height,
-                                matchingResults = matchingResults,
-                                rawResults = results,
-                                modelName = "ExecuTorch (PyTorch Mobile)",
-                                modelVersion = "v1.0",
-                                platform = "iOS/Android App"
-                            )
-                        }
-                        syncRepository.processPendingQueue(cloudinaryApi)
-                    } catch (e: Exception) {
-                        println("Sync workflow failed: ${e.message}")
-                    }
-                }
+                syncDetection(
+                    imageBytes = imageBytes,
+                    crop = crop,
+                    width = width,
+                    height = height,
+                    matchingResults = matchingResults,
+                    rawResults = results,
+                    detectionSuccessful = matchingResults.isNotEmpty(),
+                    isCropMismatch = isMismatch
+                )
             } catch (e: Exception) {
                 println("PyTorch detection failed: ${e.message}")
             } finally {
                 _detectionState.update {
                     it.copy(isDetecting = false)
                 }
+            }
+        }
+    }
+
+    /**
+     * Persists a scan to Firestore. Called on every terminal path of [detect] — including
+     * the ones with no findings — so the history page mirrors what the user actually ran.
+     * Runs fire-and-forget: the UI state is already published by the time we get here.
+     */
+    private fun syncDetection(
+        imageBytes: ByteArray,
+        crop: String,
+        width: Int,
+        height: Int,
+        matchingResults: List<DetectionResult>,
+        rawResults: List<DetectionResult>,
+        detectionSuccessful: Boolean,
+        isCropMismatch: Boolean
+    ) {
+        viewModelScope.launch(Dispatchers.Default) {
+            try {
+                val imageUrl = cloudinaryApi.uploadImage(imageBytes)
+                if (imageUrl != null) {
+                    syncRepository.saveDetectionRecord(
+                        cropName = crop,
+                        imageUrl = imageUrl,
+                        detectionSuccessful = detectionSuccessful,
+                        isCropMismatch = isCropMismatch,
+                        imageWidth = width,
+                        imageHeight = height,
+                        matchingResults = matchingResults,
+                        rawResults = rawResults,
+                        modelName = MODEL_NAME,
+                        modelVersion = MODEL_VERSION,
+                        platform = PLATFORM
+                    )
+                } else {
+                    syncRepository.queuePendingDetectionRecord(
+                        imageBytes = imageBytes,
+                        cropName = crop,
+                        detectionSuccessful = detectionSuccessful,
+                        isCropMismatch = isCropMismatch,
+                        imageWidth = width,
+                        imageHeight = height,
+                        matchingResults = matchingResults,
+                        rawResults = rawResults,
+                        modelName = MODEL_NAME,
+                        modelVersion = MODEL_VERSION,
+                        platform = PLATFORM
+                    )
+                }
+                syncRepository.processPendingQueue(cloudinaryApi)
+            } catch (e: Exception) {
+                println("Sync workflow failed: ${e.message}")
             }
         }
     }
@@ -205,8 +252,8 @@ class DetectionViewModel(
                         imageWidth = state.imageWidth ?: 0,
                         imageHeight = state.imageHeight ?: 0,
                         notes = notes,
-                        platform = "iOS/Android App",
-                        modelName = "ExecuTorch (PyTorch Mobile)",
+                        platform = PLATFORM,
+                        modelName = MODEL_NAME,
                         detectionThreshold = detectionThreshold,
                         iouThreshold = iouThreshold,
                         classifierThreshold = classifierThreshold
@@ -222,8 +269,8 @@ class DetectionViewModel(
                         imageWidth = state.imageWidth ?: 0,
                         imageHeight = state.imageHeight ?: 0,
                         notes = notes,
-                        platform = "iOS/Android App",
-                        modelName = "ExecuTorch (PyTorch Mobile)",
+                        platform = PLATFORM,
+                        modelName = MODEL_NAME,
                         detectionThreshold = detectionThreshold,
                         iouThreshold = iouThreshold,
                         classifierThreshold = classifierThreshold
@@ -255,5 +302,11 @@ class DetectionViewModel(
                 imageHeight = 0
             )
         }
+    }
+
+    private companion object {
+        const val MODEL_NAME = "ExecuTorch (PyTorch Mobile)"
+        const val MODEL_VERSION = "v1.0"
+        const val PLATFORM = "iOS/Android App"
     }
 }

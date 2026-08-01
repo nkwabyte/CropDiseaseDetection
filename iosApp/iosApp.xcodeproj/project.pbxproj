@@ -31,6 +31,7 @@
 		BCAA110000000000000003AB /* kernels_optimized in Frameworks */ = {isa = PBXBuildFile; productRef = BCAA110000000000000003AC /* kernels_optimized */; };
 		D61E33C028F78DBA3DA14B78 /* EncyclopediaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FD2359243684D780B4CFDF9 /* EncyclopediaView.swift */; };
 		DE5B96ADE68BB5C9688C9D91 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5802EC2B28D9A185EF551B /* ProfileView.swift */; };
+		856AC6C4DB050C23A531C4BF /* PrivacyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5802EC2B28D9A185EF551C /* PrivacyView.swift */; };
 		FB30DAA9D02B50D7D5F9F3B9 /* KoinHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C8AD6ACCD666C5758B0D82B /* KoinHelper.swift */; };
 /* End PBXBuildFile section */
 
@@ -47,6 +48,7 @@
 		60C3DA48D15126FEC427A4CA /* HelpView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HelpView.swift; sourceTree = "<group>"; };
 		62DD0431347F05F9E57C5B90 /* SettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		7E5802EC2B28D9A185EF551B /* ProfileView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		7E5802EC2B28D9A185EF551C /* PrivacyView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PrivacyView.swift; sourceTree = "<group>"; };
 		856AC6C4DB050C23A531C4BE /* AboutView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		8C8AD6ACCD666C5758B0D82B /* KoinHelper.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KoinHelper.swift; sourceTree = "<group>"; };
 		8CFEDA89ADC9207052E6F409 /* BoundingBoxCanvasView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BoundingBoxCanvasView.swift; sourceTree = "<group>"; };
@@ -196,6 +198,7 @@
 			isa = PBXGroup;
 			children = (
 				7E5802EC2B28D9A185EF551B /* ProfileView.swift */,
+				7E5802EC2B28D9A185EF551C /* PrivacyView.swift */,
 			);
 			name = Auth;
 			path = Auth;
@@ -321,6 +324,7 @@
 				84193365F68E5FECB203A458 /* HistoryView.swift in Sources */,
 				947A443ACC41FE424A82B5C7 /* SettingsView.swift in Sources */,
 				DE5B96ADE68BB5C9688C9D91 /* ProfileView.swift in Sources */,
+				856AC6C4DB050C23A531C4BF /* PrivacyView.swift in Sources */,
 				2E17B64D9293D3B50BE7F7E2 /* AboutView.swift in Sources */,
 				AE0CDA25B35CDF0B6C7F2390 /* HelpView.swift in Sources */,
 			);

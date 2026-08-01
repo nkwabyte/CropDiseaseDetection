@@ -7,13 +7,16 @@ import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.ProfileView
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AuthViewModel
 import com.nkwabyte.cropdiseasedetection.data.network.CloudinaryApi
 import com.nkwabyte.cropdiseasedetection.data.repository.SyncRepository
+import com.nkwabyte.cropdiseasedetection.data.storage.OfflineQueueStore
 import com.nkwabyte.cropdiseasedetection.common.utils.SettingsManager
+import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.HistoryViewModel
 import org.koin.dsl.module
 
 val appModule = module {
     single { ObjectDetector() }
     single { CloudinaryApi() }
-    single { SyncRepository() }
+    single { OfflineQueueStore() }
+    single { SyncRepository(get()) }
     single { SettingsManager() }
 
     single { AppViewModel(get(), get()) }
@@ -24,6 +27,7 @@ val appModule = module {
             syncRepository = get<SyncRepository>()
         )
     }
-    single { ProfileViewModel() }
+    single { ProfileViewModel(get()) }
     single { AuthViewModel(get()) }
+    single { HistoryViewModel(get(), get()) }
 }

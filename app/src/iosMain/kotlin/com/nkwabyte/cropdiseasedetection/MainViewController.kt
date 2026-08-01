@@ -20,7 +20,9 @@ import org.koin.core.component.inject
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AuthViewModel
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.DetectionViewModel
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.ProfileViewModel
+import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.HistoryViewModel
 import com.nkwabyte.cropdiseasedetection.common.utils.SettingsManager
+import com.nkwabyte.cropdiseasedetection.data.repository.SyncRepository
 
 private var koinInitialized = false
 
@@ -52,10 +54,12 @@ object KoinDependencies : KoinComponent {
     val detectionViewModel: DetectionViewModel by inject()
     val profileViewModel: ProfileViewModel by inject()
     val settingsManager: SettingsManager by inject()
+    val historyViewModel: HistoryViewModel by inject()
 
     fun getAppViewModel(): AppViewModel = appViewModel
     fun getAuthViewModel(): AuthViewModel = authViewModel
     fun getDetectionViewModel(): DetectionViewModel = detectionViewModel
     fun getProfileViewModel(): ProfileViewModel = profileViewModel
     fun getSettingsManager(): SettingsManager = settingsManager
+    fun getHistoryViewModel(): HistoryViewModel = historyViewModel
 }

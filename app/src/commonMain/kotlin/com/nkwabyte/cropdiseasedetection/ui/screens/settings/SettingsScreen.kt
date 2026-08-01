@@ -59,7 +59,7 @@ fun SettingsScreen(
     val appVersion = remember { settingsManager.getAppVersion() }
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
-    val syncRepository = remember { SyncRepository() }
+    val syncRepository: SyncRepository = koinInject()
 
     Scaffold(
         modifier = modifier,
@@ -151,7 +151,7 @@ fun SettingsScreen(
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                     SettingsActionRow(
                         icon = Icons.Default.DeleteForever,
-                        title = "Delete My Data",
+                        title = "Anonymize My Data",
                         subtitle = "Anonymize your data for research",
                         titleColor = MaterialTheme.colorScheme.error,
                         onClick = { showDeleteDataDialog = true }
@@ -321,8 +321,8 @@ fun SettingsScreen(
     if (showDeleteDataDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDataDialog = false },
-            title = { Text("Delete My Data") },
-            text = { Text("Are you sure you want to delete your data? This will unlink your identity from your previous scans. Your scans will become completely anonymous and will only be used to help train our AI models for the benefit of all farmers. This action cannot be undone.") },
+            title = { Text("Anonymize My Data") },
+            text = { Text("Are you sure you want to anonymize your data? This will unlink your identity from your previous scans. Your scans will become completely anonymous and will only be used to help train our AI models for the benefit of all farmers. This action cannot be undone.") },
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteDataDialog = false
