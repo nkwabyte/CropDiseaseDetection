@@ -1,6 +1,20 @@
 import SwiftUI
+import ComposeApp
 
 struct ContentView: View {
+    @StateObject private var appStateObs = ObservableFlow(KoinHelper.appViewModel.appState)
+
+    private var preferredColorScheme: ColorScheme? {
+        switch appStateObs.value.selectedTheme {
+        case "Light":
+            return .light
+        case "Dark":
+            return .dark
+        default:
+            return nil
+        }
+    }
+
     var body: some View {
         TabView {
             HomeView()
@@ -29,6 +43,7 @@ struct ContentView: View {
                 }
         }
         .accentColor(.green)
+        .preferredColorScheme(preferredColorScheme)
     }
 }
 

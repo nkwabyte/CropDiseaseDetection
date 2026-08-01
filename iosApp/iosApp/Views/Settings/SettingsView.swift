@@ -139,6 +139,9 @@ public struct SettingsView: View {
                 self.classifierThreshold = settings.getClassifierThreshold()
                 self.appVersion = settings.getAppVersion()
             }
+            .onChange(of: appStateObs.value.selectedTheme) { newTheme in
+                self.selectedTheme = newTheme
+            }
         }
     }
 }

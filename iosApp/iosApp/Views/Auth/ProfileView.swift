@@ -7,6 +7,8 @@ public struct ProfileView: View {
     
     @State private var emailInput: String = ""
     @State private var passwordInput: String = ""
+    @State private var userNameInput: String = ""
+    @State private var selectedRole: UserRole = .farmer
     @State private var isRegistering: Bool = false
     
     public var body: some View {
@@ -80,6 +82,14 @@ public struct ProfileView: View {
                             .fontWeight(.bold)
                         
                         VStack(spacing: 12) {
+                            if isRegistering {
+                                TextField("Full Name / Username", text: $userNameInput)
+                                    .autocapitalization(.words)
+                                    .padding()
+                                    .background(Color(uiColor: .secondarySystemBackground))
+                                    .cornerRadius(10)
+                            }
+
                             TextField("Email Address", text: $emailInput)
                                 .keyboardType(.emailAddress)
                                 .autocapitalization(.none)
@@ -91,11 +101,34 @@ public struct ProfileView: View {
                                 .padding()
                                 .background(Color(uiColor: .secondarySystemBackground))
                                 .cornerRadius(10)
+
+                            if isRegistering {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Account Role")
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.secondary)
+                                    
+                                    Picker("Select Role", selection: $selectedRole) {
+                                        Text("Farmer 🧑‍🌾").tag(UserRole.farmer)
+                                        Text("Field Agent 🕵️").tag(UserRole.fieldAgent)
+                                    }
+                                    .pickerStyle(.segmented)
+                                }
+                                .padding(.top, 4)
+                            }
                         }
                         
                         Button {
                             if isRegistering {
-                                KoinHelper.authViewModel.registerWithEmail(email: emailInput, pass: passwordInput, userName: "Farmer", role: UserRole.farmer)
+                                let name = userNameInput.trimmingCharacters(in: .whitespacesAndNewlines)
+                                let finalName = name.isEmpty ? (selectedRole == .fieldAgent ? "Field Agent" : "Farmer") : name
+                                KoinHelper.authViewModel.registerWithEmail(
+                                    email: emailInput,
+                                    pass: passwordInput,
+                                    userName: finalName,
+                                    role: selectedRole
+                                )
                             } else {
                                 KoinHelper.authViewModel.loginWithEmail(email: emailInput, pass: passwordInput)
                             }
