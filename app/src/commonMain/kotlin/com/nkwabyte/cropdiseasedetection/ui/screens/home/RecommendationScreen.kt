@@ -31,7 +31,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nkwabyte.cropdiseasedetection.common.data.DiseaseDatabase
@@ -588,6 +591,77 @@ private fun DiseaseRecommendationDetail(
 // ── Shared section card ────────────────────────────────────────────────────────
 
 @Composable
+fun FormattedBulletList(
+    content: String,
+    bulletColor: Color = MaterialTheme.colorScheme.primary,
+    modifier: Modifier = Modifier
+) {
+    val lines = remember(content) {
+        content.split("\n")
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+    }
+
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        lines.forEach { line ->
+            val cleanLine = line.removePrefix("•").removePrefix("-").removePrefix("*").trim()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Box(
+                    modifier = Modifier
+                        .padding(top = 7.dp)
+                        .size(8.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(bulletColor)
+                )
+
+                val colonIndex = cleanLine.indexOf(":")
+                if (colonIndex > 0 && colonIndex < cleanLine.length - 1) {
+                    val title = cleanLine.substring(0, colonIndex).trim()
+                    val description = cleanLine.substring(colonIndex + 1).trim()
+                    Text(
+                        text = buildAnnotatedString {
+                            withStyle(
+                                SpanStyle(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            ) {
+                                append(title)
+                                append(": ")
+                            }
+                            withStyle(
+                                SpanStyle(
+                                    fontWeight = FontWeight.Normal,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+                                )
+                            ) {
+                                append(description)
+                            }
+                        },
+                        style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp)
+                    )
+                } else {
+                    Text(
+                        text = cleanLine,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            lineHeight = 22.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+                        )
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun RecommendationSection(
     icon: ImageVector,
     iconTint: Color,
@@ -605,7 +679,7 @@ private fun RecommendationSection(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(bottom = 10.dp)
+                modifier = Modifier.padding(bottom = 12.dp)
             ) {
                 Icon(
                     imageVector = icon,
@@ -621,12 +695,9 @@ private fun RecommendationSection(
                     )
                 )
             }
-            Text(
-                text = content,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    lineHeight = 22.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
-                )
+            FormattedBulletList(
+                content = content,
+                bulletColor = iconTint
             )
         }
     }

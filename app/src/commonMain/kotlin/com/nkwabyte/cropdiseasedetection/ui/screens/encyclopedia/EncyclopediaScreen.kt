@@ -590,13 +590,10 @@ fun DetailSection(
                 color = MaterialTheme.colorScheme.primary
             )
         )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = content,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                lineHeight = 20.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-            )
+        Spacer(modifier = Modifier.height(6.dp))
+        com.nkwabyte.cropdiseasedetection.ui.screens.home.FormattedBulletList(
+            content = content,
+            bulletColor = MaterialTheme.colorScheme.primary
         )
     }
 }

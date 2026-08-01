@@ -108,23 +108,64 @@ public struct RecommendationView: View {
     }
 }
 
+struct FormattedBulletListView: View {
+    let content: String
+    var color: Color = .green
+    
+    private var lines: [String] {
+        content.components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(lines.indices, id: \.self) { idx in
+                let line = lines[idx]
+                let cleanLine = line
+                    .trimmingCharacters(in: .whitespaces)
+                    .replacingOccurrences(of: "^[•\\-\\*]\\s*", with: "", options: .regularExpression)
+                
+                HStack(alignment: .top, spacing: 10) {
+                    Circle()
+                        .fill(color)
+                        .frame(width: 7, height: 7)
+                        .padding(.top, 6)
+                    
+                    if let colonRange = cleanLine.range(of: ":") {
+                        let title = String(cleanLine[..<colonRange.lowerBound]).trimmingCharacters(in: .whitespaces)
+                        let desc = String(cleanLine[colonRange.upperBound...]).trimmingCharacters(in: .whitespaces)
+                        
+                        (Text(title + ": ").fontWeight(.bold).foregroundColor(.primary) +
+                         Text(desc).foregroundColor(.secondary))
+                            .font(.body)
+                            .lineSpacing(4)
+                    } else {
+                        Text(cleanLine)
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .lineSpacing(4)
+                    }
+                }
+            }
+        }
+    }
+}
+
 struct RecommendationSectionView: View {
     let title: String
     let icon: String
     let text: String
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Image(systemName: icon)
                     .foregroundColor(.green)
                 Text(title)
                     .font(.headline)
             }
-            Text(text)
-                .font(.body)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            FormattedBulletListView(content: text, color: .green)
         }
     }
 }

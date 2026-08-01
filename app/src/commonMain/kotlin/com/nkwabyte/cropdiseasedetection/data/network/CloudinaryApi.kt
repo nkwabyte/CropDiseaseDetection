@@ -33,8 +33,8 @@ class CloudinaryApi {
     }
 
     suspend fun uploadImage(imageBytes: ByteArray, folder: String? = null): String? {
-        val apiKey = BuildKonfig.CLOUDINARY_API_KEY
-        val apiSecret = BuildKonfig.CLOUDINARY_API_SECRET
+        val apiKey = BuildKonfig.CLOUDINARY_API_KEY.ifBlank { "919859216574648" }
+        val apiSecret = BuildKonfig.CLOUDINARY_API_SECRET.ifBlank { "I8xYSkICFPtCaqDStUDutFQhrX0" }
         val cloudName = BuildKonfig.CLOUDINARY_CLOUD_NAME.ifBlank { "dxdun6eym" }
         val uploadPreset = "crop_diseases"
 

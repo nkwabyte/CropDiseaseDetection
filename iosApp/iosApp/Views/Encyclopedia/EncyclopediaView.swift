@@ -148,16 +148,14 @@ struct DetailSectionView: View {
     let text: String
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Image(systemName: icon)
                     .foregroundColor(.green)
                 Text(title)
                     .font(.headline)
             }
-            Text(text)
-                .font(.body)
-                .foregroundColor(.secondary)
+            FormattedBulletListView(content: text, color: .green)
         }
     }
 }
