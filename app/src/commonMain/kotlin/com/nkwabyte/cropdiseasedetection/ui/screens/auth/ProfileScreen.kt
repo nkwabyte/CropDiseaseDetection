@@ -28,6 +28,8 @@ import androidx.compose.ui.unit.sp
 import com.nkwabyte.cropdiseasedetection.common.model.UserProfile
 import com.nkwabyte.cropdiseasedetection.common.navigation.appbar.AppBar
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.ProfileViewModel
+import org.jetbrains.compose.resources.stringResource
+import com.nkwabyte.cropdiseasedetection.generated.resources.*
 import com.nkwabyte.cropdiseasedetection.generated.resources.*
 import com.nkwabyte.cropdiseasedetection.ui.components.ProfileMenuItem
 import com.nkwabyte.cropdiseasedetection.ui.components.StatCard
@@ -167,7 +169,7 @@ fun ProfileScreen(
                                     .fillMaxWidth()
                                     .padding(top = 8.dp)
                             ) {
-                                Text("Sign In / Register", fontWeight = FontWeight.Bold)
+                                Text(stringResource(Res.string.sign_in_or_register), fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -312,34 +314,34 @@ fun ProfileScreen(
 
         AlertDialog(
             onDismissRequest = { showEditDialog = false },
-            title = { Text("Edit Profile", fontWeight = FontWeight.Bold) },
+            title = { Text(stringResource(Res.string.edit_profile_title), fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = tempName,
                         onValueChange = { tempName = it },
-                        label = { Text("Name") },
+                        label = { Text(stringResource(Res.string.profile_label_name)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
                         value = tempBio,
                         onValueChange = { tempBio = it },
-                        label = { Text("Bio") },
+                        label = { Text(stringResource(Res.string.profile_label_bio)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
                         value = tempPhone,
                         onValueChange = { tempPhone = it },
-                        label = { Text("Phone Number") },
+                        label = { Text(stringResource(Res.string.profile_label_phone)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
                         value = tempLocation,
                         onValueChange = { tempLocation = it },
-                        label = { Text("Location") },
+                        label = { Text(stringResource(Res.string.profile_label_location)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -357,12 +359,12 @@ fun ProfileScreen(
                         showEditDialog = false
                     }
                 ) {
-                    Text("Save", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    Text(stringResource(Res.string.save_button_text), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showEditDialog = false }) {
-                    Text("Cancel", color = MaterialTheme.colorScheme.onSurface)
+                    Text(stringResource(Res.string.cancel_text), color = MaterialTheme.colorScheme.onSurface)
                 }
             },
             containerColor = MaterialTheme.colorScheme.surface,

@@ -1,0 +1,154 @@
+<resources>
+    <string name="app_name">CDD</string>
+    <string name="app_name_full">Détecteur de Maladies des Cultures</string>
+
+    <!-- General Strings -->
+    <string name="copy_right_text">RAIL - © DROITS D'AUTEUR 2025</string>
+    <string name="ok_text">OK</string>
+    <string name="cancel_text">Annuler</string>
+
+    <!-- Drawer Strings -->
+    <string name="drawer_close_button_description">Fermer le tiroir de navigation</string>
+    <string name="home_drawer_item">ACCUEIL</string>
+    <string name="select_crop_drawer_item">SÉLECTIONNER CULTURE</string>
+    <string name="select_crop_drawer_item_text_alt">DÉTECTER MALADIE</string>
+    <string name="about_drawer_item">À PROPOS</string>
+    <string name="privacy_policy_drawer_item">POLITIQUE DE CONFIDENTIALITÉ</string>
+    <string name="sign_in_drawer_item">Se connecter</string>
+    <string name="sign_in_icon_description">Icône de connexion</string>
+    <string name="default_user_name">Jane Doe</string>
+    <string name="default_user_bio">Laboratoire d'IA Responsable</string>
+    <string name="unable_to_load_image">Impossible de charger l'image.</string>
+
+    <!-- Home Screen Strings -->
+    <string name="home_button_submit">SOUMETTRE</string>
+    <string name="home_button_take_picture">PRENDRE UNE PHOTO</string>
+    <string name="home_button_select_picture">SÉLECTIONNER UNE PHOTO</string>
+    <string name="home_open_drawer_description">Ouvrir le menu</string>
+    <string name="home_camera_mode_description">Mode Appareil photo</string>
+    <string name="home_gallery_mode_description">Mode Galerie</string>
+    <string name="home_selected_image_description">Aperçu de l'image sélectionnée</string>
+    <string name="home_clear_image_description">Effacer l'image</string>
+    <string name="home_tap_take_picture">Appuyez pour prendre une photo</string>
+    <string name="home_tap_select_picture">Appuyez pour sélectionner une photo</string>
+    <string name="home_permission_denied">Autorisation d'accès à la caméra refusée</string>
+
+    <!-- Splash Screen Strings -->
+    <string name="get_started">COMMENCER</string>
+    <string name="corn_corb_image_description">Plantes de maïs représentant les cultures</string>
+
+    <!-- Help Screen Strings -->
+    <string name="help_title">Suivez RAIL KNUST\nsur toutes les\nréseaux sociaux</string>
+    <string name="social_facebook_handle">Rail knust</string>
+    <string name="social_twitter_handle">Rail_knust</string>
+    <string name="social_linkedin_handle">Responsible AI Lab</string>
+    <string name="social_youtube_handle">Responsible AI Lab</string>
+    <string name="social_website_url">www.rail.knust.edu.gh</string>
+    <string name="rail_logo_description">Logo RAIL KNUST</string>
+
+    <!-- Login Strings -->
+    <string name="login_phone_number_hint">Numéro de téléphone</string>
+    <string name="login_password_hint">Mot de passe</string>
+    <string name="login_button_text">SE CONNECTER</string>
+    <string name="login_title_text">SE CONNECTER</string>
+    <string name="login_no_account_prompt">Vous n'avez pas de compte?</string>
+    <string name="login_register_link">S'INSCRIRE</string>
+
+    <!-- Register Strings -->
+    <string name="register_username_hint">Nom d'utilisateur</string>
+    <string name="register_button_text">S'INSCRIRE</string>
+    <string name="register_already_account_prompt">Vous avez déjà un compte?</string>
+    <string name="register_login_link">SE CONNECTER</string>
+    <string name="register_title_text">S'INSCRIRE</string>
+    <string name="username_icon_description">Icône nom d'utilisateur</string>
+
+    <!-- Profile Strings -->
+    <string name="profile_my_profile_title">MON PROFIL</string>
+    <string name="profile_success_label">SUCCÈS</string>
+    <string name="profile_detections_label">DÉTECTIONS</string>
+    <string name="profile_sign_out_button">SE DÉCONNECTER</string>
+    <string name="profile_home_button">Accueil</string>
+    <string name="profile_additional_help_button">Aide supplémentaire</string>
+    <string name="profile_about_button">À propos</string>
+    <string name="profile_placeholder_description">Silhouette du profil</string>
+    <string name="profile_picture_description">Photo de profil</string>
+    <string name="profile_icon_description">Silhouette du profil</string>
+
+    <!-- Select Crop Screen Strings -->
+    <string name="select_crop_title">Sélectionner la culture</string>
+    <string name="select_crop_description">Veuillez sélectionner la culture sur laquelle vous souhaitez effectuer l'analyse et la détection des maladies.</string>
+    <string name="home_no_results_found">Aucun résultat trouvé pour la culture sélectionnée et l'image fournie.</string>
+    <string name="crop_unknown">Inconnu</string>
+    <string name="crop_corn">Maïs</string>
+    <string name="crop_tomato">Tomate</string>
+    <string name="crop_pepper">Piment</string>
+    <string name="continue_button_text">Continuer</string>
+
+    <!-- Crop Image Content Descriptions -->
+    <string name="crop_corn_image_desc">Image de la culture de maïs</string>
+    <string name="crop_tomato_image_desc">Image de la culture de tomate</string>
+    <string name="crop_pepper_image_desc">Image de la culture de piment</string>
+
+    <!-- Other strings -->
+    <string name="password_toggle_description">Basculer la visibilité du mot de passe</string>
+    <string name="about_info_text">Détecteur de maladies des cultures est un projet créé par des étudiants chercheurs de KNUST sous RAIL pour aider les agriculteurs locaux à traiter les maladies courantes de leurs cultures.</string>
+    <string name="rail_partners_description">Logos des partenaires RAIL</string>
+    <string name="lock_icon_description">Icône cadenas</string>
+    <string name="phone_icon_description">Icône téléphone</string>
+
+    <!-- Detection results strings -->
+    <string name="detected_image_content_description">Image détectée avec résultats</string>
+    <string name="close_button_content_description">Fermer les résultats de détection</string>
+    <string name="no_image_available">Aucune image disponible.</string>
+    <string name="detection_details_title">Détails de la détection</string>
+    <string name="selected_crop_label">Culture sélectionnée : %1$s</string>
+    <string name="no_image_selected_yet">Aucune image n'a encore été sélectionnée.</string>
+    <string name="crop_mis_match_message">La culture sélectionnée ne correspond pas à la culture détectée.</string>
+    <string name="no_detection_message">Aucune maladie détectée sur cette image.</string>
+    <string name="error_detecting_message">Erreur lors de l'analyse de l'image, veuillez réessayer.</string>
+    <string name="classifier_rejection_message">Ceci ne semble pas être une feuille de maïs, piment ou tomate valide.</string>
+
+    <!-- Flag functionality strings -->
+    <string name="flag_button_text">Signaler</string>
+    <string name="flag_dialog_title">Signaler la détection</string>
+    <string name="flag_dialog_message">En tant qu'agent de terrain, vous pouvez signaler cette détection pour examen par un expert.</string>
+    <string name="flag_notes_hint">Notes (facultatif)</string>
+    <string name="flag_submit_button">Soumettre le signalement</string>
+    <string name="flag_cancel_button">Annuler</string>
+    <string name="flag_success_message">Détection signalée avec succès</string>
+    <string name="flag_error_prefix">Échec du signalement : %1$s</string>
+
+    <!-- Register role selection strings -->
+    <string name="register_role_label">Je suis un...</string>
+    <string name="register_role_farmer">Agriculteur</string>
+    <string name="register_role_field_agent">Agent de terrain</string>
+
+    <!-- Settings and dialog strings -->
+    <string name="email_address_hint">Adresse e-mail</string>
+    <string name="sign_in_or_register">Se connecter / S'inscrire</string>
+    <string name="edit_profile_title">Modifier le profil</string>
+    <string name="profile_label_name">Nom</string>
+    <string name="profile_label_bio">Bio</string>
+    <string name="profile_label_phone">Numéro de téléphone</string>
+    <string name="profile_label_location">Emplacement</string>
+    <string name="save_button_text">Enregistrer</string>
+    <string name="sign_in_unlock_history">Se connecter pour débloquer l'historique</string>
+    <string name="start_detection_scan">Démarrer l'analyse de détection</string>
+    <string name="history_scan_date">Date de l'analyse</string>
+    <string name="history_result_type">Type de résultat</string>
+    <string name="history_confidence">Confiance</string>
+    <string name="close_details_button">Fermer les détails</string>
+    <string name="close_button_text">Fermer</string>
+    <string name="recommendation_no_data">Aucune donnée de détection disponible.</string>
+    <string name="go_back_button">Retourner</string>
+    <string name="all_detected_conditions">Toutes les conditions détectées</string>
+    <string name="settings_clear_cache_title">Vider le cache</string>
+    <string name="settings_clear_cache_message">Êtes-vous sûr de vouloir vider le cache local ?</string>
+    <string name="settings_clear_cache_success">Cache vidé avec succès.</string>
+    <string name="clear_button_text">Vider</string>
+    <string name="settings_anonymize_title">Anonymiser mes données</string>
+    <string name="settings_anonymize_message">Êtes-vous sûr de vouloir anonymiser vos données ?</string>
+    <string name="settings_anonymize_success">Vos données ont été anonymisées avec succès.</string>
+    <string name="settings_anonymize_error">Échec du traitement de votre demande.</string>
+    <string name="proceed_button_text">Continuer</string>
+</resources>

@@ -28,6 +28,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalFocusManager
+import org.jetbrains.compose.resources.stringResource
+import com.nkwabyte.cropdiseasedetection.generated.resources.*
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -565,7 +567,7 @@ fun DiseaseDetailDialog(
                             contentColor = MaterialTheme.colorScheme.onSurface
                         )
                     ) {
-                        Text("Close")
+                        Text(stringResource(Res.string.close_button_text))
                     }
                 }
             }

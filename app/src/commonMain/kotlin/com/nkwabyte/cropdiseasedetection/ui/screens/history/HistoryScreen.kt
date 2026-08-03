@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import org.jetbrains.compose.resources.stringResource
+import com.nkwabyte.cropdiseasedetection.generated.resources.*
 import coil3.compose.rememberAsyncImagePainter
 import com.nkwabyte.cropdiseasedetection.common.data.DiseaseDatabase
 import com.nkwabyte.cropdiseasedetection.common.navigation.appbar.AppBar
@@ -241,7 +243,7 @@ fun GuestLockStateView(
                             .fillMaxWidth()
                             .padding(top = 8.dp)
                     ) {
-                        Text("Sign In to Unlock History", fontWeight = FontWeight.Bold)
+                        Text(stringResource(Res.string.sign_in_unlock_history), fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -316,7 +318,7 @@ fun HistoryEmptyStateView(
                             .fillMaxWidth()
                             .padding(top = 8.dp)
                     ) {
-                        Text("Start Detection Scan", fontWeight = FontWeight.Bold)
+                        Text(stringResource(Res.string.start_detection_scan), fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -565,14 +567,14 @@ fun HistoryDetailDialog(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("Scan Date", style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)))
+                                Text(stringResource(Res.string.history_scan_date), style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)))
                                 Text(dateString, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
                             }
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("Result Type", style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)))
+                                Text(stringResource(Res.string.history_result_type), style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)))
                                 Text(
                                     text = if (isHealthy) "✓ Healthy" else "⚠️ Disease",
                                     style = MaterialTheme.typography.bodyMedium.copy(
@@ -585,7 +587,7 @@ fun HistoryDetailDialog(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("Confidence", style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)))
+                                Text(stringResource(Res.string.history_confidence), style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)))
                                 Text(confidence, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
                             }
                         }
@@ -640,7 +642,7 @@ fun HistoryDetailDialog(
                     ),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Close Details", fontWeight = FontWeight.Bold)
+                    Text(stringResource(Res.string.close_details_button), fontWeight = FontWeight.Bold)
                 }
             }
         }

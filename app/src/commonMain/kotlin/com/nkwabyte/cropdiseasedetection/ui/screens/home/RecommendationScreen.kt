@@ -33,6 +33,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import org.jetbrains.compose.resources.stringResource
+import com.nkwabyte.cropdiseasedetection.generated.resources.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
@@ -126,13 +128,13 @@ fun RecommendationScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.padding(32.dp)
                     ) {
-                        Text("No detection data available.", style = MaterialTheme.typography.bodyLarge)
+                        Text(stringResource(Res.string.recommendation_no_data), style = MaterialTheme.typography.bodyLarge)
                         Text(
                             "Run a detection first, then come back for recommendations.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
-                        OutlinedButton(onClick = onBack) { Text("Go Back") }
+                        OutlinedButton(onClick = onBack) { Text(stringResource(Res.string.go_back_button)) }
                     }
                 }
             } else {
@@ -390,7 +392,7 @@ private fun DiseaseRecommendationDetail(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(Modifier.width(4.dp))
-                    Text("All detected conditions")
+                    Text(stringResource(Res.string.all_detected_conditions))
                 }
             }
         }

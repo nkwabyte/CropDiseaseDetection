@@ -1,0 +1,154 @@
+<resources>
+    <string name="app_name">CDD</string>
+    <string name="app_name_full">Ŋmɔmɔ Helatoyelɔ</string>
+
+    <!-- General Strings -->
+    <string name="copy_right_text">RAIL - © KITAMƆ 2025</string>
+    <string name="ok_text">YƆƆ</string>
+    <string name="cancel_text">Tsi Naa</string>
+
+    <!-- Drawer Strings -->
+    <string name="drawer_close_button_description">Nyi agbo lɔ</string>
+    <string name="home_drawer_item">SHIA</string>
+    <string name="select_crop_drawer_item">HALA NIBII</string>
+    <string name="select_crop_drawer_item_text_alt">TAO HELA</string>
+    <string name="about_drawer_item">HE SANE</string>
+    <string name="privacy_policy_drawer_item">TEEMƆ SANE</string>
+    <string name="sign_in_drawer_item">Bote Mli</string>
+    <string name="sign_in_icon_description">Bote Mli mfoniri</string>
+    <string name="default_user_name">Jane Doe</string>
+    <string name="default_user_bio">Responsible AI Lab</string>
+    <string name="unable_to_load_image">Nyɛɛɔ mfoniri lɔ egble.</string>
+
+    <!-- Home Screen Strings -->
+    <string name="home_button_submit">KE BA</string>
+    <string name="home_button_take_picture">GBA MFONIRI</string>
+    <string name="home_button_select_picture">HALA MFONIRI</string>
+    <string name="home_open_drawer_description">Gble agbo lɔ</string>
+    <string name="home_camera_mode_description">Kamera mode</string>
+    <string name="home_gallery_mode_description">Mfoniri tsu</string>
+    <string name="home_selected_image_description">Mfoniri ni ohala</string>
+    <string name="home_clear_image_description">Kpie mfoniri lɔ</string>
+    <string name="home_tap_take_picture">Mĩa no koni ogba mfoniri</string>
+    <string name="home_tap_select_picture">Mĩa no koni ohala mfoniri</string>
+    <string name="home_permission_denied">Wɔgbe kamera gbe</string>
+
+    <!-- Splash Screen Strings -->
+    <string name="get_started">JE SHI</string>
+    <string name="corn_corb_image_description">Ablona mfoniri</string>
+
+    <!-- Help Screen Strings -->
+    <string name="help_title">Nyi RAIL KNUST sɛɛ\nyɛ intanɛt\nno fɛɛ no</string>
+    <string name="social_facebook_handle">Rail knust</string>
+    <string name="social_twitter_handle">Rail_knust</string>
+    <string name="social_linkedin_handle">Responsible AI Lab</string>
+    <string name="social_youtube_handle">Responsible AI Lab</string>
+    <string name="social_website_url">www.rail.knust.edu.gh</string>
+    <string name="rail_logo_description">RAIL KNUST Kadimɔ</string>
+
+    <!-- Login Strings -->
+    <string name="login_phone_number_hint">Foonu Nɔmba</string>
+    <string name="login_password_hint">Teemɔ Wiemɔ</string>
+    <string name="login_button_text">BOTE MLI</string>
+    <string name="login_title_text">BOTE MLI</string>
+    <string name="login_no_account_prompt">Oyɛɛ akawnt?</string>
+    <string name="login_register_link">ŊMA OGBEI</string>
+
+    <!-- Register Strings -->
+    <string name="register_username_hint">Ogbei</string>
+    <string name="register_button_text">ŊMA OGBEI</string>
+    <string name="register_already_account_prompt">Oyɛ akawnt momo?</string>
+    <string name="register_login_link">BOTE MLI</string>
+    <string name="register_title_text">ŊMA OGBEI</string>
+    <string name="username_icon_description">Ogbei kadimɔ</string>
+
+    <!-- Profile Strings -->
+    <string name="profile_my_profile_title">MI HE SANE</string>
+    <string name="profile_success_label">YIYALƐ</string>
+    <string name="profile_detections_label">TAOMƆWO</string>
+    <string name="profile_sign_out_button">JE MLI</string>
+    <string name="profile_home_button">Shia</string>
+    <string name="profile_additional_help_button">Yelikɛbuamɔ Kpala</string>
+    <string name="profile_about_button">He Sane</string>
+    <string name="profile_placeholder_description">Gbomɔ susuma</string>
+    <string name="profile_picture_description">Omfoniri</string>
+    <string name="profile_icon_description">Gbomɔ susuma</string>
+
+    <!-- Select Crop Screen Strings -->
+    <string name="select_crop_title">Hala Nibii</string>
+    <string name="select_crop_description">Ofaiji hala nibii ni osumɔɔ ni otao hela yɛ he.</string>
+    <string name="home_no_results_found">Nyɛɛɔ etao nibii kpaa ko yɛ nibii ni ohala lɔ he o.</string>
+    <string name="crop_unknown">Aleee</string>
+    <string name="crop_corn">Ablona</string>
+    <string name="crop_tomato">Amɔdu</string>
+    <string name="crop_pepper">Shito</string>
+    <string name="continue_button_text">Yaa Hĩɛ</string>
+
+    <!-- Crop Image Content Descriptions -->
+    <string name="crop_corn_image_desc">Ablona mfoniri</string>
+    <string name="crop_tomato_image_desc">Amɔdu mfoniri</string>
+    <string name="crop_pepper_image_desc">Shito mfoniri</string>
+
+    <!-- Other strings -->
+    <string name="password_toggle_description">Tsakemɔ teemɔ wiemɔ lɔ</string>
+    <string name="about_info_text">Ŋmɔmɔ Helatoyelɔ ji KNUST nikasemɔ adwuma ni yɔɔ RAIL shishi kɛyeɔ ebuaɔ okwafoi.</string>
+    <string name="rail_partners_description">RAIL nanemɛi kadimɔ</string>
+    <string name="lock_icon_description">Samfe kadimɔ</string>
+    <string name="phone_icon_description">Foonu kadimɔ</string>
+
+    <!-- Detection results strings -->
+    <string name="detected_image_content_description">Mfoniri ni etao hela yɛ he</string>
+    <string name="close_button_content_description">Nyi taomɔ sɔŋŋ lɔ</string>
+    <string name="no_image_available">Mfoniri ko bɛ.</string>
+    <string name="detection_details_title">Taomɔ Sane Mli</string>
+    <string name="selected_crop_label">Nibii ni ohala: %1$s</string>
+    <string name="no_image_selected_yet">Ohalaaa mfoniri ko lolo.</string>
+    <string name="crop_mis_match_message">Nibii ni ohala lɔ kɛ mfoniri lɔ kpaaa gbe.</string>
+    <string name="no_detection_message">Anaaa hela ko yɛ mfoniri yi no o.</string>
+    <string name="error_detecting_message">Tɔmɔ ko ba yɛ taomɔ lɔ mli, ka tsɔɔmɔ ekonn.</string>
+    <string name="classifier_rejection_message">Eji ablona, shito alo amɔdu baa kpakpa o.</string>
+
+    <!-- Flag functionality strings -->
+    <string name="flag_button_text">Kadimɔ</string>
+    <string name="flag_dialog_title">Kadimɔ Taomɔ</string>
+    <string name="flag_dialog_message">Tamɔ ŋmɔmɔ nitsulɔ no, obaanyɛ okadi taomɔ nɛɛ koni lelɔi ahala mli.</string>
+    <string name="flag_notes_hint">Bayanai (kɛ osumɔɔ)</string>
+    <string name="flag_submit_button">Ke Ba</string>
+    <string name="flag_cancel_button">Tsi Naa</string>
+    <string name="flag_success_message">Okadi taomɔ lɔ jogbaŋŋ</string>
+    <string name="flag_error_prefix">Tɔmɔ ba: %1$s</string>
+
+    <!-- Register role selection strings -->
+    <string name="register_role_label">Miji...</string>
+    <string name="register_role_farmer">Okwafonyo</string>
+    <string name="register_role_field_agent">Ŋmɔmɔ Nitsulɔ</string>
+
+    <!-- Settings and dialog strings -->
+    <string name="email_address_hint">Imel Adireshin</string>
+    <string name="sign_in_or_register">Bote Mli / Ŋma Ogbei</string>
+    <string name="edit_profile_title">Tsakemɔ Ohe Sane</string>
+    <string name="profile_label_name">Ogbei</string>
+    <string name="profile_label_bio">Ohe Sane</string>
+    <string name="profile_label_phone">Foonu Nɔmba</string>
+    <string name="profile_label_location">He ni oyɔɔ</string>
+    <string name="save_button_text">To He</string>
+    <string name="sign_in_unlock_history">Bote mli koni ona yelɔmɔ tsutsu</string>
+    <string name="start_detection_scan">Je Taomɔ Lɔ Shishi</string>
+    <string name="history_scan_date">Gbi</string>
+    <string name="history_result_type">Mli Nii</string>
+    <string name="history_confidence">Hemɔkɛyeli</string>
+    <string name="close_details_button">Nyi Mli</string>
+    <string name="close_button_text">Nyi Mli</string>
+    <string name="recommendation_no_data">Taomɔ sane ko bɛ.</string>
+    <string name="go_back_button">Kua Sɛɛ</string>
+    <string name="all_detected_conditions">Helai ni ana lɔ fɛɛ</string>
+    <string name="settings_clear_cache_title">Kpie Cache</string>
+    <string name="settings_clear_cache_message">Osumɔɔ ni okpie cache ni to he lɔ?</string>
+    <string name="settings_clear_cache_success">Okpie cache lɔ jogbaŋŋ.</string>
+    <string name="clear_button_text">Kpie</string>
+    <string name="settings_anonymize_title">Teemɔ Migbei</string>
+    <string name="settings_anonymize_message">Osumɔɔ ni otoo ogbei yɛ otaomɔwo no?</string>
+    <string name="settings_anonymize_success">Otoo ogbei lɔ jogbaŋŋ.</string>
+    <string name="settings_anonymize_error">Enyɛɛɛ eyɛ.</string>
+    <string name="proceed_button_text">Yaa Hĩɛ</string>
+</resources>

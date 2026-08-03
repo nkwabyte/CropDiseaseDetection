@@ -163,7 +163,7 @@ fun RegisterScreen(
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
-                    placeholder = { Text("Email Address") },
+                    placeholder = { Text(stringResource(Res.string.email_address_hint)) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Email,

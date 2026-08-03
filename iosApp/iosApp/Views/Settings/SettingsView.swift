@@ -24,7 +24,8 @@ public struct SettingsView: View {
         LanguageOption(code: "HAUSA", displayName: "Hausa 🇬🇭"),
         LanguageOption(code: "EWE", displayName: "Ewe (Eʋe) 🇬🇭"),
         LanguageOption(code: "ASANTE_TWI", displayName: "Asante Twi 🇬🇭"),
-        LanguageOption(code: "GA", displayName: "Ga 🇬🇭")
+        LanguageOption(code: "GA", displayName: "Ga 🇬🇭"),
+        LanguageOption(code: "FRENCH", displayName: "French (Français) 🇫🇷")
     ]
     
     public var body: some View {
@@ -53,7 +54,7 @@ public struct SettingsView: View {
                 }
                 
                 Section(header: Text("Localization")) {
-                    Picker("Recommendation Language", selection: $selectedLanguage) {
+                    Picker("Language", selection: $selectedLanguage) {
                         ForEach(languages, id: \.code) { lang in
                             Text(lang.displayName).tag(lang.code)
                         }
@@ -153,6 +154,7 @@ extension RecommendationLanguage {
         case "EWE": return .ewe
         case "ASANTE_TWI": return .asanteTwi
         case "GA": return .ga
+        case "FRENCH": return .french
         default: return .english
         }
     }

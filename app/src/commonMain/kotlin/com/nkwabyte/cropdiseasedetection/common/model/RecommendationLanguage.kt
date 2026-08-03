@@ -6,11 +6,13 @@ import kotlinx.serialization.Serializable
 enum class RecommendationLanguage(
     val displayName: String,
     val nativeName: String,
-    val flag: String
+    val flag: String,
+    val code: String
 ) {
-    ENGLISH("English", "English", "🇬🇧"),
-    HAUSA("Hausa", "Hausa", "🇬🇭"),
-    EWE("Ewe", "Eʋe", "🇬🇭"),
-    ASANTE_TWI("Asante Twi", "Twi (Asante)", "🇬🇭"),
-    GA("Ga", "Ga", "🇬🇭")
+    ENGLISH("English", "English", "🇬🇧", "en"),
+    HAUSA("Hausa", "Hausa", "🇬🇭", "ha"),
+    EWE("Ewe", "Eʋe", "🇬🇭", "ee"),
+    ASANTE_TWI("Asante Twi", "Twi (Asante)", "🇬🇭", "tw"),
+    GA("Ga", "Ga", "🇬🇭", "ga"),
+    FRENCH("French", "Français", "🇫🇷", "fr")
 }

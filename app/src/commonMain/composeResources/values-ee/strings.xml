@@ -1,0 +1,154 @@
+<resources>
+    <string name="app_name">CDD</string>
+    <string name="app_name_full">Agbledɔléle Dzesidenu</string>
+
+    <!-- General Strings -->
+    <string name="copy_right_text">RAIL - © MƆƉEƉE 2025</string>
+    <string name="ok_text">ƐƐ</string>
+    <string name="cancel_text">Te Se</string>
+
+    <!-- Drawer Strings -->
+    <string name="drawer_close_button_description">Tu mɔa</string>
+    <string name="home_drawer_item">AƑE</string>
+    <string name="select_crop_drawer_item">TIA NUKU</string>
+    <string name="select_crop_drawer_item_text_alt">DZESI DƆLÉLE</string>
+    <string name="about_drawer_item">ETSO LE</string>
+    <string name="privacy_policy_drawer_item">BEBAME</string>
+    <string name="sign_in_drawer_item">Ge Ɖe Eme</string>
+    <string name="sign_in_icon_description">Ge Ɖe Eme dzesi</string>
+    <string name="default_user_name">Jane Doe</string>
+    <string name="default_user_bio">Responsible AI Lab</string>
+    <string name="unable_to_load_image">Mate ŋu aɖe nɔnɔmetata la fia o.</string>
+
+    <!-- Home Screen Strings -->
+    <string name="home_button_submit">ƉO ƉE</string>
+    <string name="home_button_take_picture">ƉE NƆNƆMETATA</string>
+    <string name="home_button_select_picture">TIA NƆNƆMETATA</string>
+    <string name="home_open_drawer_description">Vu mɔa</string>
+    <string name="home_camera_mode_description">Kamera mɔ</string>
+    <string name="home_gallery_mode_description">Nɔnɔmetatawo mɔ</string>
+    <string name="home_selected_image_description">Nɔnɔmetata si wotia</string>
+    <string name="home_clear_image_description">Tutu nɔnɔmetata la</string>
+    <string name="home_tap_take_picture">Zì edzi ne aɖe nɔnɔmetata</string>
+    <string name="home_tap_select_picture">Zì edzi ne atia nɔnɔmetata</string>
+    <string name="home_permission_denied">Wogbe kamera gbeɖeɖe</string>
+
+    <!-- Splash Screen Strings -->
+    <string name="get_started">DZE EƐ DZƐ</string>
+    <string name="corn_corb_image_description">Bli nukuwo nɔnɔmetata</string>
+
+    <!-- Help Screen Strings -->
+    <string name="help_title">Dze RAIL KNUST yome\nle nyatakaka\nmɔwo nyinaa dzi</string>
+    <string name="social_facebook_handle">Rail knust</string>
+    <string name="social_twitter_handle">Rail_knust</string>
+    <string name="social_linkedin_handle">Responsible AI Lab</string>
+    <string name="social_youtube_handle">Responsible AI Lab</string>
+    <string name="social_website_url">www.rail.knust.edu.gh</string>
+    <string name="rail_logo_description">RAIL KNUST Dzesidenu</string>
+
+    <!-- Login Strings -->
+    <string name="login_phone_number_hint">Ka Xɔxɔ Babla</string>
+    <string name="login_password_hint">Bebame Nya</string>
+    <string name="login_button_text">GE ƉE EME</string>
+    <string name="login_title_text">GE ƉE EME</string>
+    <string name="login_no_account_prompt">Mèle asusu aɖeke si oa?</string>
+    <string name="login_register_link">ŊLƆ ŊKƆ</string>
+
+    <!-- Register Strings -->
+    <string name="register_username_hint">Wò Ŋkɔ</string>
+    <string name="register_button_text">ŊLƆ ŊKƆ</string>
+    <string name="register_already_account_prompt">Asusu le siwò xoxo?</string>
+    <string name="register_login_link">GE ƉE EME</string>
+    <string name="register_title_text">ŊLƆ ŊKƆ</string>
+    <string name="username_icon_description">Ŋkɔ dzesi</string>
+
+    <!-- Profile Strings -->
+    <string name="profile_my_profile_title">NYE NƆNƆME</string>
+    <string name="profile_success_label">DZIƉEƉE</string>
+    <string name="profile_detections_label">NUMEKUKUWO</string>
+    <string name="profile_sign_out_button">DO LE EME</string>
+    <string name="profile_home_button">AƑe</string>
+    <string name="profile_additional_help_button">Kpekpeɖeŋu Bubuwo</string>
+    <string name="profile_about_button">Etsotso</string>
+    <string name="profile_placeholder_description">Ame vɔvɔli</string>
+    <string name="profile_picture_description">Wò nɔnɔmetata</string>
+    <string name="profile_icon_description">Ame vɔvɔli</string>
+
+    <!-- Select Crop Screen Strings -->
+    <string name="select_crop_title">Tia Nuku</string>
+    <string name="select_crop_description">Taflatsɛ tia nuku si dzi nèdi be yeawo numekuku le.</string>
+    <string name="home_no_results_found">Meto nunɔmesé aɖeke da le nuku sia dzi o.</string>
+    <string name="crop_unknown">Ménya o</string>
+    <string name="crop_corn">Bli</string>
+    <string name="crop_tomato">Timati</string>
+    <string name="crop_pepper">Atadi</string>
+    <string name="continue_button_text">Yi Edzi</string>
+
+    <!-- Crop Image Content Descriptions -->
+    <string name="crop_corn_image_desc">Bli nuku nɔnɔmetata</string>
+    <string name="crop_tomato_image_desc">Timati nuku nɔnɔmetata</string>
+    <string name="crop_pepper_image_desc">Atadi nuku nɔnɔmetata</string>
+
+    <!-- Other strings -->
+    <string name="password_toggle_description">Trɔ bebame nya la</string>
+    <string name="about_info_text">Agbledɔléle Dzesidenu nye KNUST sukugbãviwo ƒe dɔwɔwɔ le RAIL te be woakpe Ɖe agbledelewo ŋu.</string>
+    <string name="rail_partners_description">RAIL dɔwɔhatiwo dzesi</string>
+    <string name="lock_icon_description">Safui dzesi</string>
+    <string name="phone_icon_description">Kama dzesi</string>
+
+    <!-- Detection results strings -->
+    <string name="detected_image_content_description">Numekuku nɔnɔmetata</string>
+    <string name="close_button_content_description">Tu numekuku nutome</string>
+    <string name="no_image_available">Nɔnɔmetata aɖeke meli o.</string>
+    <string name="detection_details_title">Numekuku Emenyawo</string>
+    <string name="selected_crop_label">Nuku si wotia: %1$s</string>
+    <string name="no_image_selected_yet">Womètia nɔnɔmetata aɖeke haɖe o.</string>
+    <string name="crop_mis_match_message">Nuku si wotia la mesɔ kple numekuku la o.</string>
+    <string name="no_detection_message">Woméke Ɖe dɔléle aɖeke ŋu le nɔnɔmetata sia dzi o.</string>
+    <string name="error_detecting_message">Vɔvɔli aɖe dzɔ le numekuku me, gba agbagba ake.</string>
+    <string name="classifier_rejection_message">Esi menye bli, atadi alo timati aŋa nyuite o.</string>
+
+    <!-- Flag functionality strings -->
+    <string name="flag_button_text">Ɖo Dzesi</string>
+    <string name="flag_dialog_title">Ɖo Dzesi Numekuku</string>
+    <string name="flag_dialog_message">Sigbe agbledɔwɔla ene la, àte ŋu aɖo dzesi numekuku sia be nunyalawo nadzo eŋu.</string>
+    <string name="flag_notes_hint">Nyatakakawò (ne èdi)</string>
+    <string name="flag_submit_button">Ɖo Dzesi la Ɖe</string>
+    <string name="flag_cancel_button">Te Se</string>
+    <string name="flag_success_message">Woɖo dzesi numekuku la nyuie</string>
+    <string name="flag_error_prefix">Dzesi ɖoɖo gbe: %1$s</string>
+
+    <!-- Register role selection strings -->
+    <string name="register_role_label">Nye nye...</string>
+    <string name="register_role_farmer">Agbledela</string>
+    <string name="register_role_field_agent">Agbledɔwɔla</string>
+
+    <!-- Settings and dialog strings -->
+    <string name="email_address_hint">Imel Ɖoɖo</string>
+    <string name="sign_in_or_register">Ge Ɖe Eme / Ŋlɔ Ŋkɔ</string>
+    <string name="edit_profile_title">Trɔ Wò Nɔnɔme</string>
+    <string name="profile_label_name">Ŋkɔ</string>
+    <string name="profile_label_bio">Etsotso</string>
+    <string name="profile_label_phone">Ka Xɔxɔ Babla</string>
+    <string name="profile_label_location">Afe</string>
+    <string name="save_button_text">Dzra Ɖo</string>
+    <string name="sign_in_unlock_history">Ge Ɖe Eme ne adzo wò xoxowo ŋu</string>
+    <string name="start_detection_scan">Dze Numekuku la Gɔme</string>
+    <string name="history_scan_date">Ŋkeke</string>
+    <string name="history_result_type">Nutome</string>
+    <string name="history_confidence">Kakaɖedzi</string>
+    <string name="close_details_button">Tu Eme</string>
+    <string name="close_button_text">Tu Eme</string>
+    <string name="recommendation_no_data">Numekuku aɖeke meli o.</string>
+    <string name="go_back_button">Trɔ Yi Megbe</string>
+    <string name="all_detected_conditions">Dɔlélewo nyinaa</string>
+    <string name="settings_clear_cache_title">Tutu Nudzraɖoɖo</string>
+    <string name="settings_clear_cache_message">Èka Ɖe edzi be yeatutu nudzraɖoɖo laa?</string>
+    <string name="settings_clear_cache_success">Wotutu nudzraɖoɖo la nyuie.</string>
+    <string name="clear_button_text">Tutu</string>
+    <string name="settings_anonymize_title">Be Nye Ŋkɔ</string>
+    <string name="settings_anonymize_message">Èka Ɖe edzi be yeabe wò ŋkɔ le numekukuwo dzi?</string>
+    <string name="settings_anonymize_success">Wobe wò ŋkɔ nyuie.</string>
+    <string name="settings_anonymize_error">Mete ŋu wrom o.</string>
+    <string name="proceed_button_text">Yi Edzi</string>
+</resources>

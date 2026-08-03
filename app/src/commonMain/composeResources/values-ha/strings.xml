@@ -1,0 +1,154 @@
+<resources>
+    <string name="app_name">CDD</string>
+    <string name="app_name_full">Binciken Cututtukan Gona</string>
+
+    <!-- General Strings -->
+    <string name="copy_right_text">RAIL - © HAKKIN MALLAKA 2025</string>
+    <string name="ok_text">TO</string>
+    <string name="cancel_text">Soke</string>
+
+    <!-- Drawer Strings -->
+    <string name="drawer_close_button_description">Rufe ma\'ajiyar tsallakawa</string>
+    <string name="home_drawer_item">GIDA</string>
+    <string name="select_crop_drawer_item">ZABI SHUKI</string>
+    <string name="select_crop_drawer_item_text_alt">BINCIKI CUTAR</string>
+    <string name="about_drawer_item">SHAFIN BAYANI</string>
+    <string name="privacy_policy_drawer_item">MANOFA</string>
+    <string name="sign_in_drawer_item">Shiga</string>
+    <string name="sign_in_icon_description">Alamar Shiga</string>
+    <string name="default_user_name">Jane Doe</string>
+    <string name="default_user_bio">Gidan Bincike Na AI</string>
+    <string name="unable_to_load_image">Kasa loda hoto.</string>
+
+    <!-- Home Screen Strings -->
+    <string name="home_button_submit">TURA</string>
+    <string name="home_button_take_picture">DAUKI HOTO</string>
+    <string name="home_button_select_picture">ZABI HOTO</string>
+    <string name="home_open_drawer_description">Bude ma\'ajiya</string>
+    <string name="home_camera_mode_description">Yanayin Kamara</string>
+    <string name="home_gallery_mode_description">Yanayin Hotuna</string>
+    <string name="home_selected_image_description">Hoto a zaba</string>
+    <string name="home_clear_image_description">Goge hoto</string>
+    <string name="home_tap_take_picture">Danna domin daukar hoto</string>
+    <string name="home_tap_select_picture">Danna domin zaban hoto</string>
+    <string name="home_permission_denied">An hana amfani da kamara</string>
+
+    <!-- Splash Screen Strings -->
+    <string name="get_started">FARA</string>
+    <string name="corn_corb_image_description">Hoton shukin masara</string>
+
+    <!-- Help Screen Strings -->
+    <string name="help_title">Bi RAIL KNUST\na dukkan\nsadarwar yanar gizo</string>
+    <string name="social_facebook_handle">Rail knust</string>
+    <string name="social_twitter_handle">Rail_knust</string>
+    <string name="social_linkedin_handle">Responsible AI Lab</string>
+    <string name="social_youtube_handle">Responsible AI Lab</string>
+    <string name="social_website_url">www.rail.knust.edu.gh</string>
+    <string name="rail_logo_description">Alamar RAIL KNUST</string>
+
+    <!-- Login Strings -->
+    <string name="login_phone_number_hint">Lamba Waya</string>
+    <string name="login_password_hint">Kalmar Sirri</string>
+    <string name="login_button_text">SHIGA</string>
+    <string name="login_title_text">SHIGA</string>
+    <string name="login_no_account_prompt">Ba ka da asusu?</string>
+    <string name="login_register_link">YI RAJISTA</string>
+
+    <!-- Register Strings -->
+    <string name="register_username_hint">Sunan Mai Amfani</string>
+    <string name="register_button_text">YI RAJISTA</string>
+    <string name="register_already_account_prompt">Kana da asusu daman?</string>
+    <string name="register_login_link">SHIGA</string>
+    <string name="register_title_text">YI RAJISTA</string>
+    <string name="username_icon_description">Alamar Suna</string>
+
+    <!-- Profile Strings -->
+    <string name="profile_my_profile_title">SHAFINA</string>
+    <string name="profile_success_label">NASARA</string>
+    <string name="profile_detections_label">BINCIKE</string>
+    <string name="profile_sign_out_button">FITA</string>
+    <string name="profile_home_button">Gida</string>
+    <string name="profile_additional_help_button">Karin Taimako</string>
+    <string name="profile_about_button">Bayanai</string>
+    <string name="profile_placeholder_description">Hoto profile</string>
+    <string name="profile_picture_description">Hoton Profile</string>
+    <string name="profile_icon_description">Hoto profile</string>
+
+    <!-- Select Crop Screen Strings -->
+    <string name="select_crop_title">Zabi Shuki</string>
+    <string name="select_crop_description">Zabi shukin da kake son bincika cutar a kansa.</string>
+    <string name="home_no_results_found">Babu sakamako ga wannan shuki.</string>
+    <string name="crop_unknown">Ba a sani ba</string>
+    <string name="crop_corn">Masara</string>
+    <string name="crop_tomato">Tumatir</string>
+    <string name="crop_pepper">Barkono</string>
+    <string name="continue_button_text">Cigaba</string>
+
+    <!-- Crop Image Content Descriptions -->
+    <string name="crop_corn_image_desc">Hoton shukin masara</string>
+    <string name="crop_tomato_image_desc">Hoton shukin tumatir</string>
+    <string name="crop_pepper_image_desc">Hoton shukin barkono</string>
+
+    <!-- Other strings -->
+    <string name="password_toggle_description">Juya kalmar sirri</string>
+    <string name="about_info_text">Binciken Cututtukan Gona aikin ne daga daliban bincike na KNUST karkashin RAIL domin taimakawa manoma gano cututtuka.</string>
+    <string name="rail_partners_description">Alamar abokan aikin RAIL</string>
+    <string name="lock_icon_description">Alamar kwadago</string>
+    <string name="phone_icon_description">Alamar waya</string>
+
+    <!-- Detection results strings -->
+    <string name="detected_image_content_description">Hoton bincike tare da sakamako</string>
+    <string name="close_button_content_description">Rufe sakamakon bincike</string>
+    <string name="no_image_available">Babu hoton da za a nuna.</string>
+    <string name="detection_details_title">Bayanin Bincike</string>
+    <string name="selected_crop_label">Shukin da aka zaba: %1$s</string>
+    <string name="no_image_selected_yet">Babu hoton da aka zaba tukuna.</string>
+    <string name="crop_mis_match_message">Shukin da aka zaba bai dace da hoton ba.</string>
+    <string name="no_detection_message">Ba a sami cuta a wannan hoto ba.</string>
+    <string name="error_detecting_message">An sami kuskure wajen binciken hoton, sake gwada.</string>
+    <string name="classifier_rejection_message">Wannan ba ganyen masara, barkono ko tumatir bane mai kyau.</string>
+
+    <!-- Flag functionality strings -->
+    <string name="flag_button_text">Maka</string>
+    <string name="flag_dialog_title">Maka Bincike</string>
+    <string name="flag_dialog_message">A matsayinka na ma\'aikacin gona, zaka iya mika wannan bincike ga masana.</string>
+    <string name="flag_notes_hint">Bayanai (na zabi)</string>
+    <string name="flag_submit_button">Tura</string>
+    <string name="flag_cancel_button">Soke</string>
+    <string name="flag_success_message">An tura bincike cikin nasara</string>
+    <string name="flag_error_prefix">Kasa tura: %1$s</string>
+
+    <!-- Register role selection strings -->
+    <string name="register_role_label">Ni...</string>
+    <string name="register_role_farmer">Manomi</string>
+    <string name="register_role_field_agent">Ma\'aikacin Gona</string>
+
+    <!-- Settings and dialog strings -->
+    <string name="email_address_hint">Adireshin Imel</string>
+    <string name="sign_in_or_register">Shiga / Yi Rajista</string>
+    <string name="edit_profile_title">Gyara Shafinka</string>
+    <string name="profile_label_name">Suna</string>
+    <string name="profile_label_bio">Tarihinka</string>
+    <string name="profile_label_phone">Lamba Waya</string>
+    <string name="profile_label_location">Wuri</string>
+    <string name="save_button_text">Ajiye</string>
+    <string name="sign_in_unlock_history">Shiga domin ganin bayanan baya</string>
+    <string name="start_detection_scan">Fara Bincike</string>
+    <string name="history_scan_date">Kwanan Wata</string>
+    <string name="history_result_type">Nau\'in Sakamako</string>
+    <string name="history_confidence">Amincewa</string>
+    <string name="close_details_button">Rufe Bayani</string>
+    <string name="close_button_text">Rufe</string>
+    <string name="recommendation_no_data">Babu bayanan bincike.</string>
+    <string name="go_back_button">Koma Baya</string>
+    <string name="all_detected_conditions">Dukkan cututtuka da aka gano</string>
+    <string name="settings_clear_cache_title">Goge Cache</string>
+    <string name="settings_clear_cache_message">Shin kana tabbatar kana son goge ma\'ajiyar wucin gadi?</string>
+    <string name="settings_clear_cache_success">An goge cache cikin nasara.</string>
+    <string name="clear_button_text">Goge</string>
+    <string name="settings_anonymize_title">Kariya da Sunana</string>
+    <string name="settings_anonymize_message">Shin kana son boye sunanka daga sakamakon bincikenka?</string>
+    <string name="settings_anonymize_success">An boye sunanka cikin nasara.</string>
+    <string name="settings_anonymize_error">Kasa aiwatar da bukatarka.</string>
+    <string name="proceed_button_text">Cigaba</string>
+</resources>

@@ -133,7 +133,7 @@ fun LoginScreen(
                     value = email,
                     onValueChange = { email = it },
                     placeholder = {
-                        Text("Email Address")
+                        Text(stringResource(Res.string.email_address_hint))
                     },
                     leadingIcon = {
                         Icon(

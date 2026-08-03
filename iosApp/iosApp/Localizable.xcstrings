@@ -1,0 +1,391 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "About" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ee" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Etsotso"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À propos"
+          }
+        },
+        "ga" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "He Sane"
+          }
+        },
+        "ha" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bayanai"
+          }
+        },
+        "tw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ɛho Sɛm"
+          }
+        }
+      }
+    },
+    "Anonymize My Data" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ee" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Be Nye Ŋkɔ"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anonymiser mes données"
+          }
+        },
+        "ga" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Teemɔ Migbei"
+          }
+        },
+        "ha" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kariya da Sunana"
+          }
+        },
+        "tw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kora Me Din So"
+          }
+        }
+      }
+    },
+    "Cancel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ee" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Te Se"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annuler"
+          }
+        },
+        "ga" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tsi Naa"
+          }
+        },
+        "ha" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Soke"
+          }
+        },
+        "tw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Twa Mu"
+          }
+        }
+      }
+    },
+    "Clear Cache" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ee" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tutu Nudzraɖoɖo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vider le cache"
+          }
+        },
+        "ga" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kpie Cache"
+          }
+        },
+        "ha" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Goge Cache"
+          }
+        },
+        "tw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pepa Nsɛm a Asie"
+          }
+        }
+      }
+    },
+    "Confidence" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ee" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kakaɖedzi"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confiance"
+          }
+        },
+        "ga" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hemɔkɛyeli"
+          }
+        },
+        "ha" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Amincewa"
+          }
+        },
+        "tw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ahotoso"
+          }
+        }
+      }
+    },
+    "Crop Disease Detection" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ee" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agbledɔléle Dzesidenu"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Détection des maladies des cultures"
+          }
+        },
+        "ga" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ŋmɔmɔ Helatoyelɔ"
+          }
+        },
+        "ha" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Binciken Cututtukan Gona"
+          }
+        },
+        "tw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afifide Yare Hwehwɛfo"
+          }
+        }
+      }
+    },
+    "Detection Details" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ee" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Numekuku Emenyawo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Détails de la détection"
+          }
+        },
+        "ga" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taomɔ Sane Mli"
+          }
+        },
+        "ha" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bayanin Bincike"
+          }
+        },
+        "tw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nhwehwɛmu Mu Nsɛm"
+          }
+        }
+      }
+    },
+    "Email Address" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ee" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Imel Ɖoɖo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adresse e-mail"
+          }
+        },
+        "ga" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Imel Adireshin"
+          }
+        },
+        "ha" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adireshin Imel"
+          }
+        },
+        "tw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Imel Adrɛse"
+          }
+        }
+      }
+    },
+    "Language" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ee" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gbe"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Langue"
+          }
+        },
+        "ga" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wiemɔ"
+          }
+        },
+        "ha" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yarehe"
+          }
+        },
+        "tw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kasa"
+          }
+        }
+      }
+    },
+    "Project Overview" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ee" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dɔwɔwɔ Kpukprui"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aperçu du projet"
+          }
+        },
+        "ga" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nitsumɔ He Sane"
+          }
+        },
+        "ha" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bayanin Aiki"
+          }
+        },
+        "tw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adwuma no Ho Sɛm"
+          }
+        }
+      }
+    },
+    "Select Crop" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ee" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tia Nuku"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sélectionner la culture"
+          }
+        },
+        "ga" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hala Nibii"
+          }
+        },
+        "ha" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zabi Shuki"
+          }
+        },
+        "tw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paw Afifide"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

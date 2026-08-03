@@ -130,6 +130,33 @@
     <string name="register_role_farmer">Farmer</string>
     <string name="register_role_field_agent">Field Agent</string>
 
-
+    <!-- Settings and dialog strings -->
+    <string name="email_address_hint">Email Address</string>
+    <string name="sign_in_or_register">Sign In / Register</string>
+    <string name="edit_profile_title">Edit Profile</string>
+    <string name="profile_label_name">Name</string>
+    <string name="profile_label_bio">Bio</string>
+    <string name="profile_label_phone">Phone Number</string>
+    <string name="profile_label_location">Location</string>
+    <string name="save_button_text">Save</string>
+    <string name="sign_in_unlock_history">Sign In to Unlock History</string>
+    <string name="start_detection_scan">Start Detection Scan</string>
+    <string name="history_scan_date">Scan Date</string>
+    <string name="history_result_type">Result Type</string>
+    <string name="history_confidence">Confidence</string>
+    <string name="close_details_button">Close Details</string>
+    <string name="close_button_text">Close</string>
+    <string name="recommendation_no_data">No detection data available.</string>
+    <string name="go_back_button">Go Back</string>
+    <string name="all_detected_conditions">All detected conditions</string>
+    <string name="settings_clear_cache_title">Clear Cache</string>
+    <string name="settings_clear_cache_message">Are you sure you want to clear the local cache? This will free up storage space on your device.</string>
+    <string name="settings_clear_cache_success">Cache cleared successfully.</string>
+    <string name="clear_button_text">Clear</string>
+    <string name="settings_anonymize_title">Anonymize My Data</string>
+    <string name="settings_anonymize_message">Are you sure you want to anonymize your data? This will unlink your identity from your previous scans. Your scans will become completely anonymous and will only be used to help train our AI models for the benefit of all farmers. This action cannot be undone.</string>
+    <string name="settings_anonymize_success">Your data has been successfully anonymized.</string>
+    <string name="settings_anonymize_error">Failed to process your request.</string>
+    <string name="proceed_button_text">Proceed</string>
 
 </resources>

@@ -30,6 +30,8 @@ import com.nkwabyte.cropdiseasedetection.data.repository.SyncRepository
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AppViewModel
 import org.koin.compose.koinInject
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
+import com.nkwabyte.cropdiseasedetection.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -102,7 +104,7 @@ fun SettingsScreen(
                     SettingsClickableRow(
                         icon = Icons.Default.Language,
                         title = "Language",
-                        subtitle = "${appState.recommendationLanguage.flag} ${appState.recommendationLanguage.displayName}",
+                        subtitle = "${appState.recommendationLanguage.flag} ${appState.recommendationLanguage.displayName} (${appState.recommendationLanguage.nativeName})",
                         onClick = { showLanguageDialog = true }
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
@@ -245,8 +247,8 @@ fun SettingsScreen(
 
     // Dialogs
     if (showLanguageDialog) {
-        val langMap = RecommendationLanguage.entries.associateBy { "${it.flag} ${it.displayName}" }
-        val currentDisplay = "${appState.recommendationLanguage.flag} ${appState.recommendationLanguage.displayName}"
+        val langMap = RecommendationLanguage.entries.associateBy { "${it.flag} ${it.displayName} (${it.nativeName})" }
+        val currentDisplay = "${appState.recommendationLanguage.flag} ${appState.recommendationLanguage.displayName} (${appState.recommendationLanguage.nativeName})"
         
         SelectionDialog(
             title = "Select Language",
@@ -292,25 +294,29 @@ fun SettingsScreen(
         )
     }
 
+    val clearCacheSuccessMsg = stringResource(Res.string.settings_clear_cache_success)
+    val anonymizeSuccessMsg = stringResource(Res.string.settings_anonymize_success)
+    val anonymizeErrorMsg = stringResource(Res.string.settings_anonymize_error)
+
     if (showClearCacheDialog) {
         AlertDialog(
             onDismissRequest = { showClearCacheDialog = false },
-            title = { Text("Clear Cache") },
-            text = { Text("Are you sure you want to clear the local cache? This will free up storage space on your device.") },
+            title = { Text(stringResource(Res.string.settings_clear_cache_title)) },
+            text = { Text(stringResource(Res.string.settings_clear_cache_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     showClearCacheDialog = false
                     // Simulate clearing cache
                     coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Cache cleared successfully.")
+                        snackbarHostState.showSnackbar(clearCacheSuccessMsg)
                     }
                 }) {
-                    Text("Clear", color = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(Res.string.clear_button_text), color = MaterialTheme.colorScheme.primary)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearCacheDialog = false }) {
-                    Text("Cancel", color = MaterialTheme.colorScheme.onSurface)
+                    Text(stringResource(Res.string.cancel_text), color = MaterialTheme.colorScheme.onSurface)
                 }
             },
             containerColor = MaterialTheme.colorScheme.surface,
@@ -321,26 +327,26 @@ fun SettingsScreen(
     if (showDeleteDataDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDataDialog = false },
-            title = { Text("Anonymize My Data") },
-            text = { Text("Are you sure you want to anonymize your data? This will unlink your identity from your previous scans. Your scans will become completely anonymous and will only be used to help train our AI models for the benefit of all farmers. This action cannot be undone.") },
+            title = { Text(stringResource(Res.string.settings_anonymize_title)) },
+            text = { Text(stringResource(Res.string.settings_anonymize_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteDataDialog = false
                     coroutineScope.launch {
                         try {
                             syncRepository.anonymizeUserData()
-                            snackbarHostState.showSnackbar("Your data has been successfully anonymized.")
+                            snackbarHostState.showSnackbar(anonymizeSuccessMsg)
                         } catch (e: Exception) {
-                            snackbarHostState.showSnackbar("Failed to process your request.")
+                            snackbarHostState.showSnackbar(anonymizeErrorMsg)
                         }
                     }
                 }) {
-                    Text("Proceed", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(Res.string.proceed_button_text), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDataDialog = false }) {
-                    Text("Cancel", color = MaterialTheme.colorScheme.onSurface)
+                    Text(stringResource(Res.string.cancel_text), color = MaterialTheme.colorScheme.onSurface)
                 }
             },
             containerColor = MaterialTheme.colorScheme.surface,
@@ -544,7 +550,7 @@ fun SelectionDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(Res.string.cancel_text), color = MaterialTheme.colorScheme.primary)
             }
         },
         containerColor = MaterialTheme.colorScheme.surface,
