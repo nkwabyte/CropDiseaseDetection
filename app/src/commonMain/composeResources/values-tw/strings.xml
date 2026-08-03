@@ -151,4 +151,11 @@
     <string name="settings_anonymize_success">Woakora wo din so yie.</string>
     <string name="settings_anonymize_error">Antumi anyɛ.</string>
     <string name="proceed_button_text">To Soa</string>
+
+    <!-- History soft-delete strings -->
+    <string name="history_delete_title">Pepa Nhwehwɛmu</string>
+    <string name="history_delete_message">Yiyi nhwehwɛmu yi fi w\'abakɔsɛm mu? Ɛrempue wɔ krataafa yi so bio.</string>
+    <string name="history_delete_confirm">Pepa</string>
+    <string name="history_delete_content_description">Pepa nhwehwɛmu</string>
+
 </resources>

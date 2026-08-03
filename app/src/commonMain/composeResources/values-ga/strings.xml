@@ -151,4 +151,11 @@
     <string name="settings_anonymize_success">Otoo ogbei lɔ jogbaŋŋ.</string>
     <string name="settings_anonymize_error">Enyɛɛɛ eyɛ.</string>
     <string name="proceed_button_text">Yaa Hĩɛ</string>
+
+    <!-- History soft-delete strings -->
+    <string name="history_delete_title">Jie Helakwɛmɔ</string>
+    <string name="history_delete_message">Ojie helakwɛmɔ nɛɛ kɛjɛ oyinɔ lɛ mli? Ejeee kpo yɛ baafa nɛɛ nɔ dɔŋŋ.</string>
+    <string name="history_delete_confirm">Jie</string>
+    <string name="history_delete_content_description">Jie helakwɛmɔ</string>
+
 </resources>

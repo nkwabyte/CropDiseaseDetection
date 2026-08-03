@@ -16,6 +16,7 @@ public struct DetectionResultView: View {
     @State private var isRecommendationPresented: Bool = false
     @State private var isFlagSheetPresented: Bool = false
     @State private var flagNotes: String = ""
+    @StateObject private var langMgr = LanguageManager.shared
     
     public var body: some View {
         ScrollView {
@@ -39,10 +40,10 @@ public struct DetectionResultView: View {
                             HStack {
                                 Image(systemName: "exclamationmark.triangle.fill")
                                     .foregroundColor(.orange)
-                                Text("Unrecognized Leaf Type")
+                                LText("Unrecognized Leaf Type")
                                     .font(.headline)
                             }
-                            Text("The classifier confidence (\(Int(state.classifierConfidence * 100))%) suggests this is not a supported Corn, Pepper, or Tomato crop.")
+                            LText("The classifier confidence (%@) suggests this is not a supported Corn, Pepper, or Tomato crop.", "\(Int(state.classifierConfidence * 100))%")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
@@ -55,10 +56,10 @@ public struct DetectionResultView: View {
                             HStack {
                                 Image(systemName: "xmark.octagon.fill")
                                     .foregroundColor(.red)
-                                Text("Crop Mismatch Detected")
+                                LText("Crop Mismatch Detected")
                                     .font(.headline)
                             }
-                            Text("Detections found do not match your selected crop category.")
+                            LText("Detections found do not match your selected crop category.")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
@@ -71,10 +72,10 @@ public struct DetectionResultView: View {
                             HStack {
                                 Image(systemName: "checkmark.seal.fill")
                                     .foregroundColor(.green)
-                                Text("Detection Summary")
+                                LText("Detection Summary")
                                     .font(.headline)
                                 Spacer()
-                                Text("\(state.results.count) Found")
+                                LText("%@ Found", "\(state.results.count)")
                                     .font(.subheadline)
                                     .fontWeight(.bold)
                                     .foregroundColor(.green)
@@ -101,16 +102,16 @@ public struct DetectionResultView: View {
                             ForEach(items) { item in
                                 let det = item.result
                                 NavigationLink {
-                                    let info = DiseaseDatabase.shared.getDiseaseInfo(diseaseName: det.className ?? "Unknown")
+                                    let info = DiseaseDatabase.shared.getDiseaseInfo(diseaseName: det.className ?? L("Unknown"))
                                     DiseaseDetailView(disease: info)
                                 } label: {
                                     HStack {
                                         VStack(alignment: .leading, spacing: 2) {
-                                            Text(det.className ?? "Unknown")
+                                            Text(det.className ?? L("Unknown"))
                                                 .font(.body)
                                                 .fontWeight(.semibold)
                                                 .foregroundColor(.primary)
-                                            Text("Confidence: \(Int(det.score * 100))%")
+                                            LText("Confidence: %@", "\(Int(det.score * 100))%")
                                                 .font(.caption)
                                                 .foregroundColor(.secondary)
                                         }
@@ -134,9 +135,9 @@ public struct DetectionResultView: View {
                             Image(systemName: "leaf.circle")
                                 .font(.system(size: 40))
                                 .foregroundColor(.green)
-                            Text("No Disease Detected")
+                            LText("No Disease Detected")
                                 .font(.headline)
-                            Text("Your crop leaf appears healthy based on current ML thresholds.")
+                            LText("Your crop leaf appears healthy based on current ML thresholds.")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
@@ -152,7 +153,7 @@ public struct DetectionResultView: View {
                             NavigationLink {
                                 RecommendationView(results: detectionStateObs.value.results as? [DetectionResult] ?? [])
                             } label: {
-                                Label(LocalizedStringKey("View Treatment Guidelines"), systemImage: "book.pages.fill")
+                                Label(L("View Treatment Guidelines"), systemImage: "book.pages.fill")
                                     .font(.headline)
                                     .foregroundColor(.white)
                                     .frame(maxWidth: .infinity)
@@ -165,7 +166,7 @@ public struct DetectionResultView: View {
                         Button {
                             isFlagSheetPresented = true
                         } label: {
-                            Label(LocalizedStringKey("Report Inaccurate Detection"), systemImage: "flag.fill")
+                            Label(L("Report Inaccurate Detection"), systemImage: "flag.fill")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -173,11 +174,11 @@ public struct DetectionResultView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Diagnostic Results")
+            .navigationTitle(L("Diagnostic Results"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(LocalizedStringKey("Done")) {
+                    Button(L("Done")) {
                         onDone?()
                         dismiss()
                     }
@@ -185,9 +186,9 @@ public struct DetectionResultView: View {
             }
             .sheet(isPresented: $isFlagSheetPresented) {
                 VStack(spacing: 16) {
-                    Text("Flag Detection Record")
+                    LText("Flag Detection Record")
                         .font(.headline)
-                    Text("Help improve AI accuracy by submitting details on misclassifications.")
+                    LText("Help improve AI accuracy by submitting details on misclassifications.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
@@ -196,10 +197,10 @@ public struct DetectionResultView: View {
                         .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.secondary.opacity(0.3)))
                     
                     HStack {
-                        Button(LocalizedStringKey("Cancel")) { isFlagSheetPresented = false }
+                        Button(L("Cancel")) { isFlagSheetPresented = false }
                             .foregroundColor(.secondary)
                         Spacer()
-                        Button(LocalizedStringKey("Submit Flag")) {
+                        Button(L("Submit Flag")) {
                             let settings = KoinHelper.settingsManager
                             let ktByteArray = KotlinByteArray(size: Int32(imageBytes.count))
                             for (idx, b) in imageBytes.enumerated() {

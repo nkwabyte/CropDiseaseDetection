@@ -151,4 +151,11 @@
     <string name="settings_anonymize_success">Wobe wò ŋkɔ nyuie.</string>
     <string name="settings_anonymize_error">Mete ŋu wrom o.</string>
     <string name="proceed_button_text">Yi Edzi</string>
+
+    <!-- History soft-delete strings -->
+    <string name="history_delete_title">Tutu Dɔlélediɖeɖe</string>
+    <string name="history_delete_message">Èdi be yeaɖe dɔlélediɖeɖe sia ɖa le wò ŋutinya me? Magadze axa sia dzi o.</string>
+    <string name="history_delete_confirm">Tutui</string>
+    <string name="history_delete_content_description">Tutu dɔlélediɖeɖe</string>
+
 </resources>

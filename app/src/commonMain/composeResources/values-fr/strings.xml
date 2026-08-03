@@ -151,4 +151,11 @@
     <string name="settings_anonymize_success">Vos données ont été anonymisées avec succès.</string>
     <string name="settings_anonymize_error">Échec du traitement de votre demande.</string>
     <string name="proceed_button_text">Continuer</string>
+
+    <!-- History soft-delete strings -->
+    <string name="history_delete_title">Supprimer l\'analyse</string>
+    <string name="history_delete_message">Retirer cette analyse de votre historique ? Elle n\'apparaîtra plus sur cette page.</string>
+    <string name="history_delete_confirm">Supprimer</string>
+    <string name="history_delete_content_description">Supprimer l\'analyse</string>
+
 </resources>

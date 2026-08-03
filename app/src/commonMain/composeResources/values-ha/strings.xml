@@ -151,4 +151,11 @@
     <string name="settings_anonymize_success">An boye sunanka cikin nasara.</string>
     <string name="settings_anonymize_error">Kasa aiwatar da bukatarka.</string>
     <string name="proceed_button_text">Cigaba</string>
+
+    <!-- History soft-delete strings -->
+    <string name="history_delete_title">Share Bincike</string>
+    <string name="history_delete_message">A cire wannan bincike daga tarihinka? Ba zai ƙara bayyana a wannan shafin ba.</string>
+    <string name="history_delete_confirm">Share</string>
+    <string name="history_delete_content_description">Share bincike</string>
+
 </resources>

@@ -1,18 +1,20 @@
 import SwiftUI
 
 public struct PrivacyView: View {
+    @StateObject private var langMgr = LanguageManager.shared
+
     public init() {}
 
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Responsible AI Lab")
+                    LText("Responsible AI Lab")
                         .font(.title)
                         .fontWeight(.bold)
                         .foregroundColor(.green)
 
-                    Text("Last Updated: Today")
+                    LText("Last Updated: Today")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -133,23 +135,24 @@ public struct PrivacyView: View {
             }
             .padding()
         }
-        .navigationTitle("Privacy Policy")
+        .navigationTitle(L("Privacy Policy"))
         .navigationBarTitleDisplayMode(.inline)
     }
 }
 
 struct PrivacySectionView: View {
+    /// English source strings, used as localization keys.
     let title: String
     let content: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(title)
+            LText(title)
                 .font(.headline)
                 .fontWeight(.bold)
                 .foregroundColor(.green)
 
-            FormattedPrivacyContentView(content: content)
+            FormattedPrivacyContentView(content: L(content))
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -230,15 +233,17 @@ struct FormattedPrivacyContentView: View {
 }
 
 struct PrivacyContactCardView: View {
+    @StateObject private var langMgr = LanguageManager.shared
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("10. Contact Us")
+            LText("10. Contact Us")
                 .font(.headline)
                 .fontWeight(.bold)
                 .foregroundColor(.green)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Responsible Artificial Intelligence Lab (RAIL)")
+                LText("Responsible Artificial Intelligence Lab (RAIL)")
                     .font(.subheadline)
                     .fontWeight(.bold)
                     .foregroundColor(.primary)
@@ -308,10 +313,10 @@ private struct PrivacyContactInfoRow: View {
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
+                    LText(title)
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text(value)
+                    LText(value)
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(.primary)

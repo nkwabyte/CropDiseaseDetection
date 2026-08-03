@@ -22,6 +22,8 @@ struct ProfileView: View {
     @State private var showDeleteDataAlert: Bool = false
     @State private var showDeleteAccountAlert: Bool = false
 
+    @StateObject private var langMgr = LanguageManager.shared
+
     var body: some View {
         NavigationView {
             ScrollView {
@@ -40,7 +42,7 @@ struct ProfileView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Account")
+            .navigationTitle(L("Account"))
             .onAppear {
                 self.currentUser = Auth.auth().currentUser
             }
@@ -100,7 +102,7 @@ struct ProfileView: View {
                 .foregroundColor(.green)
             
             VStack(spacing: 4) {
-                Text(user.displayName?.isEmpty == false ? user.displayName! : (profileStateObs.value.userName.isEmpty ? "Farmer" : profileStateObs.value.userName))
+                Text(user.displayName?.isEmpty == false ? user.displayName! : (profileStateObs.value.userName.isEmpty ? L("Farmer") : profileStateObs.value.userName))
                     .font(.title2)
                     .fontWeight(.bold)
                 
@@ -116,7 +118,7 @@ struct ProfileView: View {
                     Text(profileStateObs.value.detections)
                         .font(.title3)
                         .fontWeight(.bold)
-                    Text("Detections")
+                    LText("Detections")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -129,7 +131,7 @@ struct ProfileView: View {
                         .font(.title3)
                         .fontWeight(.bold)
                         .foregroundColor(.green)
-                    Text("Success Rate")
+                    LText("Success Rate")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -145,7 +147,7 @@ struct ProfileView: View {
                 KoinHelper.profileViewModel.resetProfile()
                 self.currentUser = nil
             } label: {
-                Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                Label(L("Sign Out"), systemImage: "rectangle.portrait.and.arrow.right")
                     .font(.headline)
                     .foregroundColor(.red)
                     .frame(maxWidth: .infinity)
@@ -171,11 +173,11 @@ struct ProfileView: View {
                     .font(.system(size: 44))
                     .foregroundColor(.green)
                 
-                Text("Guest Farmer")
+                LText("Guest Farmer")
                     .font(.title3)
                     .fontWeight(.bold)
                 
-                Text("Sign in or create an account to save your disease detection history and sync across devices.")
+                LText("Sign in or create an account to save your disease detection history and sync across devices.")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -187,9 +189,9 @@ struct ProfileView: View {
             
             // Form Card
             VStack(spacing: 16) {
-                Picker("Auth Mode", selection: $isRegistering) {
-                    Text("Sign In").tag(false)
-                    Text("Register").tag(true)
+                Picker(L("Auth Mode"), selection: $isRegistering) {
+                    LText("Sign In").tag(false)
+                    LText("Register").tag(true)
                 }
                 .pickerStyle(.segmented)
                 .padding(.bottom, 8)
@@ -210,14 +212,14 @@ struct ProfileView: View {
                 
                 VStack(spacing: 12) {
                     if isRegistering {
-                        TextField("Full Name", text: $userNameInput)
+                        TextField(L("Full Name"), text: $userNameInput)
                             .autocapitalization(.words)
                             .padding()
                             .background(Color(uiColor: .secondarySystemBackground))
                             .cornerRadius(10)
                     }
 
-                    TextField("Email Address", text: $emailInput)
+                    TextField(L("Email Address"), text: $emailInput)
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
@@ -225,21 +227,21 @@ struct ProfileView: View {
                         .background(Color(uiColor: .secondarySystemBackground))
                         .cornerRadius(10)
                     
-                    SecureField("Password", text: $passwordInput)
+                    SecureField(L("Password"), text: $passwordInput)
                         .padding()
                         .background(Color(uiColor: .secondarySystemBackground))
                         .cornerRadius(10)
 
                     if isRegistering {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Role")
+                            LText("Role")
                                 .font(.caption)
                                 .fontWeight(.semibold)
                                 .foregroundColor(.secondary)
                             
-                            Picker("Select Role", selection: $selectedRole) {
-                                Text("Farmer 🧑‍🌾").tag(UserRole.farmer)
-                                Text("Field Agent 🕵️").tag(UserRole.fieldAgent)
+                            Picker(L("Select Role"), selection: $selectedRole) {
+                                Text(L("Farmer") + " 🧑‍🌾").tag(UserRole.farmer)
+                                Text(L("Field Agent") + " 🕵️").tag(UserRole.fieldAgent)
                             }
                             .pickerStyle(.segmented)
                         }
@@ -252,13 +254,13 @@ struct ProfileView: View {
                     let pass = passwordInput.trimmingCharacters(in: .whitespacesAndNewlines)
                     
                     if email.isEmpty || pass.isEmpty {
-                        authErrorMessage = "Please fill in all email and password fields."
+                        authErrorMessage = L("Please fill in all email and password fields.")
                         return
                     }
                     
                     if isRegistering {
                         let name = userNameInput.trimmingCharacters(in: .whitespacesAndNewlines)
-                        let finalName = name.isEmpty ? (selectedRole == .fieldAgent ? "Field Agent" : "Farmer") : name
+                        let finalName = name.isEmpty ? (selectedRole == .fieldAgent ? L("Field Agent") : L("Farmer")) : name
                         KoinHelper.authViewModel.registerWithEmail(
                             email: email,
                             pass: pass,
@@ -275,7 +277,7 @@ struct ProfileView: View {
                                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                 .padding(.trailing, 6)
                         }
-                        Text(isRegistering ? "Create Account" : "Sign In")
+                        LText(isRegistering ? "Create Account" : "Sign In")
                             .font(.headline)
                     }
                     .foregroundColor(.white)
@@ -296,7 +298,7 @@ struct ProfileView: View {
     @ViewBuilder
     private var privacySection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Data & Privacy Management")
+            LText("Data & Privacy Management")
                 .font(.headline)
                 .foregroundColor(.primary)
                 .padding(.leading, 4)
@@ -311,11 +313,11 @@ struct ProfileView: View {
                             .font(.title3)
                             .foregroundColor(.blue)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Privacy Policy")
+                            LText("Privacy Policy")
                                 .font(.body)
                                 .fontWeight(.medium)
                                 .foregroundColor(.primary)
-                            Text("Read how RAIL protects your data and privacy")
+                            LText("Read how RAIL protects your data and privacy")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -339,11 +341,11 @@ struct ProfileView: View {
                             .font(.title3)
                             .foregroundColor(.green)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Clear Cache")
+                            LText("Clear Cache")
                                 .font(.body)
                                 .fontWeight(.medium)
                                 .foregroundColor(.primary)
-                            Text("Free up local storage space on device")
+                            LText("Free up local storage space on device")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -354,13 +356,13 @@ struct ProfileView: View {
                     }
                     .padding()
                 }
-                .alert("Clear Cache", isPresented: $showClearCacheAlert) {
-                    Button("Clear", role: .destructive) {
-                        statusToastMessage = "Cache cleared successfully."
+                .alert(L("Clear Cache"), isPresented: $showClearCacheAlert) {
+                    Button(L("Clear"), role: .destructive) {
+                        statusToastMessage = L("Cache cleared successfully.")
                     }
-                    Button("Cancel", role: .cancel) {}
+                    Button(L("Cancel"), role: .cancel) {}
                 } message: {
-                    Text("Are you sure you want to clear local cache? This will free up storage space on your device.")
+                    LText("Are you sure you want to clear local cache? This will free up storage space on your device.")
                 }
                 
                 Divider()
@@ -375,11 +377,11 @@ struct ProfileView: View {
                             .font(.title3)
                             .foregroundColor(.orange)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Anonymize My Data")
+                            LText("Anonymize My Data")
                                 .font(.body)
                                 .fontWeight(.medium)
                                 .foregroundColor(.orange)
-                            Text("Anonymize your data for research")
+                            LText("Anonymize your data for research")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -390,14 +392,14 @@ struct ProfileView: View {
                     }
                     .padding()
                 }
-                .alert("Anonymize My Data", isPresented: $showDeleteDataAlert) {
-                    Button("Proceed", role: .destructive) {
+                .alert(L("Anonymize My Data"), isPresented: $showDeleteDataAlert) {
+                    Button(L("Proceed"), role: .destructive) {
                         KoinHelper.profileViewModel.deleteUserData()
-                        statusToastMessage = "Your data has been successfully anonymized."
+                        statusToastMessage = L("Your data has been successfully anonymized.")
                     }
-                    Button("Cancel", role: .cancel) {}
+                    Button(L("Cancel"), role: .cancel) {}
                 } message: {
-                    Text("Are you sure you want to anonymize your data? This will unlink your identity from your previous scans. Your scans will become completely anonymous and will only be used to help train our AI models for the benefit of all farmers. This action cannot be undone.")
+                    LText("Are you sure you want to anonymize your data? This will unlink your identity from your previous scans. Your scans will become completely anonymous and will only be used to help train our AI models for the benefit of all farmers. This action cannot be undone.")
                 }
                 
                 if currentUser != nil {
@@ -413,11 +415,11 @@ struct ProfileView: View {
                                 .font(.title3)
                                 .foregroundColor(.red)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Delete Account")
+                                LText("Delete Account")
                                     .font(.body)
                                     .fontWeight(.medium)
                                     .foregroundColor(.red)
-                                Text("Permanently delete account and profile data")
+                                LText("Permanently delete account and profile data")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -428,13 +430,13 @@ struct ProfileView: View {
                         }
                         .padding()
                     }
-                    .alert("Delete Account", isPresented: $showDeleteAccountAlert) {
-                        Button("Delete Account", role: .destructive) {
+                    .alert(L("Delete Account"), isPresented: $showDeleteAccountAlert) {
+                        Button(L("Delete Account"), role: .destructive) {
                             KoinHelper.authViewModel.deleteAccount()
                         }
-                        Button("Cancel", role: .cancel) {}
+                        Button(L("Cancel"), role: .cancel) {}
                     } message: {
-                        Text("Are you sure you want to permanently delete your account? This action cannot be undone and all your account information will be permanently removed.")
+                        LText("Are you sure you want to permanently delete your account? This action cannot be undone and all your account information will be permanently removed.")
                     }
                 }
             }

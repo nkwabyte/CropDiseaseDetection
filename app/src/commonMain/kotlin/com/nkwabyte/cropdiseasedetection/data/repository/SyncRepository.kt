@@ -10,12 +10,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.random.Random
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class DetectionRecord(
     val userId: String,
@@ -30,7 +33,31 @@ data class DetectionRecord(
     val rawResults: List<DetectionResult>,
     val modelName: String? = null,
     val modelVersion: String? = null,
-    val platform: String? = null
+    val platform: String? = null,
+    /**
+     * Soft delete. The user hides a scan from their history, but the document stays in
+     * Firestore — flagged rather than removed — so it remains available as training data.
+     */
+    val deleted: Boolean = false,
+    val deletedAt: Long? = null,
+    /**
+     * Firestore document id, populated on read and carried through the on-disk cache so a
+     * record can be soft-deleted without a lookup round trip. Never written back: NEVER
+     * keeps it out of the payload on create regardless of the encoder's default handling.
+     */
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val docId: String? = null
+)
+
+/**
+ * A user's history as last seen from Firestore, persisted so the page can render
+ * immediately on open instead of blocking on the network every time.
+ */
+@Serializable
+data class CachedHistory(
+    val userId: String,
+    val fetchedAt: Long,
+    val records: List<DetectionRecord>
 )
 
 @Serializable
@@ -130,13 +157,17 @@ class SyncRepository(
 
         withContext(Dispatchers.Default) {
             queueStore.readAll().forEach { (name, contents) ->
+                // The store also holds the history cache; only queue entries are our business
+                // here, and anything else must be left alone rather than reaped.
+                val isQueueEntry = name.startsWith(DETECTION_PREFIX) || name.startsWith(FLAGGED_PREFIX)
+                if (!isQueueEntry) return@forEach
+
                 val restored = runCatching {
                     when {
                         name.startsWith(DETECTION_PREFIX) ->
                             pendingDetections.add(json.decodeFromString(PendingDetectionRecord.serializer(), contents))
-                        name.startsWith(FLAGGED_PREFIX) ->
+                        else ->
                             pendingFlagged.add(json.decodeFromString(PendingFlaggedRecord.serializer(), contents))
-                        else -> false
                     }
                 }.getOrDefault(false)
 
@@ -389,6 +420,10 @@ class SyncRepository(
             )
 
             firestore.collection("detections").add(record)
+            // A scan taken while online never passes through the queue, so the cached
+            // history is now a record short. Drop it rather than let the new scan sit
+            // invisible until the cache window elapses.
+            clearHistoryCache()
             println("Successfully saved detection to Firestore")
             return true
         } catch (e: Exception) {
@@ -397,6 +432,117 @@ class SyncRepository(
         }
     }
 
+    /**
+     * The last history we successfully fetched for the signed-in user, or null when there is
+     * none — a different account was cached, or the entry is unreadable.
+     *
+     * Callers get whatever was cached regardless of age; [isCacheStale] decides whether a
+     * refresh is also warranted, so the page can paint immediately and update behind it.
+     */
+    suspend fun getCachedHistory(): CachedHistory? = withContext(Dispatchers.Default) {
+        val uid = Firebase.auth.currentUser?.uid ?: return@withContext null
+        val raw = queueStore.readAll()[HISTORY_CACHE_PREFIX + uid] ?: return@withContext null
+        runCatching { json.decodeFromString(CachedHistory.serializer(), raw) }
+            .onFailure {
+                println("History cache: discarding unreadable entry: ${it.message}")
+                queueStore.delete(HISTORY_CACHE_PREFIX + uid)
+            }
+            .getOrNull()
+            ?.takeIf { it.userId == uid }
+    }
+
+    fun isCacheStale(fetchedAt: Long): Boolean =
+        io.ktor.util.date.GMTDate().timestamp - fetchedAt > HISTORY_CACHE_TTL_MS
+
+    private suspend fun writeHistoryCache(records: List<DetectionRecord>) =
+        withContext(Dispatchers.Default) {
+            val uid = Firebase.auth.currentUser?.uid ?: return@withContext
+            // Only cloud records are cached: queued scans are already durable in the queue
+            // itself, and caching them too would show each pending scan twice.
+            val cache = CachedHistory(
+                userId = uid,
+                fetchedAt = io.ktor.util.date.GMTDate().timestamp,
+                records = records.filter { it.docId != null }
+            )
+            runCatching {
+                queueStore.save(
+                    HISTORY_CACHE_PREFIX + uid,
+                    json.encodeToString(CachedHistory.serializer(), cache)
+                )
+            }.onFailure { println("History cache: failed to write: ${it.message}") }
+        }
+
+    /**
+     * Replaces the cached record list, keeping the existing fetch time.
+     *
+     * Used after a soft delete so the removed row does not reappear from the cache on the
+     * next open; the fetch time is preserved so this does not also extend the cache window.
+     */
+    suspend fun overwriteHistoryCache(records: List<DetectionRecord>) =
+        withContext(Dispatchers.Default) {
+            val uid = Firebase.auth.currentUser?.uid ?: return@withContext
+            val fetchedAt = getCachedHistory()?.fetchedAt ?: io.ktor.util.date.GMTDate().timestamp
+            runCatching {
+                queueStore.save(
+                    HISTORY_CACHE_PREFIX + uid,
+                    json.encodeToString(
+                        CachedHistory.serializer(),
+                        CachedHistory(uid, fetchedAt, records.filter { it.docId != null })
+                    )
+                )
+            }.onFailure { println("History cache: failed to rewrite: ${it.message}") }
+        }
+
+    /** Drops the cached history for the signed-in user. */
+    suspend fun clearHistoryCache() = withContext(Dispatchers.Default) {
+        val uid = Firebase.auth.currentUser?.uid ?: return@withContext
+        queueStore.delete(HISTORY_CACHE_PREFIX + uid)
+    }
+
+    /**
+     * Hides [record] from the user's history without destroying it.
+     *
+     * A synced record is flagged `deleted` in Firestore and stays there for training; a scan
+     * still sitting in the offline queue never reached Firestore at all, so it is simply
+     * dropped from the queue. Returns false when the write failed and the caller should keep
+     * showing the record.
+     */
+    suspend fun softDeleteDetectionRecord(record: DetectionRecord): Boolean {
+        ensureQueueLoaded()
+
+        val docId = record.docId
+        if (docId == null) {
+            // Not yet uploaded — remove it from the queue so it never syncs.
+            queueLock.withLock {
+                val pending = pendingDetections.firstOrNull { it.timestamp == record.timestamp }
+                    ?: return@withLock
+                pendingDetections.remove(pending)
+                queueStore.delete(DETECTION_PREFIX + pending.id)
+                println("Removed queued detection record before upload")
+            }
+            return true
+        }
+
+        return try {
+            firestore.collection("detections").document(docId).update(
+                "deleted" to true,
+                "deletedAt" to io.ktor.util.date.GMTDate().timestamp
+            )
+            println("Soft-deleted detection record $docId")
+            true
+        } catch (e: Exception) {
+            println("Failed to soft-delete detection record: ${e.message}")
+            false
+        }
+    }
+
+    /**
+     * Fetches the user's history from Firestore, merges in anything still queued locally and
+     * refreshes the on-disk cache.
+     *
+     * Soft-deleted records are filtered here rather than in the query: existing documents
+     * predate the field, and `where deleted == false` would silently drop every one of them.
+     */
     suspend fun getDetectionRecords(): List<DetectionRecord> {
         ensureQueueLoaded()
 
@@ -408,38 +554,46 @@ class SyncRepository(
                 .where { "userId" equalTo uid }
                 .get()
 
-            response.documents.map { document ->
-                document.data(DetectionRecord.serializer())
-            }
+            response.documents
+                .map { document -> document.data(DetectionRecord.serializer()).copy(docId = document.id) }
+                .filter { !it.deleted }
         } catch (e: Exception) {
             println("Failed to fetch detection records: ${e.message}")
             emptyList()
         }
 
-        // Building data: URLs concatenates the full base64 of every queued image, so keep
-        // it off whichever dispatcher the caller happened to be on.
-        val localRecords = withContext(Dispatchers.Default) {
-            queueLock.withLock { pendingDetections.toList() }.map { pending ->
-                DetectionRecord(
-                    userId = Firebase.auth.currentUser?.uid ?: "anonymous",
-                    cropName = pending.cropName,
-                    imageUrl = "data:image/jpeg;base64,${pending.imageBase64}",
-                    detectionSuccessful = pending.detectionSuccessful,
-                    isCropMismatch = pending.isCropMismatch,
-                    imageWidth = pending.imageWidth,
-                    imageHeight = pending.imageHeight,
-                    timestamp = pending.timestamp,
-                    matchingResults = pending.matchingResults,
-                    rawResults = pending.rawResults,
-                    modelName = pending.modelName,
-                    modelVersion = pending.modelVersion,
-                    platform = pending.platform
-                )
-            }
-        }
+        val localRecords = getPendingAsRecords()
+
+        writeHistoryCache(remoteRecords)
 
         return (remoteRecords + localRecords).sortedByDescending { it.timestamp }
     }
+
+    /** Queued scans, rendered as history rows. Merged with whatever the cache holds. */
+    suspend fun getPendingAsRecords(): List<DetectionRecord> {
+        ensureQueueLoaded()
+        // Building data: URLs concatenates the full base64 of every queued image, so keep
+        // it off whichever dispatcher the caller happened to be on.
+        return withContext(Dispatchers.Default) {
+            queueLock.withLock { pendingDetections.toList() }.map { it.toDetectionRecord() }
+        }
+    }
+
+    private fun PendingDetectionRecord.toDetectionRecord() = DetectionRecord(
+        userId = Firebase.auth.currentUser?.uid ?: "anonymous",
+        cropName = cropName,
+        imageUrl = "data:image/jpeg;base64,$imageBase64",
+        detectionSuccessful = detectionSuccessful,
+        isCropMismatch = isCropMismatch,
+        imageWidth = imageWidth,
+        imageHeight = imageHeight,
+        timestamp = timestamp,
+        matchingResults = matchingResults,
+        rawResults = rawResults,
+        modelName = modelName,
+        modelVersion = modelVersion,
+        platform = platform
+    )
 
     suspend fun saveUserProfile(userName: String, userEmail: String?, role: UserRole) {
         try {
@@ -547,6 +701,9 @@ class SyncRepository(
                 pendingDetections.forEach { queueStore.delete(DETECTION_PREFIX + it.id) }
                 pendingDetections.clear()
             }
+            // The cache still holds records stamped with this uid; leaving it would show the
+            // history we just detached.
+            clearHistoryCache()
             println("Successfully anonymized user data in Firestore")
         } catch (e: Exception) {
             println("Failed to anonymize user data: ${e.message}")
@@ -563,6 +720,16 @@ class SyncRepository(
     private companion object {
         const val DETECTION_PREFIX = "detection-"
         const val FLAGGED_PREFIX = "flagged-"
+
+        /** Per-account so signing into a second account on one device shows its own history. */
+        const val HISTORY_CACHE_PREFIX = "history-"
+
+        /**
+         * How long a cached history is served without going back to Firestore. Long enough
+         * that opening the page repeatedly costs nothing, short enough that a scan made on
+         * another device shows up the same session. Pull-to-refresh bypasses it.
+         */
+        const val HISTORY_CACHE_TTL_MS = 15L * 60L * 1000L
 
         /**
          * Each entry carries a base64 image and is held in memory as well as on disk, so

@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
@@ -58,6 +59,7 @@ fun HistoryScreen(
     val historyViewModel: HistoryViewModel = koinInject()
     val state by historyViewModel.historyState.collectAsState()
     var selectedRecord by remember { mutableStateOf<DetectionRecord?>(null) }
+    var pendingDeletion by remember { mutableStateOf<DetectionRecord?>(null) }
 
     val isGuest = state.isGuest
     val isLoading = state.isLoading
@@ -127,6 +129,17 @@ fun HistoryScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
+                    // A refresh running behind records already on screen: a thin bar rather
+                    // than a spinner, so the list underneath stays readable.
+                    if (state.isRefreshing) {
+                        item {
+                            LinearProgressIndicator(
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+
                     // Header Stats Summary Row
                     item {
                         Row(
@@ -159,7 +172,8 @@ fun HistoryScreen(
                     items(historyRecords, key = { "${it.timestamp}-${it.imageUrl.hashCode()}" }) { record ->
                         HistoryRecordCard(
                             record = record,
-                            onClick = { selectedRecord = record }
+                            onClick = { selectedRecord = record },
+                            onDeleteClick = { pendingDeletion = record }
                         )
                     }
                 }
@@ -172,6 +186,34 @@ fun HistoryScreen(
         HistoryDetailDialog(
             record = record,
             onDismiss = { selectedRecord = null }
+        )
+    }
+
+    // Deleting only hides the scan from this list; the record itself is retained, so the
+    // wording promises exactly that and nothing stronger.
+    pendingDeletion?.let { record ->
+        AlertDialog(
+            onDismissRequest = { pendingDeletion = null },
+            title = { Text(stringResource(Res.string.history_delete_title)) },
+            text = { Text(stringResource(Res.string.history_delete_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    historyViewModel.deleteRecord(record)
+                    if (selectedRecord != null) selectedRecord = null
+                    pendingDeletion = null
+                }) {
+                    Text(
+                        stringResource(Res.string.history_delete_confirm),
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDeletion = null }) {
+                    Text(stringResource(Res.string.cancel_text))
+                }
+            }
         )
     }
 }
@@ -329,7 +371,8 @@ fun HistoryEmptyStateView(
 @Composable
 fun HistoryRecordCard(
     record: DetectionRecord,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDeleteClick: () -> Unit = {}
 ) {
     val dateString = formatTimestamp(record.timestamp)
     val primaryResult = record.matchingResults.maxByOrNull { it.score }
@@ -448,6 +491,15 @@ fun HistoryRecordCard(
                         )
                     )
                 }
+            }
+
+            IconButton(onClick = onDeleteClick) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = stringResource(Res.string.history_delete_content_description),
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }

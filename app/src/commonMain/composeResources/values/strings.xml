@@ -159,4 +159,11 @@
     <string name="settings_anonymize_error">Failed to process your request.</string>
     <string name="proceed_button_text">Proceed</string>
 
+
+    <!-- History soft-delete strings -->
+    <string name="history_delete_title">Delete Scan</string>
+    <string name="history_delete_message">Remove this scan from your history? It will no longer appear on this page.</string>
+    <string name="history_delete_confirm">Delete</string>
+    <string name="history_delete_content_description">Delete scan</string>
+
 </resources>

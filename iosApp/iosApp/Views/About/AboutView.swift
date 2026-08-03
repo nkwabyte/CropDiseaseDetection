@@ -3,6 +3,7 @@ import ComposeApp
 
 public struct AboutView: View {
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var langMgr = LanguageManager.shared
     
     public init() {}
     
@@ -21,15 +22,15 @@ public struct AboutView: View {
                             .foregroundColor(.green)
                     }
                     
-                    Text("Crop Disease Detection")
+                    LText("Crop Disease Detection")
                         .font(.title2)
                         .fontWeight(.bold)
                     
-                    Text("On-Device AI Diagnostics for Agriculture")
+                    LText("On-Device AI Diagnostics for Agriculture")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     
-                    Text("Version \(KoinHelper.settingsManager.getAppVersion())")
+                    LText("Version %@", KoinHelper.settingsManager.getAppVersion())
                         .font(.caption)
                         .fontWeight(.semibold)
                         .padding(.horizontal, 12)
@@ -44,11 +45,11 @@ public struct AboutView: View {
                     HStack {
                         Image(systemName: "info.circle.fill")
                             .foregroundColor(.green)
-                        Text("Project Overview")
+                        LText("Project Overview")
                             .font(.headline)
                     }
                     
-                    Text("The Plant Disease Detector application provides real-time, offline crop disease identification and actionable management guidance for farmers, agronomists, and agricultural extension officers across Ghana and West Africa. Designed specifically for field deployment, the platform delivers instant diagnostics and step-by-step treatment remedies for key crops—including Corn 🌽, Pepper 🫑, and Tomato 🍅—empowering agricultural communities to prevent crop loss, protect yields, and make informed decisions directly in the field without needing an internet connection.")
+                    LText("The Plant Disease Detector application provides real-time, offline crop disease identification and actionable management guidance for farmers, agronomists, and agricultural extension officers across Ghana and West Africa. Designed specifically for field deployment, the platform delivers instant diagnostics and step-by-step treatment remedies for key crops—including Corn 🌽, Pepper 🫑, and Tomato 🍅—empowering agricultural communities to prevent crop loss, protect yields, and make informed decisions directly in the field without needing an internet connection.")
                         .font(.body)
                         .foregroundColor(.secondary)
                         .lineSpacing(4)
@@ -62,7 +63,7 @@ public struct AboutView: View {
                     HStack {
                         Image(systemName: "building.2.fill")
                             .foregroundColor(.green)
-                        Text("Research Partners & Support")
+                        LText("Research Partners & Support")
                             .font(.headline)
                     }
                     
@@ -80,13 +81,13 @@ public struct AboutView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("RAIL KNUST")
                                     .font(.headline)
-                                Text("Responsible AI Lab, KNUST")
+                                LText("Responsible AI Lab, KNUST")
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
                             }
                         }
                         
-                        Text("Developed under the Responsible AI Lab (RAIL) at Kwame Nkrumah University of Science and Technology, Kumasi, Ghana. Dedicated to advancing ethical, inclusive, and practical AI solutions for African agriculture.")
+                        LText("Developed under the Responsible AI Lab (RAIL) at Kwame Nkrumah University of Science and Technology, Kumasi, Ghana. Dedicated to advancing ethical, inclusive, and practical AI solutions for African agriculture.")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .lineSpacing(3)
@@ -94,7 +95,7 @@ public struct AboutView: View {
                         Divider()
                             .padding(.vertical, 2)
                         
-                        Text("Partner Institutions")
+                        LText("Partner Institutions")
                             .font(.subheadline)
                             .fontWeight(.semibold)
                             .foregroundColor(.primary)
@@ -116,7 +117,7 @@ public struct AboutView: View {
             }
             .padding()
         }
-        .navigationTitle("About")
+        .navigationTitle(L("About"))
         .navigationBarTitleDisplayMode(.inline)
     }
 }

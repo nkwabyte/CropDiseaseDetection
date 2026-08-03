@@ -11,6 +11,7 @@ public struct SettingsView: View {
     @State private var iouThreshold: Float = 0.10
     @State private var classifierThreshold: Float = 0.55
     @State private var appVersion: String = ""
+    @StateObject private var langMgr = LanguageManager.shared
     
     private let themes = ["System Default", "Light", "Dark"]
     
@@ -31,21 +32,21 @@ public struct SettingsView: View {
     public var body: some View {
         NavigationStack {
             Form {
-                Section(header: Text("Disease Detection Model")) {
-                    Picker("Detection Model", selection: $selectedDetectionModel) {
-                        Text("YOLO26 (Active)").tag("YOLO26")
-                        Text("Faster R-CNN (Under Training)").tag("FasterRCNN")
-                        Text("Vision Transformer (Under Training)").tag("VisionTransformer")
+                Section(header: LText("Disease Detection Model")) {
+                    Picker(L("Detection Model"), selection: $selectedDetectionModel) {
+                        LText("YOLO26 (Active)").tag("YOLO26")
+                        LText("Faster R-CNN (Under Training)").tag("FasterRCNN")
+                        LText("Vision Transformer (Under Training)").tag("VisionTransformer")
                     }
                     .onChange(of: selectedDetectionModel) { newModel in
                         KoinHelper.appViewModel.setSelectedDetectionModel(model: newModel)
                     }
                 }
 
-                Section(header: Text("Appearance")) {
-                    Picker("Theme Mode", selection: $selectedTheme) {
+                Section(header: LText("Appearance")) {
+                    Picker(L("Theme Mode"), selection: $selectedTheme) {
                         ForEach(themes, id: \.self) { theme in
-                            Text(LocalizedStringKey(theme)).tag(theme)
+                            LText(theme).tag(theme)
                         }
                     }
                     .onChange(of: selectedTheme) { newTheme in
@@ -53,8 +54,8 @@ public struct SettingsView: View {
                     }
                 }
                 
-                Section(header: Text("Localization")) {
-                    Picker("Language", selection: $selectedLanguage) {
+                Section(header: LText("Localization")) {
+                    Picker(L("Language"), selection: $selectedLanguage) {
                         ForEach(languages, id: \.code) { lang in
                             Text(lang.displayName).tag(lang.code)
                         }
@@ -63,14 +64,14 @@ public struct SettingsView: View {
                         let recLang = RecommendationLanguage.from(code: newLang)
                         KoinHelper.settingsManager.setRecommendationLanguage(value: newLang)
                         KoinHelper.appViewModel.setRecommendationLanguage(language: recLang)
-                        UserDefaults.standard.set(recLang.localeCode, forKey: "selected_app_language_code")
+                        LanguageManager.shared.setLanguage(recLang.localeCode)
                     }
                 }
                 
-                Section(header: Text("ExecuTorch ML Thresholds"), footer: Text("Adjust detection confidence and IoU overlap sensitivity for YOLO26 & EfficientNet models.")) {
+                Section(header: LText("ExecuTorch ML Thresholds"), footer: LText("Adjust detection confidence and IoU overlap sensitivity for YOLO26 & EfficientNet models.")) {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            Text("Detection Confidence Threshold")
+                            LText("Detection Confidence Threshold")
                             Spacer()
                             Text("\(Int(detectionThreshold * 100))%")
                                 .fontWeight(.bold)
@@ -83,7 +84,7 @@ public struct SettingsView: View {
                     
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            Text("IoU Overlap Threshold")
+                            LText("IoU Overlap Threshold")
                             Spacer()
                             Text("\(Int(iouThreshold * 100))%")
                                 .fontWeight(.bold)
@@ -96,7 +97,7 @@ public struct SettingsView: View {
                     
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            Text("Classifier Acceptance Threshold")
+                            LText("Classifier Acceptance Threshold")
                             Spacer()
                             Text("\(Int(classifierThreshold * 100))%")
                                 .fontWeight(.bold)
@@ -108,37 +109,45 @@ public struct SettingsView: View {
                     }
                 }
                 
-                Section(header: Text("About & Support")) {
+                Section(header: LText("About & Support")) {
                     NavigationLink {
                         AboutView()
                     } label: {
-                        Label("About Plant Disease Detector", systemImage: "info.circle.fill")
+                        Label {
+                            LText("About Plant Disease Detector")
+                        } icon: {
+                            Image(systemName: "info.circle.fill")
+                        }
                     }
                     
                     NavigationLink {
                         HelpView()
                     } label: {
-                        Label("Help & Support", systemImage: "questionmark.circle.fill")
+                        Label {
+                            LText("Help & Support")
+                        } icon: {
+                            Image(systemName: "questionmark.circle.fill")
+                        }
                     }
                 }
 
-                Section(header: Text("App Info")) {
+                Section(header: LText("App Info")) {
                     HStack {
-                        Text("App Version")
+                        LText("App Version")
                         Spacer()
                         Text(appVersion)
                             .foregroundColor(.secondary)
                     }
                 }
             }
-            .navigationTitle("Settings")
+            .navigationTitle(L("Settings"))
             .onAppear {
                 let settings = KoinHelper.settingsManager
                 self.selectedTheme = appStateObs.value.selectedTheme
                 let currentRecLang = settings.getRecommendationLanguage()
                 self.selectedLanguage = currentRecLang
                 let recLang = RecommendationLanguage.from(code: currentRecLang)
-                UserDefaults.standard.set(recLang.localeCode, forKey: "selected_app_language_code")
+                LanguageManager.shared.setLanguage(recLang.localeCode)
                 self.selectedDetectionModel = settings.getDetectionModel()
                 self.detectionThreshold = settings.getDetectionThreshold()
                 self.iouThreshold = settings.getIouThreshold()

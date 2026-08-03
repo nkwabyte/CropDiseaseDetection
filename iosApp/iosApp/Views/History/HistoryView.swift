@@ -4,6 +4,14 @@ import ComposeApp
 public struct HistoryView: View {
     @StateObject private var stateObs = ObservableFlow(KoinHelper.historyViewModel.historyState)
     @State private var selectedRecord: DetectionRecord? = nil
+    @State private var pendingDeletion: DetectionRecord? = nil
+    @StateObject private var langMgr = LanguageManager.shared
+
+    /// Derived so the record being confirmed and the alert's visibility cannot drift apart.
+    private var isDeleteAlertPresented: Binding<Bool> {
+        Binding(get: { pendingDeletion != nil },
+                set: { if !$0 { pendingDeletion = nil } })
+    }
 
     public init() {}
 
@@ -14,7 +22,7 @@ public struct HistoryView: View {
                     VStack(spacing: 12) {
                         ProgressView()
                             .scaleEffect(1.2)
-                        Text("Loading Detection History...")
+                        LText("Loading Detection History...")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
@@ -24,36 +32,71 @@ public struct HistoryView: View {
                 } else if stateObs.value.records.isEmpty {
                     EmptyHistoryView()
                 } else {
-                    ScrollView {
-                        LazyVStack(spacing: 12) {
-                            ForEach(stateObs.value.records, id: \.timestamp) { record in
-                                HistoryRecordRow(record: record)
-                                    .onTapGesture {
-                                        selectedRecord = record
-                                    }
-                            }
+                    // A List rather than a LazyVStack so rows get the standard swipe-to-delete
+                    // gesture; the row chrome is stripped back so the cards still read as cards.
+                    List {
+                        if stateObs.value.isRefreshing {
+                            ProgressView()
+                                .frame(maxWidth: .infinity)
+                                .listRowSeparator(.hidden)
+                                .listRowBackground(Color.clear)
                         }
-                        .padding()
+
+                        ForEach(stateObs.value.records, id: \.id) { record in
+                            HistoryRecordRow(record: record)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    selectedRecord = record
+                                }
+                                .listRowSeparator(.hidden)
+                                .listRowBackground(Color.clear)
+                                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                                .swipeActions(edge: .trailing) {
+                                    Button(role: .destructive) {
+                                        pendingDeletion = record
+                                    } label: {
+                                        Label(L("Delete"), systemImage: "trash")
+                                    }
+                                }
+                        }
                     }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
                     .refreshable {
-                        KoinHelper.historyViewModel.loadHistory()
+                        KoinHelper.historyViewModel.refresh()
                     }
                 }
             }
-            .navigationTitle("Scan History")
+            .navigationTitle(L("Scan History"))
             .onAppear {
                 KoinHelper.historyViewModel.loadHistory()
             }
             .sheet(item: $selectedRecord) { record in
-                HistoryDetailSheet(record: record)
+                HistoryDetailSheet(record: record, onDelete: { pendingDeletion = record })
+            }
+            // Deleting only hides the scan; the record is retained, so the wording promises
+            // exactly that and nothing stronger.
+            .alert(L("Delete Scan"), isPresented: isDeleteAlertPresented) {
+                Button(L("Delete"), role: .destructive) {
+                    if let record = pendingDeletion {
+                        KoinHelper.historyViewModel.deleteRecord(record: record)
+                    }
+                    selectedRecord = nil
+                    pendingDeletion = nil
+                }
+                Button(L("Cancel"), role: .cancel) { pendingDeletion = nil }
+            } message: {
+                LText("Remove this scan from your history? It will no longer appear on this page.")
             }
         }
     }
 }
 
 extension DetectionRecord: @retroactive Identifiable {
+    /// Includes the image because a queued scan and its uploaded twin can otherwise
+    /// collide, and duplicate ids break ForEach.
     public var id: String {
-        "\(timestamp)_\(cropName)"
+        docId ?? "\(timestamp)_\(cropName)_\(imageUrl.hashValue)"
     }
 }
 
@@ -71,12 +114,12 @@ private struct GuestHistoryLockView: View {
                     .foregroundColor(.green)
             }
 
-            Text("History is Locked")
+            LText("History is Locked")
                 .font(.title2)
                 .fontWeight(.bold)
 
             VStack(spacing: 12) {
-                Text("Scans made as a guest are not synced to the cloud. Sign in or register to keep an archive of your diagnostics, sync data, and manage your crops.")
+                LText("Scans made as a guest are not synced to the cloud. Sign in or register to keep an archive of your diagnostics, sync data, and manage your crops.")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -84,7 +127,7 @@ private struct GuestHistoryLockView: View {
                 Button {
                     showAuthSheet = true
                 } label: {
-                    Text(LocalizedStringKey("Sign In to Unlock History"))
+                    LText("Sign In to Unlock History")
                         .font(.headline)
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
@@ -118,11 +161,11 @@ private struct EmptyHistoryView: View {
                     .foregroundColor(.green)
             }
 
-            Text("No Scan History")
+            LText("No Scan History")
                 .font(.title2)
                 .fontWeight(.bold)
 
-            Text("You haven't scanned any crops for diseases yet. Use the disease detector on a leaf to add diagnosed records to your cloud history archive.")
+            LText("You haven't scanned any crops for diseases yet. Use the disease detector on a leaf to add diagnosed records to your cloud history archive.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -134,13 +177,14 @@ private struct EmptyHistoryView: View {
 
 private struct HistoryRecordRow: View {
     let record: DetectionRecord
+    @StateObject private var langMgr = LanguageManager.shared
 
     private var primaryResult: DetectionResult? {
         record.matchingResults.max(by: { $0.score < $1.score })
     }
 
     private var diseaseLabel: String {
-        primaryResult?.className ?? "No Detection"
+        primaryResult?.className ?? L("No Detection")
     }
 
     private var confidenceText: String {
@@ -206,7 +250,7 @@ private struct HistoryRecordRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text("\(cropEmoji) \(record.cropName.uppercased())")
+                    Text("\(cropEmoji) \(L(record.cropName.capitalized).uppercased())")
                         .font(.caption)
                         .fontWeight(.bold)
                         .foregroundColor(.green)
@@ -225,7 +269,7 @@ private struct HistoryRecordRow: View {
                     .lineLimit(1)
 
                 HStack {
-                    Text(isHealthy ? "Healthy" : "Diseased")
+                    LText(isHealthy ? "Healthy" : "Diseased")
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundColor(isHealthy ? .green : .red)
@@ -236,7 +280,7 @@ private struct HistoryRecordRow: View {
 
                     Spacer()
 
-                    Text("Confidence: \(confidenceText)")
+                    LText("Confidence: %@", confidenceText)
                         .font(.caption)
                         .fontWeight(.medium)
                         .foregroundColor(.secondary)
@@ -252,6 +296,8 @@ private struct HistoryRecordRow: View {
 private struct HistoryDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
     let record: DetectionRecord
+    var onDelete: (() -> Void)? = nil
+    @StateObject private var langMgr = LanguageManager.shared
 
     private var formattedDate: String {
         let date = Date(timeIntervalSince1970: Double(record.timestamp) / 1000.0)
@@ -296,11 +342,11 @@ private struct HistoryDetailSheet: View {
                     // Metadata Card
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
-                            Text("Crop Category")
+                            LText("Crop Category")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                             Spacer()
-                            Text(record.cropName.capitalized)
+                            LText(record.cropName.capitalized)
                                 .font(.subheadline)
                                 .fontWeight(.bold)
                                 .foregroundColor(.primary)
@@ -309,7 +355,7 @@ private struct HistoryDetailSheet: View {
                         Divider()
 
                         HStack {
-                            Text("Timestamp")
+                            LText("Timestamp")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                             Spacer()
@@ -321,11 +367,11 @@ private struct HistoryDetailSheet: View {
                         Divider()
 
                         HStack {
-                            Text("Model Backend")
+                            LText("Model Backend")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                             Spacer()
-                            Text(record.modelName ?? "Unknown")
+                            Text(record.modelName ?? L("Unknown"))
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                                 .foregroundColor(.primary)
@@ -336,17 +382,17 @@ private struct HistoryDetailSheet: View {
                     .cornerRadius(16)
 
                     // Detections List
-                    Text("Detected Conditions (\(record.matchingResults.count))")
+                    LText("Detected Conditions (%@)", "\(record.matchingResults.count)")
                         .font(.headline)
                         .fontWeight(.bold)
 
                     ForEach(Array(record.matchingResults.enumerated()), id: \.offset) { _, result in
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(result.className ?? "Unknown")
+                                Text(result.className ?? L("Unknown"))
                                     .font(.body)
                                     .fontWeight(.semibold)
-                                Text("Score: \(Int(result.score * 100))%")
+                                LText("Score: %@", "\(Int(result.score * 100))%")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -365,12 +411,20 @@ private struct HistoryDetailSheet: View {
                 }
                 .padding()
             }
-            .navigationTitle("Scan Details")
+            .navigationTitle(L("Scan Details"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(LocalizedStringKey("Done")) {
+                    Button(L("Done")) {
                         dismiss()
+                    }
+                }
+                ToolbarItem(placement: .destructiveAction) {
+                    Button(role: .destructive) {
+                        dismiss()
+                        onDelete?()
+                    } label: {
+                        Image(systemName: "trash")
                     }
                 }
             }

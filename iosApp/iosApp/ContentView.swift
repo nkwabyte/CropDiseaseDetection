@@ -3,7 +3,7 @@ import ComposeApp
 
 struct ContentView: View {
     @StateObject private var appStateObs = ObservableFlow(KoinHelper.appViewModel.appState)
-    @AppStorage("selected_app_language_code") private var appLangCode: String = "en"
+    @StateObject private var langMgr = LanguageManager.shared
 
     private var preferredColorScheme: ColorScheme? {
         switch appStateObs.value.selectedTheme {
@@ -20,32 +20,51 @@ struct ContentView: View {
         TabView {
             HomeView()
                 .tabItem {
-                    Label(LocalizedStringKey("Diagnostics"), systemImage: "waveform.path.ecg")
+                    Label {
+                        Text(langMgr.localize("Diagnostics"))
+                    } icon: {
+                        Image(systemName: "waveform.path.ecg")
+                    }
                 }
             
             EncyclopediaView()
                 .tabItem {
-                    Label(LocalizedStringKey("Encyclopedia"), systemImage: "book.fill")
+                    Label {
+                        Text(langMgr.localize("Encyclopedia"))
+                    } icon: {
+                        Image(systemName: "book.fill")
+                    }
                 }
             
             HistoryView()
                 .tabItem {
-                    Label(LocalizedStringKey("History"), systemImage: "clock.arrow.circlepath")
+                    Label {
+                        Text(langMgr.localize("History"))
+                    } icon: {
+                        Image(systemName: "clock.arrow.circlepath")
+                    }
                 }
             
             SettingsView()
                 .tabItem {
-                    Label(LocalizedStringKey("Settings"), systemImage: "gearshape.fill")
+                    Label {
+                        Text(langMgr.localize("Settings"))
+                    } icon: {
+                        Image(systemName: "gearshape.fill")
+                    }
                 }
             
             ProfileView()
                 .tabItem {
-                    Label(LocalizedStringKey("Account"), systemImage: "person.crop.circle.fill")
+                    Label {
+                        Text(langMgr.localize("Account"))
+                    } icon: {
+                        Image(systemName: "person.crop.circle.fill")
+                    }
                 }
         }
         .accentColor(.green)
         .preferredColorScheme(preferredColorScheme)
-        .environment(\.locale, Locale(identifier: appLangCode))
     }
 }
 

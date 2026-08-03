@@ -33,6 +33,8 @@
 		DE5B96ADE68BB5C9688C9D91 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5802EC2B28D9A185EF551B /* ProfileView.swift */; };
 		856AC6C4DB050C23A531C4BF /* PrivacyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5802EC2B28D9A185EF551C /* PrivacyView.swift */; };
 		FB30DAA9D02B50D7D5F9F3B9 /* KoinHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C8AD6ACCD666C5758B0D82B /* KoinHelper.swift */; };
+		998877665544332211001122 /* Localizations.json in Resources */ = {isa = PBXBuildFile; fileRef = 998877665544332211001123 /* Localizations.json */; };
+		998877665544332211001124 /* LanguageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 998877665544332211001125 /* LanguageManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -59,6 +61,8 @@
 		BCAA110000000000000001AC /* ExecuTorchBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ExecuTorchBridge.h; sourceTree = "<group>"; };
 		DDB5B99DA5A78327089E835E /* DetectionResultView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DetectionResultView.swift; sourceTree = "<group>"; };
 		FAB36399A606D851CB85C98F /* RecommendationView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecommendationView.swift; sourceTree = "<group>"; };
+		998877665544332211001123 /* Localizations.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; path = Localizations.json; sourceTree = "<group>"; };
+		998877665544332211001125 /* LanguageManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LanguageManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -127,6 +131,7 @@
 				BC1E7F3A2FD70566009B6C63 /* crop_disease_yolo26.pte */,
 				BCAA110000000000000001AA /* ExecuTorchBridge.swift */,
 				BCAA110000000000000001AC /* ExecuTorchBridge.h */,
+				998877665544332211001123 /* Localizations.json */,
 				49B86A63D266CB3667613A35 /* Utils */,
 				80E2B11E31E00A59D6177BB8 /* Views */,
 			);
@@ -146,6 +151,7 @@
 			children = (
 				3288937051A8255A007428B4 /* SkieObservable.swift */,
 				8C8AD6ACCD666C5758B0D82B /* KoinHelper.swift */,
+				998877665544332211001125 /* LanguageManager.swift */,
 			);
 			name = Utils;
 			path = Utils;
@@ -255,6 +261,11 @@
 			knownRegions = (
 				en,
 				Base,
+				fr,
+				ha,
+				ee,
+				tw,
+				ga,
 			);
 			mainGroup = 419B5E5E2A1D000000000009;
 			packageReferences = (
@@ -279,6 +290,7 @@
 				BC1E7F3B2FD70566009B6C63 /* crop_disease_yolo26.pte in Resources */,
 				419B5E5E2A1D000000000008 /* GoogleService-Info.plist in Resources */,
 				0A5F4FD242A3F0FF0EBEDF7A /* Assets.xcassets in Resources */,
+				998877665544332211001122 /* Localizations.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -327,6 +339,7 @@
 				856AC6C4DB050C23A531C4BF /* PrivacyView.swift in Sources */,
 				2E17B64D9293D3B50BE7F7E2 /* AboutView.swift in Sources */,
 				AE0CDA25B35CDF0B6C7F2390 /* HelpView.swift in Sources */,
+				998877665544332211001124 /* LanguageManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

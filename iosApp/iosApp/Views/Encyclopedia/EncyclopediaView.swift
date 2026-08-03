@@ -6,6 +6,7 @@ public struct EncyclopediaView: View {
     @State private var selectedCropFilter: String = "All"
     
     private let cropFilters = ["All", "Corn", "Pepper", "Tomato"]
+    @StateObject private var langMgr = LanguageManager.shared
     
     public var body: some View {
         NavigationStack {
@@ -18,7 +19,7 @@ public struct EncyclopediaView: View {
                             Button {
                                 selectedCropFilter = filter
                             } label: {
-                                Text(LocalizedStringKey(filter))
+                                LText(filter)
                                     .font(.subheadline)
                                     .fontWeight(.semibold)
                                     .padding(.horizontal, 16)
@@ -56,7 +57,7 @@ public struct EncyclopediaView: View {
                                     .font(.headline)
                                 
                                 HStack(spacing: 8) {
-                                    Text(disease.crop)
+                                    LText(disease.crop)
                                         .font(.caption)
                                         .fontWeight(.bold)
                                         .padding(.horizontal, 8)
@@ -64,7 +65,7 @@ public struct EncyclopediaView: View {
                                         .background(Capsule().fill(Color.green.opacity(0.12)))
                                         .foregroundColor(.green)
                                     
-                                    Text(LocalizedStringKey(disease.isHealthy ? "Healthy" : "Disease"))
+                                    LText(disease.isHealthy ? "Healthy" : "Disease")
                                         .font(.caption)
                                         .fontWeight(.bold)
                                         .foregroundColor(disease.isHealthy ? .green : .red)
@@ -76,14 +77,15 @@ public struct EncyclopediaView: View {
                 }
                 .listStyle(.plain)
             }
-            .navigationTitle("Encyclopedia")
-            .searchable(text: $searchText, prompt: "Search plant diseases...")
+            .navigationTitle(L("Encyclopedia"))
+            .searchable(text: $searchText, prompt: L("Search plant diseases..."))
         }
     }
 }
 
 struct DiseaseDetailView: View {
     let disease: DiseaseInfo
+    @StateObject private var langMgr = LanguageManager.shared
     
     var body: some View {
         ScrollView {
@@ -108,14 +110,14 @@ struct DiseaseDetailView: View {
                     }
                     
                     HStack(spacing: 8) {
-                        Text("Target Crop: \(disease.crop)")
+                        LText("Target Crop: %@", L(disease.crop))
                             .font(.subheadline)
                             .fontWeight(.semibold)
                             .foregroundColor(.green)
                         
                         Spacer()
                         
-                        Text(disease.isHealthy ? "✓ Healthy" : "⚠️ Disease")
+                        Text(disease.isHealthy ? "✓ " + L("Healthy") : "⚠️ " + L("Disease"))
                             .font(.caption)
                             .fontWeight(.bold)
                             .padding(.horizontal, 10)
@@ -128,11 +130,11 @@ struct DiseaseDetailView: View {
                 Divider()
                 
                 VStack(alignment: .leading, spacing: 14) {
-                    DetailSectionView(title: LocalizedStringKey("Overview"), icon: "info.circle.fill", text: disease.description_)
-                    DetailSectionView(title: LocalizedStringKey("Symptoms"), icon: "cross.case.fill", text: disease.symptoms)
-                    DetailSectionView(title: LocalizedStringKey("Organic Treatment"), icon: "leaf.fill", text: disease.organicMitigation)
-                    DetailSectionView(title: LocalizedStringKey("Chemical Treatment"), icon: "flask.fill", text: disease.chemicalMitigation)
-                    DetailSectionView(title: LocalizedStringKey("Prevention Measures"), icon: "shield.fill", text: disease.prevention)
+                    DetailSectionView(title: "Overview", icon: "info.circle.fill", text: disease.description_)
+                    DetailSectionView(title: "Symptoms", icon: "cross.case.fill", text: disease.symptoms)
+                    DetailSectionView(title: "Organic Treatment", icon: "leaf.fill", text: disease.organicMitigation)
+                    DetailSectionView(title: "Chemical Treatment", icon: "flask.fill", text: disease.chemicalMitigation)
+                    DetailSectionView(title: "Prevention Measures", icon: "shield.fill", text: disease.prevention)
                 }
             }
             .padding()
@@ -143,7 +145,8 @@ struct DiseaseDetailView: View {
 }
 
 struct DetailSectionView: View {
-    let title: LocalizedStringKey
+    /// English source string, used as the localization key.
+    let title: String
     let icon: String
     let text: String
     
@@ -152,7 +155,7 @@ struct DetailSectionView: View {
             HStack {
                 Image(systemName: icon)
                     .foregroundColor(.green)
-                Text(title)
+                LText(title)
                     .font(.headline)
             }
             FormattedBulletListView(content: text, color: .green)

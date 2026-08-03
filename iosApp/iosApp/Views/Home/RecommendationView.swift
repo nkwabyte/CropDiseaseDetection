@@ -23,15 +23,15 @@ extension DiseaseDatabase {
             id: 0,
             name: diseaseName,
             localName: "",
-            crop: "Crop",
+            crop: L("Crop"),
             isHealthy: false,
-            description: "No details available",
-            symptoms: "N/A",
-            causes: "N/A",
-            effects: "N/A",
-            prevention: "N/A",
-            organicMitigation: "N/A",
-            chemicalMitigation: "N/A",
+            description: L("No details available"),
+            symptoms: L("N/A"),
+            causes: L("N/A"),
+            effects: L("N/A"),
+            prevention: L("N/A"),
+            organicMitigation: L("N/A"),
+            chemicalMitigation: L("N/A"),
             imageUrl: ""
         )
     }
@@ -39,9 +39,10 @@ extension DiseaseDatabase {
 
 private struct RecommendationCardView: View {
     let det: DetectionResult
+    @StateObject private var langMgr = LanguageManager.shared
     
     var body: some View {
-        let diseaseName = det.className ?? "Unknown Disease"
+        let diseaseName = det.className ?? L("Unknown Disease")
         let info = DiseaseDatabase.shared.getDiseaseInfo(diseaseName: diseaseName)
         
         return VStack(alignment: .leading, spacing: 14) {
@@ -50,7 +51,7 @@ private struct RecommendationCardView: View {
                     Text(diseaseName)
                         .font(.title3)
                         .fontWeight(.bold)
-                    Text("Severity: \(Int(det.score * 100))% Match")
+                    LText("Severity: %@ Match", "\(Int(det.score * 100))%")
                         .font(.subheadline)
                         .foregroundColor(.green)
                 }
@@ -59,10 +60,10 @@ private struct RecommendationCardView: View {
             
             Divider()
             
-            RecommendationSectionView(title: LocalizedStringKey("Symptoms"), icon: "cross.case.fill", text: info.symptoms)
-            RecommendationSectionView(title: LocalizedStringKey("Organic Management"), icon: "leaf.fill", text: info.organicMitigation)
-            RecommendationSectionView(title: LocalizedStringKey("Chemical Control"), icon: "flask.fill", text: info.chemicalMitigation)
-            RecommendationSectionView(title: LocalizedStringKey("Prevention Measures"), icon: "shield.fill", text: info.prevention)
+            RecommendationSectionView(title: "Symptoms", icon: "cross.case.fill", text: info.symptoms)
+            RecommendationSectionView(title: "Organic Management", icon: "leaf.fill", text: info.organicMitigation)
+            RecommendationSectionView(title: "Chemical Control", icon: "flask.fill", text: info.chemicalMitigation)
+            RecommendationSectionView(title: "Prevention Measures", icon: "shield.fill", text: info.prevention)
         }
         .padding()
         .background(Color(uiColor: .secondarySystemBackground))
@@ -72,12 +73,13 @@ private struct RecommendationCardView: View {
 
 public struct RecommendationView: View {
     public let results: [DetectionResult]
+    @StateObject private var langMgr = LanguageManager.shared
     
     public var body: some View {
         ScrollView {
             VStack(spacing: 20) {
                 if results.isEmpty {
-                    Text("No disease information required.")
+                    LText("No disease information required.")
                         .foregroundColor(.secondary)
                         .padding()
                 } else {
@@ -103,7 +105,7 @@ public struct RecommendationView: View {
             }
             .padding()
         }
-        .navigationTitle("Treatment Guidelines")
+        .navigationTitle(L("Treatment Guidelines"))
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -153,7 +155,8 @@ struct FormattedBulletListView: View {
 }
 
 struct RecommendationSectionView: View {
-    let title: LocalizedStringKey
+    /// English source string, used as the localization key.
+    let title: String
     let icon: String
     let text: String
     
@@ -162,7 +165,7 @@ struct RecommendationSectionView: View {
             HStack {
                 Image(systemName: icon)
                     .foregroundColor(.green)
-                Text(title)
+                LText(title)
                     .font(.headline)
             }
             FormattedBulletListView(content: text, color: .green)

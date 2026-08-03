@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct HelpView: View {
     @Environment(\.openURL) private var openURL
+    @StateObject private var langMgr = LanguageManager.shared
     
     public init() {}
     
@@ -35,7 +36,7 @@ public struct HelpView: View {
             url: "https://youtube.com/@railknust"
         ),
         SocialLinkItem(
-            name: "Official Website",
+            name: L("Official Website"),
             handle: "rail.knust.edu.gh",
             icon: "globe",
             color: .green,
@@ -58,11 +59,11 @@ public struct HelpView: View {
                             .foregroundColor(.green)
                     }
                     
-                    Text("Help & Community Support")
+                    LText("Help & Community Support")
                         .font(.title2)
                         .fontWeight(.bold)
                     
-                    Text("Connect with RAIL KNUST for research updates, extension guidance, and feedback.")
+                    LText("Connect with RAIL KNUST for research updates, extension guidance, and feedback.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -75,7 +76,7 @@ public struct HelpView: View {
                     HStack {
                         Image(systemName: "lifepreserver.fill")
                             .foregroundColor(.green)
-                        Text("How to Use Diagnostics")
+                        LText("How to Use Diagnostics")
                             .font(.headline)
                     }
                     
@@ -95,12 +96,12 @@ public struct HelpView: View {
                     HStack {
                         Image(systemName: "envelope.badge.fill")
                             .foregroundColor(.green)
-                        Text("Contact Us")
+                        LText("Contact Us")
                             .font(.headline)
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Responsible Artificial Intelligence Lab (RAIL)")
+                        LText("Responsible Artificial Intelligence Lab (RAIL)")
                             .font(.subheadline)
                             .fontWeight(.bold)
                             .foregroundColor(.primary)
@@ -148,7 +149,7 @@ public struct HelpView: View {
                     HStack {
                         Image(systemName: "person.2.wave.2.fill")
                             .foregroundColor(.green)
-                        Text("Connect on Social Media")
+                        LText("Connect on Social Media")
                             .font(.headline)
                     }
                     
@@ -198,7 +199,7 @@ public struct HelpView: View {
             }
             .padding()
         }
-        .navigationTitle("Help & Support")
+        .navigationTitle(L("Help & Support"))
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -214,6 +215,7 @@ private struct SocialLinkItem: Identifiable {
 
 private struct GuideStepRow: View {
     let step: String
+    /// English source strings, used as localization keys.
     let title: String
     let desc: String
     
@@ -230,10 +232,10 @@ private struct GuideStepRow: View {
             }
             
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
+                LText(title)
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                Text(desc)
+                LText(desc)
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -265,10 +267,10 @@ private struct ContactInfoRow: View {
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
+                    LText(title)
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text(value)
+                    LText(value)
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(.primary)

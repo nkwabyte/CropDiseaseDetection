@@ -13,6 +13,7 @@ public struct HomeView: View {
     @State private var isResultPresented: Bool = false
     @State private var isCropPickerPresented: Bool = false
     @State private var isCropAlertPresented: Bool = false
+    @StateObject private var langMgr = LanguageManager.shared
     
     private let crops = [
         ("Corn", "🌽", "Maize Crops"),
@@ -27,10 +28,10 @@ public struct HomeView: View {
                     // Header Banner
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Crop Disease Detector")
+                            LText("Crop Disease Detector")
                                 .font(.title2)
                                 .fontWeight(.bold)
-                            Text("AI-powered diagnostic assistant")
+                            LText("AI-powered diagnostic assistant")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -45,7 +46,7 @@ public struct HomeView: View {
                     
                     // Selected Crop Card
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Select Target Crop")
+                        LText("Select Target Crop")
                             .font(.headline)
                         
                         HStack(spacing: 12) {
@@ -57,7 +58,7 @@ public struct HomeView: View {
                                     VStack(spacing: 6) {
                                         Text(icon)
                                             .font(.system(size: 28))
-                                        Text(LocalizedStringKey(cropName))
+                                        LText(cropName)
                                             .font(.subheadline)
                                             .fontWeight(.semibold)
                                             .foregroundColor(isSelected ? .white : .primary)
@@ -105,9 +106,9 @@ public struct HomeView: View {
                                 Image(systemName: "camera.macro")
                                     .font(.system(size: 48))
                                     .foregroundColor(.green)
-                                Text("No Crop Photo Selected")
+                                LText("No Crop Photo Selected")
                                     .font(.headline)
-                                Text("Take a photo or upload an image of an affected leaf")
+                                LText("Take a photo or upload an image of an affected leaf")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                     .multilineTextAlignment(.center)
@@ -124,7 +125,7 @@ public struct HomeView: View {
                         // Image Source Action Buttons
                         HStack(spacing: 16) {
                             PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                                Label(LocalizedStringKey("Gallery"), systemImage: "photo.on.rectangle")
+                                Label(L("Gallery"), systemImage: "photo.on.rectangle")
                                     .font(.headline)
                                     .frame(maxWidth: .infinity)
                                     .padding()
@@ -136,7 +137,7 @@ public struct HomeView: View {
                             Button {
                                 isCameraPresented = true
                             } label: {
-                                Label(LocalizedStringKey("Camera"), systemImage: "camera.fill")
+                                Label(L("Camera"), systemImage: "camera.fill")
                                     .font(.headline)
                                     .frame(maxWidth: .infinity)
                                     .padding()
@@ -169,10 +170,10 @@ public struct HomeView: View {
                                     ProgressView()
                                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                         .padding(.trailing, 8)
-                                    Text("Analyzing Crop Health...")
+                                    LText("Analyzing Crop Health...")
                                 } else {
                                     Image(systemName: "waveform.path.ecg")
-                                    Text("Run Disease Diagnostics")
+                                    LText("Run Disease Diagnostics")
                                 }
                             }
                             .font(.headline)
@@ -188,7 +189,7 @@ public struct HomeView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Diagnostics")
+            .navigationTitle(L("Diagnostics"))
             .onChange(of: selectedPhotoItem) { newItem in
                 Task {
                     if let data = try? await newItem?.loadTransferable(type: Data.self),
@@ -222,10 +223,10 @@ public struct HomeView: View {
                     self.selectedByteArray = data
                 }
             }
-            .alert("Select Target Crop", isPresented: $isCropAlertPresented) {
-                Button("OK", role: .cancel) { }
+            .alert(L("Select Target Crop"), isPresented: $isCropAlertPresented) {
+                Button(L("OK"), role: .cancel) { }
             } message: {
-                Text("Please select a target crop type (Corn, Pepper, or Tomato) before running disease diagnostics.")
+                LText("Please select a target crop type (Corn, Pepper, or Tomato) before running disease diagnostics.")
             }
         }
     }
