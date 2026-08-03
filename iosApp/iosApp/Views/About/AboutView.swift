@@ -48,12 +48,7 @@ public struct AboutView: View {
                             .font(.headline)
                     }
                     
-                    Text("The Plant Disease Detector application provides real-time, offline crop disease identification for farmers and agricultural extension officers across Ghana and West Africa.")
-                        .font(.body)
-                        .foregroundColor(.secondary)
-                        .lineSpacing(4)
-                    
-                    Text("Powered by Meta ExecuTorch on-device neural networks (YOLO26 object detection and EfficientNet-B2 classification), the app diagnoses disease conditions in Corn 🌽, Pepper 🫑, and Tomato 🍅 crops without requiring an active internet connection.")
+                    Text("The Plant Disease Detector application provides real-time, offline crop disease identification and actionable management guidance for farmers, agronomists, and agricultural extension officers across Ghana and West Africa. Designed specifically for field deployment, the platform delivers instant diagnostics and step-by-step treatment remedies for key crops—including Corn 🌽, Pepper 🫑, and Tomato 🍅—empowering agricultural communities to prevent crop loss, protect yields, and make informed decisions directly in the field without needing an internet connection.")
                         .font(.body)
                         .foregroundColor(.secondary)
                         .lineSpacing(4)
