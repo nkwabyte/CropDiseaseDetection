@@ -31,7 +31,7 @@ public struct SettingsView: View {
     public var body: some View {
         NavigationStack {
             Form {
-                Section(header: Text("Disease Detection Model"), footer: Text("YOLO26 is currently active and optimized for on-device ExecuTorch inference. Faster R-CNN and Vision Transformer (ViT) models are under training and will be supported upon release.")) {
+                Section(header: Text("Disease Detection Model")) {
                     Picker("Detection Model", selection: $selectedDetectionModel) {
                         Text("YOLO26 (Active)").tag("YOLO26")
                         Text("Faster R-CNN (Under Training)").tag("FasterRCNN")
@@ -45,7 +45,7 @@ public struct SettingsView: View {
                 Section(header: Text("Appearance")) {
                     Picker("Theme Mode", selection: $selectedTheme) {
                         ForEach(themes, id: \.self) { theme in
-                            Text(theme).tag(theme)
+                            Text(LocalizedStringKey(theme)).tag(theme)
                         }
                     }
                     .onChange(of: selectedTheme) { newTheme in
@@ -60,8 +60,10 @@ public struct SettingsView: View {
                         }
                     }
                     .onChange(of: selectedLanguage) { newLang in
+                        let recLang = RecommendationLanguage.from(code: newLang)
                         KoinHelper.settingsManager.setRecommendationLanguage(value: newLang)
-                        KoinHelper.appViewModel.setRecommendationLanguage(language: RecommendationLanguage.from(code: newLang))
+                        KoinHelper.appViewModel.setRecommendationLanguage(language: recLang)
+                        UserDefaults.standard.set(recLang.localeCode, forKey: "selected_app_language_code")
                     }
                 }
                 
@@ -133,7 +135,10 @@ public struct SettingsView: View {
             .onAppear {
                 let settings = KoinHelper.settingsManager
                 self.selectedTheme = appStateObs.value.selectedTheme
-                self.selectedLanguage = settings.getRecommendationLanguage()
+                let currentRecLang = settings.getRecommendationLanguage()
+                self.selectedLanguage = currentRecLang
+                let recLang = RecommendationLanguage.from(code: currentRecLang)
+                UserDefaults.standard.set(recLang.localeCode, forKey: "selected_app_language_code")
                 self.selectedDetectionModel = settings.getDetectionModel()
                 self.detectionThreshold = settings.getDetectionThreshold()
                 self.iouThreshold = settings.getIouThreshold()
@@ -156,6 +161,17 @@ extension RecommendationLanguage {
         case "GA": return .ga
         case "FRENCH": return .french
         default: return .english
+        }
+    }
+
+    var localeCode: String {
+        switch self {
+        case .hausa: return "ha"
+        case .ewe: return "ee"
+        case .asanteTwi: return "tw"
+        case .ga: return "ga"
+        case .french: return "fr"
+        default: return "en"
         }
     }
 }

@@ -59,10 +59,10 @@ private struct RecommendationCardView: View {
             
             Divider()
             
-            RecommendationSectionView(title: "Symptoms", icon: "cross.case.fill", text: info.symptoms)
-            RecommendationSectionView(title: "Organic Management", icon: "leaf.fill", text: info.organicMitigation)
-            RecommendationSectionView(title: "Chemical Control", icon: "flask.fill", text: info.chemicalMitigation)
-            RecommendationSectionView(title: "Prevention Measures", icon: "shield.fill", text: info.prevention)
+            RecommendationSectionView(title: LocalizedStringKey("Symptoms"), icon: "cross.case.fill", text: info.symptoms)
+            RecommendationSectionView(title: LocalizedStringKey("Organic Management"), icon: "leaf.fill", text: info.organicMitigation)
+            RecommendationSectionView(title: LocalizedStringKey("Chemical Control"), icon: "flask.fill", text: info.chemicalMitigation)
+            RecommendationSectionView(title: LocalizedStringKey("Prevention Measures"), icon: "shield.fill", text: info.prevention)
         }
         .padding()
         .background(Color(uiColor: .secondarySystemBackground))
@@ -153,7 +153,7 @@ struct FormattedBulletListView: View {
 }
 
 struct RecommendationSectionView: View {
-    let title: String
+    let title: LocalizedStringKey
     let icon: String
     let text: String
     

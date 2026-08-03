@@ -3,6 +3,7 @@ import ComposeApp
 
 struct ContentView: View {
     @StateObject private var appStateObs = ObservableFlow(KoinHelper.appViewModel.appState)
+    @AppStorage("selected_app_language_code") private var appLangCode: String = "en"
 
     private var preferredColorScheme: ColorScheme? {
         switch appStateObs.value.selectedTheme {
@@ -19,31 +20,32 @@ struct ContentView: View {
         TabView {
             HomeView()
                 .tabItem {
-                    Label("Diagnostics", systemImage: "waveform.path.ecg")
+                    Label(LocalizedStringKey("Diagnostics"), systemImage: "waveform.path.ecg")
                 }
             
             EncyclopediaView()
                 .tabItem {
-                    Label("Encyclopedia", systemImage: "book.fill")
+                    Label(LocalizedStringKey("Encyclopedia"), systemImage: "book.fill")
                 }
             
             HistoryView()
                 .tabItem {
-                    Label("History", systemImage: "clock.arrow.circlepath")
+                    Label(LocalizedStringKey("History"), systemImage: "clock.arrow.circlepath")
                 }
             
             SettingsView()
                 .tabItem {
-                    Label("Settings", systemImage: "gearshape.fill")
+                    Label(LocalizedStringKey("Settings"), systemImage: "gearshape.fill")
                 }
             
             ProfileView()
                 .tabItem {
-                    Label("Account", systemImage: "person.crop.circle.fill")
+                    Label(LocalizedStringKey("Account"), systemImage: "person.crop.circle.fill")
                 }
         }
         .accentColor(.green)
         .preferredColorScheme(preferredColorScheme)
+        .environment(\.locale, Locale(identifier: appLangCode))
     }
 }
 

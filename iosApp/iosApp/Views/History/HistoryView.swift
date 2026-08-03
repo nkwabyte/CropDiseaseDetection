@@ -84,7 +84,7 @@ private struct GuestHistoryLockView: View {
                 Button {
                     showAuthSheet = true
                 } label: {
-                    Text("Sign In to Unlock History")
+                    Text(LocalizedStringKey("Sign In to Unlock History"))
                         .font(.headline)
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
@@ -369,7 +369,7 @@ private struct HistoryDetailSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") {
+                    Button(LocalizedStringKey("Done")) {
                         dismiss()
                     }
                 }

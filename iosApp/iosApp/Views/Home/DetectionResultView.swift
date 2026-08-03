@@ -152,7 +152,7 @@ public struct DetectionResultView: View {
                             NavigationLink {
                                 RecommendationView(results: detectionStateObs.value.results as? [DetectionResult] ?? [])
                             } label: {
-                                Label("View Treatment Guidelines", systemImage: "book.pages.fill")
+                                Label(LocalizedStringKey("View Treatment Guidelines"), systemImage: "book.pages.fill")
                                     .font(.headline)
                                     .foregroundColor(.white)
                                     .frame(maxWidth: .infinity)
@@ -165,7 +165,7 @@ public struct DetectionResultView: View {
                         Button {
                             isFlagSheetPresented = true
                         } label: {
-                            Label("Report Inaccurate Detection", systemImage: "flag.fill")
+                            Label(LocalizedStringKey("Report Inaccurate Detection"), systemImage: "flag.fill")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -177,7 +177,7 @@ public struct DetectionResultView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
+                    Button(LocalizedStringKey("Done")) {
                         onDone?()
                         dismiss()
                     }
@@ -196,10 +196,10 @@ public struct DetectionResultView: View {
                         .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.secondary.opacity(0.3)))
                     
                     HStack {
-                        Button("Cancel") { isFlagSheetPresented = false }
+                        Button(LocalizedStringKey("Cancel")) { isFlagSheetPresented = false }
                             .foregroundColor(.secondary)
                         Spacer()
-                        Button("Submit Flag") {
+                        Button(LocalizedStringKey("Submit Flag")) {
                             let settings = KoinHelper.settingsManager
                             let ktByteArray = KotlinByteArray(size: Int32(imageBytes.count))
                             for (idx, b) in imageBytes.enumerated() {

@@ -57,7 +57,7 @@ public struct HomeView: View {
                                     VStack(spacing: 6) {
                                         Text(icon)
                                             .font(.system(size: 28))
-                                        Text(cropName)
+                                        Text(LocalizedStringKey(cropName))
                                             .font(.subheadline)
                                             .fontWeight(.semibold)
                                             .foregroundColor(isSelected ? .white : .primary)
@@ -124,7 +124,7 @@ public struct HomeView: View {
                         // Image Source Action Buttons
                         HStack(spacing: 16) {
                             PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                                Label("Gallery", systemImage: "photo.on.rectangle")
+                                Label(LocalizedStringKey("Gallery"), systemImage: "photo.on.rectangle")
                                     .font(.headline)
                                     .frame(maxWidth: .infinity)
                                     .padding()
@@ -136,7 +136,7 @@ public struct HomeView: View {
                             Button {
                                 isCameraPresented = true
                             } label: {
-                                Label("Camera", systemImage: "camera.fill")
+                                Label(LocalizedStringKey("Camera"), systemImage: "camera.fill")
                                     .font(.headline)
                                     .frame(maxWidth: .infinity)
                                     .padding()

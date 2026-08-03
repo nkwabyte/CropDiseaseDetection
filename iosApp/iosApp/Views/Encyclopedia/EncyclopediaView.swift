@@ -18,7 +18,7 @@ public struct EncyclopediaView: View {
                             Button {
                                 selectedCropFilter = filter
                             } label: {
-                                Text(filter)
+                                Text(LocalizedStringKey(filter))
                                     .font(.subheadline)
                                     .fontWeight(.semibold)
                                     .padding(.horizontal, 16)
@@ -64,7 +64,7 @@ public struct EncyclopediaView: View {
                                         .background(Capsule().fill(Color.green.opacity(0.12)))
                                         .foregroundColor(.green)
                                     
-                                    Text(disease.isHealthy ? "Healthy" : "Disease")
+                                    Text(LocalizedStringKey(disease.isHealthy ? "Healthy" : "Disease"))
                                         .font(.caption)
                                         .fontWeight(.bold)
                                         .foregroundColor(disease.isHealthy ? .green : .red)
@@ -128,11 +128,11 @@ struct DiseaseDetailView: View {
                 Divider()
                 
                 VStack(alignment: .leading, spacing: 14) {
-                    DetailSectionView(title: "Overview", icon: "info.circle.fill", text: disease.description_)
-                    DetailSectionView(title: "Symptoms", icon: "cross.case.fill", text: disease.symptoms)
-                    DetailSectionView(title: "Organic Treatment", icon: "leaf.fill", text: disease.organicMitigation)
-                    DetailSectionView(title: "Chemical Treatment", icon: "flask.fill", text: disease.chemicalMitigation)
-                    DetailSectionView(title: "Prevention Measures", icon: "shield.fill", text: disease.prevention)
+                    DetailSectionView(title: LocalizedStringKey("Overview"), icon: "info.circle.fill", text: disease.description_)
+                    DetailSectionView(title: LocalizedStringKey("Symptoms"), icon: "cross.case.fill", text: disease.symptoms)
+                    DetailSectionView(title: LocalizedStringKey("Organic Treatment"), icon: "leaf.fill", text: disease.organicMitigation)
+                    DetailSectionView(title: LocalizedStringKey("Chemical Treatment"), icon: "flask.fill", text: disease.chemicalMitigation)
+                    DetailSectionView(title: LocalizedStringKey("Prevention Measures"), icon: "shield.fill", text: disease.prevention)
                 }
             }
             .padding()
@@ -143,7 +143,7 @@ struct DiseaseDetailView: View {
 }
 
 struct DetailSectionView: View {
-    let title: String
+    let title: LocalizedStringKey
     let icon: String
     let text: String
     
