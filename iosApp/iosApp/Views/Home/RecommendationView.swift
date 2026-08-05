@@ -6,6 +6,10 @@ private struct IdentifiedDetection: Identifiable {
     let result: DetectionResult
 }
 
+// Section headings, the banner, the audio notice and the disclaimer all come
+// from `RecommendationStrings` in commonMain — do not re-declare them here.
+// Swift cannot add a member the imported Kotlin type already exposes, and a
+// second copy drifts from the shared one within a release.
 extension DiseaseDatabase {
     func getDiseaseInfo(diseaseName: String) -> DiseaseInfo {
         let target = diseaseName.lowercased()
@@ -39,12 +43,17 @@ extension DiseaseDatabase {
 
 private struct RecommendationCardView: View {
     let det: DetectionResult
+    let selectedLanguageCode: String
     @StateObject private var langMgr = LanguageManager.shared
     
     var body: some View {
         let diseaseName = det.displayName.isEmpty ? L("Unknown Disease") : det.displayName
-        let info = DiseaseDatabase.shared.getDiseaseInfo(diseaseName: diseaseName)
-        
+        let canonical = DiseaseDatabase.shared.getDiseaseInfo(diseaseName: diseaseName)
+        let recLang = RecommendationLanguage.from(code: selectedLanguageCode)
+        // Body text in the selected language; falls back to English per-disease.
+        let info = DiseaseTranslations.shared.localized(disease: canonical, lang: recLang)
+        let strings = RecommendationStrings.shared
+
         return VStack(alignment: .leading, spacing: 14) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
@@ -57,13 +66,21 @@ private struct RecommendationCardView: View {
                 }
                 Spacer()
             }
-            
+
             Divider()
-            
-            RecommendationSectionView(title: "Symptoms", icon: "cross.case.fill", text: info.symptoms)
-            RecommendationSectionView(title: "Organic Management", icon: "leaf.fill", text: info.organicMitigation)
-            RecommendationSectionView(title: "Chemical Control", icon: "flask.fill", text: info.chemicalMitigation)
-            RecommendationSectionView(title: "Prevention Measures", icon: "shield.fill", text: info.prevention)
+
+            if canonical.isHealthy {
+                RecommendationSectionView(title: strings.healthyTitle(lang: recLang), icon: "checkmark.seal.fill", text: info.prevention)
+                RecommendationSectionView(title: strings.healthyOrganicTitle(lang: recLang), icon: "leaf.fill", text: info.organicMitigation)
+                RecommendationSectionView(title: strings.healthyChemicalTitle(lang: recLang), icon: "flask.fill", text: info.chemicalMitigation)
+            } else {
+                RecommendationSectionView(title: strings.symptomsTitle(lang: recLang), icon: "cross.case.fill", text: info.symptoms)
+                RecommendationSectionView(title: strings.causeTitle(lang: recLang), icon: "exclamationmark.triangle.fill", text: info.causes)
+                RecommendationSectionView(title: strings.effectsTitle(lang: recLang), icon: "chart.line.downtrend.xyaxis", text: info.effects)
+                RecommendationSectionView(title: strings.organicControlTitle(lang: recLang), icon: "leaf.fill", text: info.organicMitigation)
+                RecommendationSectionView(title: strings.chemicalControlTitle(lang: recLang), icon: "flask.fill", text: info.chemicalMitigation)
+                RecommendationSectionView(title: strings.preventionTitle(lang: recLang), icon: "shield.fill", text: info.prevention)
+            }
         }
         .padding()
         .background(Color(uiColor: .secondarySystemBackground))
@@ -97,6 +114,7 @@ public struct RecommendationView: View {
             VStack(spacing: 16) {
                 // ── Top Header Control Row (Language Selector & Play Audio Button) ─────
                 let currentOpt = languages.first(where: { $0.code == selectedLanguageCode }) ?? languages[0]
+                let recLang = RecommendationLanguage.from(code: selectedLanguageCode)
                 
                 HStack {
                     // Language Picker Menu
@@ -124,15 +142,15 @@ public struct RecommendationView: View {
                         .cornerRadius(20)
                     }
                     .onChange(of: selectedLanguageCode) { newLang in
-                        let recLang = RecommendationLanguage.from(code: newLang)
+                        let rLang = RecommendationLanguage.from(code: newLang)
                         KoinHelper.settingsManager.setRecommendationLanguage(value: newLang)
-                        KoinHelper.appViewModel.setRecommendationLanguage(language: recLang)
-                        LanguageManager.shared.setLanguage(recLang.localeCode)
+                        KoinHelper.appViewModel.setRecommendationLanguage(language: rLang)
+                        LanguageManager.shared.setLanguage(rLang.localeCode)
                     }
 
                     Spacer()
 
-                    // Play Audio Button (Future feature placeholder)
+                    // Play Audio Button
                     Button {
                         showAudioComingSoonAlert = true
                     } label: {
@@ -152,24 +170,39 @@ public struct RecommendationView: View {
                 }
                 .padding(.horizontal, 4)
 
-                // Translation pending banner if non-English
+                // Translation banner if non-English. It only claims a full
+                // translation when every disease on screen actually has one —
+                // otherwise it says the headings are translated and the body
+                // is still English.
                 if selectedLanguageCode != "ENGLISH" {
+                    let strings = RecommendationStrings.shared
+                    let allBodiesTranslated = results.allSatisfy { det in
+                        let name = det.displayName.isEmpty ? L("Unknown Disease") : det.displayName
+                        let info = DiseaseDatabase.shared.getDiseaseInfo(diseaseName: name)
+                        return DiseaseTranslations.shared.hasTranslation(id: info.id, lang: recLang)
+                    }
                     HStack(spacing: 10) {
                         Image(systemName: "character.bubble.fill")
-                            .foregroundColor(.orange)
+                            .foregroundColor(allBodiesTranslated ? .green : .orange)
                         VStack(alignment: .leading, spacing: 2) {
-                            LText("%@ %@ — Translation coming soon", currentOpt.flag, currentOpt.displayName)
+                            Text("\(currentOpt.flag) \(currentOpt.displayName) — " + (allBodiesTranslated
+                                ? strings.bannerLocalizedTitle(lang: recLang)
+                                : strings.bannerHeadingsOnlyTitle(lang: recLang)))
                                 .font(.caption)
                                 .fontWeight(.bold)
-                                .foregroundColor(Color(red: 0.75, green: 0.2, blue: 0.05))
-                            LText("Content is currently displayed in English.")
+                                .foregroundColor(allBodiesTranslated
+                                    ? Color(red: 0.1, green: 0.45, blue: 0.15)
+                                    : Color(red: 0.75, green: 0.2, blue: 0.05))
+                            Text(allBodiesTranslated
+                                ? strings.bannerLocalizedBody(lang: recLang)
+                                : strings.bannerHeadingsOnlyBody(lang: recLang))
                                 .font(.caption2)
-                                .foregroundColor(.orange)
+                                .foregroundColor(.secondary)
                         }
                         Spacer()
                     }
                     .padding(12)
-                    .background(Color.orange.opacity(0.12))
+                    .background((allBodiesTranslated ? Color.green : Color.orange).opacity(0.12))
                     .cornerRadius(12)
                 }
 
@@ -194,8 +227,15 @@ public struct RecommendationView: View {
                     }()
                     let items = distinctResults.enumerated().map { IdentifiedDetection(id: $0.offset, result: $0.element) }
                     ForEach(items) { item in
-                        RecommendationCardView(det: item.result)
+                        RecommendationCardView(det: item.result, selectedLanguageCode: selectedLanguageCode)
                     }
+
+                    // Advisory disclaimer — same shared copy as Android.
+                    Text(RecommendationStrings.shared.disclaimer(lang: recLang))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 4)
                 }
             }
             .padding()
@@ -203,10 +243,10 @@ public struct RecommendationView: View {
         .navigationTitle(L("Treatment Guidelines"))
         .navigationBarTitleDisplayMode(.inline)
         .alert(isPresented: $showAudioComingSoonAlert) {
-            let currentOpt = languages.first(where: { $0.code == selectedLanguageCode }) ?? languages[0]
+            let recLang = RecommendationLanguage.from(code: selectedLanguageCode)
             return Alert(
                 title: Text(L("Audio Playback")),
-                message: Text(L("Audio playback in %@ is coming soon!", currentOpt.displayName)),
+                message: Text(RecommendationStrings.shared.audioNotice(lang: recLang)),
                 dismissButton: .default(Text(L("OK")))
             )
         }
@@ -264,17 +304,20 @@ struct FormattedBulletListView: View {
 }
 
 struct RecommendationSectionView: View {
-    /// English source string, used as the localization key.
+    /// Display text, already resolved for the selected recommendation language
+    /// by `RecommendationStrings`. Not a localization key — do not pass it
+    /// through `L()`, or a heading that happens to collide with a catalogue key
+    /// would be translated a second time.
     let title: String
     let icon: String
     let text: String
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Image(systemName: icon)
                     .foregroundColor(.green)
-                LText(title)
+                Text(title)
                     .font(.headline)
             }
             FormattedBulletListView(content: text, color: .green)

@@ -947,6 +947,41 @@
         }
       }
     },
+    "Audio Playback": {
+      "extractionState": "manual",
+      "localizations": {
+        "ee": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gbeɖiɖi Ɖoɖo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lecture audio"
+          }
+        },
+        "ga": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gbee Mli Toiboo"
+          }
+        },
+        "ha": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sauraron Murya"
+          }
+        },
+        "tw": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nne Mu Tie"
+          }
+        }
+      }
+    },
     "Auth Mode": {
       "extractionState": "manual",
       "localizations": {
@@ -4233,6 +4268,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Afifide Nkyerɛkyerɛw"
+          }
+        }
+      }
+    },
+    "Play Audio": {
+      "extractionState": "manual",
+      "localizations": {
+        "ee": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ɖo Gbeɖiɖi"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lire l'audio"
+          }
+        },
+        "ga": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bo Gbee Lɛ"
+          }
+        },
+        "ha": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunna Murya"
+          }
+        },
+        "tw": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To Nne No"
           }
         }
       }

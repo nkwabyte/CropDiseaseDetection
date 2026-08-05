@@ -41,6 +41,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nkwabyte.cropdiseasedetection.common.data.DiseaseDatabase
 import com.nkwabyte.cropdiseasedetection.common.data.DiseaseInfo
+import com.nkwabyte.cropdiseasedetection.common.data.DiseaseTranslations
+import com.nkwabyte.cropdiseasedetection.common.data.RecommendationStrings
 import com.nkwabyte.cropdiseasedetection.common.model.RecommendationLanguage
 import com.nkwabyte.cropdiseasedetection.common.navigation.appbar.AppBar
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AppViewModel
@@ -130,7 +132,7 @@ fun RecommendationScreen(
                 onLanguageClick = { showLanguageDialog = true },
                 onPlayAudioClick = {
                     coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Audio playback in ${selectedLanguage.displayName} coming soon!")
+                        snackbarHostState.showSnackbar(RecommendationStrings.audioNotice(selectedLanguage))
                     }
                 }
             )
@@ -253,7 +255,7 @@ private fun HeaderControlRow(
                     }
                 }
 
-                // Play Audio Button (Future feature placeholder)
+                // Play Audio Button
                 FilledTonalButton(
                     onClick = onPlayAudioClick,
                     shape = RoundedCornerShape(20.dp),
@@ -286,18 +288,32 @@ private fun HeaderControlRow(
     }
 }
 
-// ── Translation pending banner ─────────────────────────────────────────────────
+// ── Translation banner ────────────────────────────────────────────────────────
 
+/**
+ * States what is actually translated for the disease on screen.
+ *
+ * [bodyIsTranslated] comes from [DiseaseTranslations.hasTranslation], so the
+ * banner degrades to "headings only" for any disease still awaiting body text
+ * instead of claiming a translation the farmer isn't getting.
+ */
 @Composable
-private fun TranslationPendingBanner(language: RecommendationLanguage) {
+private fun TranslationBanner(
+    language: RecommendationLanguage,
+    bodyIsTranslated: Boolean
+) {
     AnimatedVisibility(
         visible = language != RecommendationLanguage.ENGLISH,
         enter = expandVertically() + fadeIn(),
         exit = shrinkVertically() + fadeOut()
     ) {
+        val container = if (bodyIsTranslated) Color(0xFFE8F5E9) else Color(0xFFFFF8E1)
+        val accent = if (bodyIsTranslated) Color(0xFF2E7D32) else Color(0xFFE65100)
+        val headline = if (bodyIsTranslated) Color(0xFF1B5E20) else Color(0xFFBF360C)
+
         Card(
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8E1)),
+            colors = CardDefaults.cardColors(containerColor = container),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 4.dp)
@@ -310,22 +326,29 @@ private fun TranslationPendingBanner(language: RecommendationLanguage) {
                 Icon(
                     imageVector = Icons.Default.Translate,
                     contentDescription = null,
-                    tint = Color(0xFFE65100),
+                    tint = accent,
                     modifier = Modifier.size(20.dp)
                 )
                 Column {
                     Text(
-                        text = "${language.flag} ${language.nativeName} — Translation coming soon",
+                        text = "${language.flag} ${language.nativeName} — " +
+                            if (bodyIsTranslated) {
+                                RecommendationStrings.bannerLocalizedTitle(language)
+                            } else {
+                                RecommendationStrings.bannerHeadingsOnlyTitle(language)
+                            },
                         style = MaterialTheme.typography.labelMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFBF360C)
+                            color = headline
                         )
                     )
                     Text(
-                        text = "Content is currently displayed in English.",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = Color(0xFFE65100)
-                        )
+                        text = if (bodyIsTranslated) {
+                            RecommendationStrings.bannerLocalizedBody(language)
+                        } else {
+                            RecommendationStrings.bannerHeadingsOnlyBody(language)
+                        },
+                        style = MaterialTheme.typography.bodySmall.copy(color = accent)
                     )
                 }
             }
@@ -342,13 +365,17 @@ private fun DiseasePicker(
     onSelect: (DiseaseInfo) -> Unit
 ) {
     val total = detectedDiseases.sumOf { it.second }
+    // The list only claims a full translation when every disease on it has one.
+    val allBodiesTranslated = detectedDiseases.all { (disease, _) ->
+        DiseaseTranslations.hasTranslation(disease.id, selectedLanguage)
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        TranslationPendingBanner(selectedLanguage)
+        TranslationBanner(selectedLanguage, allBodiesTranslated)
 
         Text(
             text = "Multiple conditions detected",
@@ -364,6 +391,7 @@ private fun DiseasePicker(
         detectedDiseases.forEach { (disease, count) ->
             DiseasePickerCard(
                 disease = disease,
+                selectedLanguage = selectedLanguage,
                 count = count,
                 total = total,
                 onClick = { onSelect(disease) }
@@ -375,11 +403,13 @@ private fun DiseasePicker(
 @Composable
 private fun DiseasePickerCard(
     disease: DiseaseInfo,
+    selectedLanguage: RecommendationLanguage,
     count: Int,
     total: Int,
     onClick: () -> Unit
 ) {
     val cropTheme = getCropTheme(disease.crop)
+    val localName = DiseaseTranslations.localized(disease, selectedLanguage).localName
     val percentage = if (total > 0) (count.toFloat() / total * 100).toInt() else 0
 
     Card(
@@ -410,7 +440,7 @@ private fun DiseasePickerCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = disease.localName,
+                    text = localName,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
                 )
@@ -446,6 +476,11 @@ private fun DiseaseRecommendationDetail(
     val cropTheme = getCropTheme(disease.crop)
     val percentage = if (totalDetections > 0) (detectionCount.toFloat() / totalDetections * 100).toInt() else 100
 
+    // Body text in the selected language, falling back to English per-disease.
+    // `disease` itself stays canonical — crop, name and id must not shift.
+    val content = DiseaseTranslations.localized(disease, selectedLanguage)
+    val bodyIsTranslated = DiseaseTranslations.hasTranslation(disease.id, selectedLanguage)
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
@@ -453,7 +488,7 @@ private fun DiseaseRecommendationDetail(
     ) {
         // Translation banner (only when non-English is selected)
         item {
-            TranslationPendingBanner(selectedLanguage)
+            TranslationBanner(selectedLanguage, bodyIsTranslated)
         }
 
         // Back to list button
@@ -531,7 +566,7 @@ private fun DiseaseRecommendationDetail(
                         )
                     )
                     Text(
-                        text = disease.localName,
+                        text = content.localName,
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = cropTheme.textColor.copy(alpha = 0.7f)
                         )
@@ -560,7 +595,7 @@ private fun DiseaseRecommendationDetail(
                     )
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        text = disease.description,
+                        text = content.description,
                         style = MaterialTheme.typography.bodyMedium.copy(
                             color = cropTheme.textColor.copy(alpha = 0.85f),
                             lineHeight = 22.sp
@@ -575,8 +610,8 @@ private fun DiseaseRecommendationDetail(
                 RecommendationSection(
                     icon = Icons.Default.WarningAmber,
                     iconTint = Color(0xFFE65100),
-                    title = "Cause",
-                    content = disease.causes,
+                    title = RecommendationStrings.causeTitle(selectedLanguage),
+                    content = content.causes,
                     containerColor = Color(0xFFFFF3E0)
                 )
             }
@@ -584,8 +619,8 @@ private fun DiseaseRecommendationDetail(
                 RecommendationSection(
                     icon = Icons.Default.WarningAmber,
                     iconTint = Color(0xFFC62828),
-                    title = "Effects on Crop & Yield",
-                    content = disease.effects,
+                    title = RecommendationStrings.effectsTitle(selectedLanguage),
+                    content = content.effects,
                     containerColor = Color(0xFFFFEBEE)
                 )
             }
@@ -593,8 +628,8 @@ private fun DiseaseRecommendationDetail(
                 RecommendationSection(
                     icon = Icons.Default.Eco,
                     iconTint = Color(0xFF2E7D32),
-                    title = "Organic / Biological Control",
-                    content = disease.organicMitigation,
+                    title = RecommendationStrings.organicControlTitle(selectedLanguage),
+                    content = content.organicMitigation,
                     containerColor = Color(0xFFE8F5E9)
                 )
             }
@@ -602,8 +637,8 @@ private fun DiseaseRecommendationDetail(
                 RecommendationSection(
                     icon = Icons.Default.Science,
                     iconTint = Color(0xFF1565C0),
-                    title = "Chemical Control",
-                    content = disease.chemicalMitigation,
+                    title = RecommendationStrings.chemicalControlTitle(selectedLanguage),
+                    content = content.chemicalMitigation,
                     containerColor = Color(0xFFE3F2FD)
                 )
             }
@@ -611,8 +646,8 @@ private fun DiseaseRecommendationDetail(
                 RecommendationSection(
                     icon = Icons.Default.CheckCircle,
                     iconTint = Color(0xFF6A1B9A),
-                    title = "Prevention & Cultural Practices",
-                    content = disease.prevention,
+                    title = RecommendationStrings.preventionTitle(selectedLanguage),
+                    content = content.prevention,
                     containerColor = Color(0xFFF3E5F5)
                 )
             }
@@ -621,8 +656,8 @@ private fun DiseaseRecommendationDetail(
                 RecommendationSection(
                     icon = Icons.Default.CheckCircle,
                     iconTint = Color(0xFF2E7D32),
-                    title = "Your plant looks healthy!",
-                    content = disease.prevention,
+                    title = RecommendationStrings.healthyTitle(selectedLanguage),
+                    content = content.prevention,
                     containerColor = Color(0xFFE8F5E9)
                 )
             }
@@ -630,8 +665,8 @@ private fun DiseaseRecommendationDetail(
                 RecommendationSection(
                     icon = Icons.Default.Eco,
                     iconTint = Color(0xFF2E7D32),
-                    title = "Best Organic Practices to Maintain Health",
-                    content = disease.organicMitigation,
+                    title = RecommendationStrings.healthyOrganicTitle(selectedLanguage),
+                    content = content.organicMitigation,
                     containerColor = Color(0xFFF1F8E9)
                 )
             }
@@ -639,8 +674,8 @@ private fun DiseaseRecommendationDetail(
                 RecommendationSection(
                     icon = Icons.Default.Science,
                     iconTint = Color(0xFF1565C0),
-                    title = "Agrochemical Maintenance Tips",
-                    content = disease.chemicalMitigation,
+                    title = RecommendationStrings.healthyChemicalTitle(selectedLanguage),
+                    content = content.chemicalMitigation,
                     containerColor = Color(0xFFE3F2FD)
                 )
             }
@@ -653,7 +688,7 @@ private fun DiseaseRecommendationDetail(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "These recommendations are for general guidance. Consult a local agronomist or extension officer from Ghana MoFA for location-specific advice and approved chemical products.",
+                    text = RecommendationStrings.disclaimer(selectedLanguage),
                     style = MaterialTheme.typography.bodySmall.copy(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         lineHeight = 18.sp
