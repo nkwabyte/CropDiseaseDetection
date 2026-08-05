@@ -9,6 +9,24 @@ data class DetectionResult(
     val box: FloatArray,
     val className: String? = null,
 ) {
+    /**
+     * The class name as it should be shown to a user, and as it should be matched
+     * against [com.nkwabyte.cropdiseasedetection.common.data.DiseaseDatabase].
+     *
+     * Underscores come from the raw YOLO class ids (`Corn_Common_Rust`) and have leaked
+     * into stored history records, so stripping them here rather than only fixing the
+     * label list also cleans up scans that were already saved. It matters beyond looks:
+     * the disease lookups match on `name.contains(className)`, and "Corn Common_Rust"
+     * never matched the database's "Corn Common Rust".
+     */
+    val displayName: String
+        get() = className
+            ?.replace('_', ' ')
+            ?.split(' ')
+            ?.filter { it.isNotBlank() }
+            ?.joinToString(" ")
+            .orEmpty()
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other == null || this::class != other::class) return false

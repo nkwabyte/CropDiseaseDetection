@@ -73,10 +73,22 @@ fun DetectionResultScreen(
         }
     }
 
+    // Boxes are drawn for every detection that cleared the inference threshold, which on a
+    // leaf with many lesions buries the image. This filters what is drawn only — the
+    // detections themselves are untouched, so raising it never changes the diagnosis below.
+    // The floor is the inference threshold: nothing weaker than that exists to reveal, so
+    // starting there keeps every slider position meaningful.
+    val boxFloor = appState.detectionThreshold.coerceIn(0f, 0.95f)
+    var boxConfidence by remember(boxFloor) { mutableStateOf(boxFloor) }
+
+    val visibleBoxes by remember(detectionResults, boxConfidence) {
+        derivedStateOf { detectionResults.filter { it.score >= boxConfidence } }
+    }
+
     val distinctDetectionResults by remember(detectionResults) {
         derivedStateOf {
             detectionResults
-                .groupBy { it.className ?: it.classIndex.toString() }
+                .groupBy { it.displayName.ifEmpty { it.classIndex.toString() } }
                 .mapValues { (_, list) -> list.maxByOrNull { it.score }!! }
                 .values
                 .sortedByDescending { it.score }
@@ -149,7 +161,7 @@ fun DetectionResultScreen(
                     ) {
                         BoundingBoxImage(
                             imageBytes = selectedImageBytes,
-                            results = detectionResults,
+                            results = visibleBoxes,
                             modelWidth = 640,
                             modelHeight = 640,
                             contentDescription = stringResource(Res.string.detected_image_content_description),
@@ -220,6 +232,16 @@ fun DetectionResultScreen(
                                     modifier = Modifier.padding(bottom = 8.dp)
                                 )
                             }
+
+                            if (detectionResults.isNotEmpty()) {
+                                BoxConfidenceSlider(
+                                    value = boxConfidence,
+                                    onValueChange = { boxConfidence = it },
+                                    valueRange = boxFloor..1f,
+                                    shown = visibleBoxes.size,
+                                    total = detectionResults.size
+                                )
+                            }
                         }
 
                         if (detectionResults.isEmpty()) {
@@ -237,7 +259,8 @@ fun DetectionResultScreen(
                                     result = result,
                                     onClick = {
                                         selectedDisease = DiseaseDatabase.diseases.find { disease ->
-                                            result.className?.let { disease.name.contains(it, ignoreCase = true) } == true
+                                            result.displayName.isNotEmpty() &&
+                                                disease.name.contains(result.displayName, ignoreCase = true)
                                         } ?: DiseaseDatabase.diseases.getOrNull(result.classIndex)
                                     }
                                 )
@@ -330,6 +353,43 @@ fun DetectionResultScreen(
     }
 }
 
+/**
+ * Controls how many boxes are drawn over the image, by hiding the weaker detections.
+ * The live "N of M" readout is what makes the control legible — without it, dragging
+ * on an image whose boxes are all similarly scored looks like nothing is happening.
+ */
+@Composable
+private fun BoxConfidenceSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+    shown: Int,
+    total: Int
+) {
+    Column(modifier = Modifier.padding(bottom = 8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Box confidence",
+                style = MaterialTheme.typography.titleSmall
+            )
+            Text(
+                text = "$shown of $total  ·  ${(value * 100).toInt()}%",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = valueRange
+        )
+    }
+}
+
 @Composable
 private fun FlagDetectionDialog(
     onDismiss: () -> Unit,
@@ -392,7 +452,7 @@ fun DetectionResultCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = result.className ?: "Unknown",
+                    text = result.displayName.ifEmpty { "Unknown" },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )

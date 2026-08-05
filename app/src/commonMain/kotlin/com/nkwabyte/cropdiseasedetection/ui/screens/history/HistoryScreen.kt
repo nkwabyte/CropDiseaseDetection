@@ -376,7 +376,7 @@ fun HistoryRecordCard(
 ) {
     val dateString = formatTimestamp(record.timestamp)
     val primaryResult = record.matchingResults.maxByOrNull { it.score }
-    val diseaseLabel = primaryResult?.className ?: "No Detection"
+    val diseaseLabel = primaryResult?.displayName?.ifEmpty { null } ?: "No Detection"
     val isHealthy = diseaseLabel.lowercase().contains("healthy")
     val confidence = primaryResult?.let { "${(it.score * 100).toInt()}%" } ?: "0%"
 
@@ -512,7 +512,7 @@ fun HistoryDetailDialog(
 ) {
     val dateString = formatTimestamp(record.timestamp)
     val primaryResult = record.matchingResults.maxByOrNull { it.score }
-    val diseaseLabel = primaryResult?.className ?: "No Detection"
+    val diseaseLabel = primaryResult?.displayName?.ifEmpty { null } ?: "No Detection"
     val isHealthy = diseaseLabel.lowercase().contains("healthy")
     val confidence = primaryResult?.let { "${(it.score * 100).toInt()}%" } ?: "0%"
 

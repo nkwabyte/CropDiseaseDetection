@@ -7,6 +7,9 @@ import android.util.Log
 import androidx.core.graphics.scale
 import com.nkwabyte.cropdiseasedetection.common.AppConstants
 import com.nkwabyte.cropdiseasedetection.common.model.ClassificationResult
+import com.nkwabyte.cropdiseasedetection.common.model.DetectionModelCatalog
+import com.nkwabyte.cropdiseasedetection.common.model.DetectionModelSpec
+import com.nkwabyte.cropdiseasedetection.common.model.DetectionOutputLayout
 import com.nkwabyte.cropdiseasedetection.common.model.DetectionResult
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -23,29 +26,44 @@ actual class ObjectDetector actual constructor() : KoinComponent {
     private var _module: Module? = null
     private var _classifierModule: Module? = null
 
+    /** The spec the currently loaded module was built from — detect() decodes
+     *  against this, and a settings change is detected by comparing ids. */
+    private var _loadedSpec: DetectionModelSpec? = null
+
     actual val isLoaded: Boolean
         get() = _module != null
 
     actual val isClassifierLoaded: Boolean
         get() = _classifierModule != null
 
+    /**
+     * Loads the detector the user selected, replacing the loaded one if the
+     * selection changed. Safe and cheap to call before every detection: it only
+     * touches the filesystem when the model actually differs.
+     */
     actual suspend fun loadModel() {
-        if (_module == null) {
-            val modelPath = assetFilePath(context, "crop_disease_yolo26.pte")
-            val file = File(modelPath)
-            _module = Module.load(modelPath)
-            val sizeMb = file.length() / (1024f * 1024f)
-            Log.d("ObjectDetector", "ExecuTorch detection model 'crop_disease_yolo26.pte' loaded successfully. Path: ${file.absolutePath}, Size: ${"%.2f".format(sizeMb)} MB")
-        }
+        val spec = DetectionModelCatalog.byId(settingsManager.getDetectionModel())
+        if (_module != null && _loadedSpec?.id == spec.id) return
+
+        _module?.destroy()
+        _module = null
+        _loadedSpec = null
+
+        val modelPath = assetFilePath(context, spec.assetName)
+        val file = File(modelPath)
+        _module = Module.load(modelPath)
+        _loadedSpec = spec
+        val sizeMb = file.length() / (1024f * 1024f)
+        Log.d("ObjectDetector", "ExecuTorch detection model '${spec.assetName}' (${spec.displayName}) loaded successfully. Path: ${file.absolutePath}, Size: ${"%.2f".format(sizeMb)} MB, Layout: ${spec.layout}, NMS: ${spec.applyNms}")
     }
 
     actual suspend fun loadClassifierModel() {
         if (_classifierModule == null) {
-            val modelPath = assetFilePath(context, "crop_classifier.pte")
+            val modelPath = assetFilePath(context, CLASSIFIER_ASSET)
             val file = File(modelPath)
             _classifierModule = Module.load(modelPath)
             val sizeMb = file.length() / (1024f * 1024f)
-            Log.d("ObjectDetector", "ExecuTorch classifier model 'crop_classifier.pte' loaded successfully. Path: ${file.absolutePath}, Size: ${"%.2f".format(sizeMb)} MB")
+            Log.d("ObjectDetector", "ExecuTorch classifier model '$CLASSIFIER_ASSET' loaded successfully. Path: ${file.absolutePath}, Size: ${"%.2f".format(sizeMb)} MB, Classes: ${CROP_CLASSES.joinToString()}")
         }
     }
 
@@ -74,23 +92,12 @@ actual class ObjectDetector actual constructor() : KoinComponent {
         
         val outputTensor = outputTensors[0].toTensor()
         val outputArray = outputTensor.getDataAsFloatArray()
-        
-        if (outputArray == null || outputArray.size < 3) {
+
+        if (outputArray == null || outputArray.size < CROP_CLASSES.size) {
             return null
         }
 
-        val maxLogit = maxOf(outputArray[0], maxOf(outputArray[1], outputArray[2]))
-        val exp0 = kotlin.math.exp(outputArray[0] - maxLogit)
-        val exp1 = kotlin.math.exp(outputArray[1] - maxLogit)
-        val exp2 = kotlin.math.exp(outputArray[2] - maxLogit)
-        val sum = exp0 + exp1 + exp2
-
-        val prob0 = exp0 / sum
-        val prob1 = exp1 / sum
-        val prob2 = exp2 / sum
-
-        val probs = floatArrayOf(prob0, prob1, prob2)
-        val classes = arrayOf("Corn", "Pepper", "Tomato")
+        val probs = softmax(outputArray, CROP_CLASSES.size)
 
         var maxProb = -1f
         var maxIdx = -1
@@ -101,8 +108,11 @@ actual class ObjectDetector actual constructor() : KoinComponent {
             }
         }
 
+        // Two rejection mechanisms that fail differently: the learned "Other" class
+        // catches the non-crop species it was trained on, the confidence floor still
+        // catches confidently-wrong predictions on species it has never seen.
         val threshold = settingsManager.getClassifierThreshold()
-        val label = if (maxProb >= threshold) classes[maxIdx] else "unknown"
+        val label = if (maxIdx == OTHER_INDEX || maxProb < threshold) "unknown" else CROP_CLASSES[maxIdx]
 
         return ClassificationResult(
             label = label,
@@ -115,27 +125,41 @@ actual class ObjectDetector actual constructor() : KoinComponent {
         val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
             ?: return emptyList()
         val module = _module ?: return emptyList()
+        val spec = _loadedSpec ?: return emptyList()
 
         val origWidth = bitmap.width
         val origHeight = bitmap.height
+        val size = spec.inputSize
 
-        // Letterbox to 640×640 maintaining aspect ratio — matches ultralytics preprocessing.
-        // Stretching (scale(640,640)) distorts the aspect ratio and causes the model to miss detections.
-        val (letterboxedBitmap, meta) = letterboxBitmap(bitmap, 640)
-        val scale = meta[0]
-        val padLeft = meta[1]
-        val padTop = meta[2]
+        // YOLO was trained with letterboxing, so stretching to 640×640 distorts the
+        // aspect ratio and costs detections. RT-DETR is exported the way Ultralytics
+        // runs it — LetterBox(auto=false, scaleFill=true), i.e. a plain stretch — so
+        // padding it would be the mismatch instead.
+        val scale: Float
+        val padLeft: Float
+        val padTop: Float
+        val inputBitmap: Bitmap
+        if (spec.letterbox) {
+            val (letterboxed, meta) = letterboxBitmap(bitmap, size)
+            inputBitmap = letterboxed
+            scale = meta[0]; padLeft = meta[1]; padTop = meta[2]
+        } else {
+            inputBitmap = bitmap.scale(size, size)
+            scale = 1f; padLeft = 0f; padTop = 0f
+        }
 
         val floatArray = bitmapToFloat32Array(
-            letterboxedBitmap,
+            inputBitmap,
             floatArrayOf(0f, 0f, 0f),
             floatArrayOf(1f, 1f, 1f)
         )
-        letterboxedBitmap.recycle()
+        // Bitmap.scale() can hand back the source itself when the dimensions already
+        // match, so recycling unconditionally would free a bitmap we don't own.
+        if (inputBitmap !== bitmap) inputBitmap.recycle()
 
         val inputTensor = Tensor.fromBlob(
             floatArray,
-            longArrayOf(1, 3, 640, 640)
+            longArrayOf(1, 3, size.toLong(), size.toLong())
         )
 
         val outputTensors = module.forward(EValue.from(inputTensor))
@@ -146,54 +170,129 @@ actual class ObjectDetector actual constructor() : KoinComponent {
         val outputTensor = outputTensors[0].toTensor()
         val outputArray = outputTensor.getDataAsFloatArray()
         val outputShape = outputTensor.shape()
-
-        val numClasses = outputShape[1].toInt() - 4
-        val numPredictions = outputShape[2].toInt()
+        val threshold = settingsManager.getDetectionThreshold()
 
         val preliminaryDetections = mutableListOf<DetectionResult>()
 
-        for (i in 0 until numPredictions) {
-            var maxScore = 0f
-            var classId = -1
-            for (j in 0 until numClasses) {
-                val score = outputArray[(j + 4) * numPredictions + i]
-                if (score > maxScore) {
-                    maxScore = score
-                    classId = j
+        when (spec.layout) {
+            // [1, 4 + numClasses, numPredictions] — attribute-major, so a given
+            // prediction's fields are numPredictions apart.
+            DetectionOutputLayout.YOLO_ATTRIBUTE_MAJOR -> {
+                val numClasses = outputShape[1].toInt() - 4
+                val numPredictions = outputShape[2].toInt()
+
+                for (i in 0 until numPredictions) {
+                    var maxScore = 0f
+                    var classId = -1
+                    for (j in 0 until numClasses) {
+                        val score = outputArray[(j + 4) * numPredictions + i]
+                        if (score > maxScore) {
+                            maxScore = score
+                            classId = j
+                        }
+                    }
+                    if (maxScore > threshold && classId >= 0) {
+                        preliminaryDetections.add(
+                            toDetection(
+                                classId, maxScore,
+                                outputArray[0 * numPredictions + i],
+                                outputArray[1 * numPredictions + i],
+                                outputArray[2 * numPredictions + i],
+                                outputArray[3 * numPredictions + i],
+                                spec, size, scale, padLeft, padTop, origWidth, origHeight
+                            )
+                        )
+                    }
                 }
             }
 
-            if (maxScore > settingsManager.getDetectionThreshold()) {
-                // Boxes from model are in letterboxed-640×640 space.
-                // Un-letterbox to original pixel coords, then re-express in stretched-640×640
-                // space so drawBoundingBoxesOnBitmap(modelWidth=640, modelHeight=640) maps correctly.
-                val cx = outputArray[0 * numPredictions + i]
-                val cy = outputArray[1 * numPredictions + i]
-                val w  = outputArray[2 * numPredictions + i]
-                val h  = outputArray[3 * numPredictions + i]
+            // [1, numQueries, 4 + numClasses] — query-major, one contiguous row per
+            // query, and boxes normalized to 0..1.
+            DetectionOutputLayout.DETR_QUERY_MAJOR -> {
+                val numQueries = outputShape[1].toInt()
+                val stride = outputShape[2].toInt()
+                val numClasses = stride - 4
 
-                val x1Lb = cx - w / 2f
-                val y1Lb = cy - h / 2f
-                val x2Lb = cx + w / 2f
-                val y2Lb = cy + h / 2f
-
-                val x1 = ((x1Lb - padLeft) / scale / origWidth  * 640f).coerceIn(0f, 640f)
-                val y1 = ((y1Lb - padTop)  / scale / origHeight * 640f).coerceIn(0f, 640f)
-                val x2 = ((x2Lb - padLeft) / scale / origWidth  * 640f).coerceIn(0f, 640f)
-                val y2 = ((y2Lb - padTop)  / scale / origHeight * 640f).coerceIn(0f, 640f)
-
-                preliminaryDetections.add(
-                    DetectionResult(
-                        classIndex = classId,
-                        score = maxScore,
-                        box = floatArrayOf(x1, y1, x2, y2),
-                        className = AppConstants.CLASS_LABELS.getOrElse(classId) { "Unknown" }
-                    )
-                )
+                for (i in 0 until numQueries) {
+                    val row = i * stride
+                    var maxScore = 0f
+                    var classId = -1
+                    for (j in 0 until numClasses) {
+                        val score = outputArray[row + 4 + j]
+                        if (score > maxScore) {
+                            maxScore = score
+                            classId = j
+                        }
+                    }
+                    if (maxScore > threshold && classId >= 0) {
+                        preliminaryDetections.add(
+                            toDetection(
+                                classId, maxScore,
+                                outputArray[row + 0], outputArray[row + 1],
+                                outputArray[row + 2], outputArray[row + 3],
+                                spec, size, scale, padLeft, padTop, origWidth, origHeight
+                            )
+                        )
+                    }
+                }
             }
         }
 
-        return nonMaxSuppression(preliminaryDetections, settingsManager.getIouThreshold())
+        // RT-DETR's query head already emits one box per object; running NMS over it
+        // would merge distinct detections that legitimately overlap.
+        return if (spec.applyNms) {
+            nonMaxSuppression(preliminaryDetections, settingsManager.getIouThreshold())
+        } else {
+            preliminaryDetections
+        }
+    }
+
+    /**
+     * Converts one raw cxcywh prediction into a [DetectionResult] in stretched-640×640
+     * space, which is what `drawBoundingBoxesOnBitmap(modelWidth=640, modelHeight=640)`
+     * expects. Letterboxed models are un-padded back to original pixel coords first;
+     * normalized boxes from a stretched input already sit in that space once scaled up.
+     */
+    private fun toDetection(
+        classId: Int, score: Float,
+        cx: Float, cy: Float, w: Float, h: Float,
+        spec: DetectionModelSpec, size: Int,
+        scale: Float, padLeft: Float, padTop: Float,
+        origWidth: Int, origHeight: Int,
+    ): DetectionResult {
+        // The canvas convention the drawing code works in, independent of any
+        // model's input resolution.
+        val canvas = DRAW_SPACE
+        val f = if (spec.normalizedBoxes) size.toFloat() else 1f
+        val x1Raw = cx * f - w * f / 2f
+        val y1Raw = cy * f - h * f / 2f
+        val x2Raw = cx * f + w * f / 2f
+        val y2Raw = cy * f + h * f / 2f
+
+        val x1: Float; val y1: Float; val x2: Float; val y2: Float
+        if (spec.letterbox) {
+            x1 = (x1Raw - padLeft) / scale / origWidth * canvas
+            y1 = (y1Raw - padTop) / scale / origHeight * canvas
+            x2 = (x2Raw - padLeft) / scale / origWidth * canvas
+            y2 = (y2Raw - padTop) / scale / origHeight * canvas
+        } else {
+            // A stretched input maps proportionally onto the original image, so the
+            // box is already in canvas space once scaled off the input resolution.
+            x1 = x1Raw / size * canvas
+            y1 = y1Raw / size * canvas
+            x2 = x2Raw / size * canvas
+            y2 = y2Raw / size * canvas
+        }
+
+        return DetectionResult(
+            classIndex = classId,
+            score = score,
+            box = floatArrayOf(
+                x1.coerceIn(0f, canvas), y1.coerceIn(0f, canvas),
+                x2.coerceIn(0f, canvas), y2.coerceIn(0f, canvas)
+            ),
+            className = AppConstants.CLASS_LABELS.getOrElse(classId) { "Unknown" }
+        )
     }
 
     private fun letterboxBitmap(source: Bitmap, targetSize: Int): Pair<Bitmap, FloatArray> {
@@ -217,7 +316,21 @@ actual class ObjectDetector actual constructor() : KoinComponent {
 
     private fun assetFilePath(context: Context, assetName: String): String {
         val file = File(context.filesDir, assetName)
-        if (file.exists() && file.length() > 0) return file.absolutePath
+        // Assets are unpacked into filesDir once, and filesDir survives app updates —
+        // so a newly shipped model was invisible to anyone who had already run the
+        // app. Compare the cached copy against the asset and re-unpack when they
+        // differ. `.pte` is in noCompress (build.gradle.kts) so the descriptor
+        // reports the real length; if it can't be read, keep whatever is cached
+        // rather than rewriting 30 MB on every launch.
+        val assetLength = try {
+            context.assets.openFd(assetName).use { it.length }
+        } catch (e: Exception) {
+            Log.w("ObjectDetector", "Could not measure asset '$assetName'; keeping the cached copy", e)
+            -1L
+        }
+        if (file.exists() && file.length() > 0 && (assetLength < 0 || file.length() == assetLength)) {
+            return file.absolutePath
+        }
         context.assets.open(assetName).use { input ->
             FileOutputStream(file).use { output ->
                 val buffer = ByteArray(4 * 1024)
@@ -234,6 +347,7 @@ actual class ObjectDetector actual constructor() : KoinComponent {
     actual fun release() {
         _module?.destroy()
         _module = null
+        _loadedSpec = null
         _classifierModule?.destroy()
         _classifierModule = null
     }
@@ -279,8 +393,31 @@ private fun calculateIoU(box1: FloatArray, box2: FloatArray): Float {
     return if (unionArea > 0) intersectionArea / unionArea else 0f
 }
 
+/** Boxes are reported in this square space; drawBoundingBoxesOnBitmap is called
+ *  with modelWidth = modelHeight = 640 and maps from it to the displayed image. */
+private const val DRAW_SPACE = 640f
+
 private val TORCHVISION_NORM_MEAN_RGB = floatArrayOf(0.485f, 0.456f, 0.406f)
 private val TORCHVISION_NORM_STD_RGB = floatArrayOf(0.229f, 0.224f, 0.225f)
+
+// The 4-class classifier with a learned "Other" class. It matches the 3-class
+// model on crop accuracy (97.54%) while rejecting 98.7% of non-crop images
+// against the old 40.8% at a 0.55 threshold — see the project's
+// docs/10_classifier_ood_adoption.md. Rejection is by argmax, with the
+// confidence floor kept on top of it.
+private const val CLASSIFIER_ASSET = "crop_classifier_ood.pte"
+private val CROP_CLASSES = arrayOf("Corn", "Pepper", "Tomato", "Other")
+private const val OTHER_INDEX = 3
+
+private fun softmax(logits: FloatArray, count: Int): FloatArray {
+    var maxLogit = logits[0]
+    for (i in 1 until count) {
+        if (logits[i] > maxLogit) maxLogit = logits[i]
+    }
+    val exps = FloatArray(count) { kotlin.math.exp(logits[it] - maxLogit) }
+    val sum = exps.sum()
+    return FloatArray(count) { exps[it] / sum }
+}
 
 private fun bitmapToFloat32Array(bitmap: android.graphics.Bitmap, mean: FloatArray, std: FloatArray): FloatArray {
     val width = bitmap.width

@@ -33,12 +33,23 @@ public struct SettingsView: View {
         NavigationStack {
             Form {
                 Section(header: LText("Disease Detection Model")) {
+                    // Driven by the shared catalog so the two platforms cannot drift.
+                    // Every model is listed; the ones with no shippable weights carry an
+                    // "(Unavailable)" marker in their label.
                     Picker(L("Detection Model"), selection: $selectedDetectionModel) {
-                        LText("YOLO26 (Active)").tag("YOLO26")
-                        LText("Faster R-CNN (Under Training)").tag("FasterRCNN")
-                        LText("Vision Transformer (Under Training)").tag("VisionTransformer")
+                        ForEach(DetectionModelCatalog.shared.all, id: \.id) { spec in
+                            LText(spec.listLabel).tag(spec.id)
+                        }
                     }
                     .onChange(of: selectedDetectionModel) { newModel in
+                        // Picker has no per-row disable, so an unavailable pick is bounced
+                        // back to whatever is actually loaded. byId() only ever returns an
+                        // available model, so this cannot loop.
+                        guard DetectionModelCatalog.shared.selectable.contains(where: { $0.id == newModel }) else {
+                            selectedDetectionModel = DetectionModelCatalog.shared
+                                .byId(id: KoinHelper.settingsManager.getDetectionModel()).id
+                            return
+                        }
                         KoinHelper.appViewModel.setSelectedDetectionModel(model: newModel)
                     }
                 }
@@ -148,7 +159,10 @@ public struct SettingsView: View {
                 self.selectedLanguage = currentRecLang
                 let recLang = RecommendationLanguage.from(code: currentRecLang)
                 LanguageManager.shared.setLanguage(recLang.localeCode)
-                self.selectedDetectionModel = settings.getDetectionModel()
+                // Normalize through the catalog: a stored id that is no longer
+                // selectable would otherwise leave the picker with no match.
+                self.selectedDetectionModel = DetectionModelCatalog.shared
+                    .byId(id: settings.getDetectionModel()).id
                 self.detectionThreshold = settings.getDetectionThreshold()
                 self.iouThreshold = settings.getIouThreshold()
                 self.classifierThreshold = settings.getClassifierThreshold()

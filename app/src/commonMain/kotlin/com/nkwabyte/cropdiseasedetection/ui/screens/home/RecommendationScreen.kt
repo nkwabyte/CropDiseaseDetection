@@ -64,11 +64,12 @@ fun RecommendationScreen(
 
     val detectedDiseases: List<Pair<DiseaseInfo, Int>> = remember(detectionState.results) {
         detectionState.results
-            .groupBy { it.className ?: it.classIndex.toString() }
+            .groupBy { it.displayName.ifEmpty { it.classIndex.toString() } }
             .map { (_, results) ->
                 val sample = results.first()
                 val disease = DiseaseDatabase.diseases.find { info ->
-                    sample.className?.let { name -> info.name.contains(name, ignoreCase = true) } == true
+                    sample.displayName.isNotEmpty() &&
+                        info.name.contains(sample.displayName, ignoreCase = true)
                 } ?: DiseaseDatabase.diseases.getOrNull(sample.classIndex)
                 Pair(disease, results.size)
             }

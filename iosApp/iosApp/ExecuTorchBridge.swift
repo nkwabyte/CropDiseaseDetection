@@ -116,8 +116,26 @@ public class ExecuTorchBridge: NSObject {
         return rawOutput
     }
 
+    /// RT-DETR: input `size`×`size`, stretched to fill (Ultralytics runs it with
+    /// `LetterBox(auto: false, scaleFill: true)`), pixel/255 normalization.
+    /// Returns the raw output flattened from [1, numQueries, 4 + numClasses] with no
+    /// box rewriting — the boxes come back normalized to 0…1 and the caller scales
+    /// them, so the un-letterboxing `runDetection` applies would be wrong here.
+    @objc public func runDetectionStretched(withImageData imageData: Data, inputSize: Int) -> [NSNumber] {
+        guard let module = detectionModule,
+              let prep = preprocessCHW(imageData, width: inputSize, height: inputSize,
+                                        mean: (0.0, 0.0, 0.0),
+                                        std: (1.0, 1.0, 1.0),
+                                        isLetterbox: false) else { return [] }
+
+        return runForward(module: module, data: prep.data,
+                          shape: [1, 3, inputSize, inputSize],
+                          tag: "detection-stretched")
+    }
+
     /// EfficientNet-B2: input 260×260, ImageNet normalization.
-    /// Output: logits for [Corn, Pepper, Tomato].
+    /// Output: logits for [Corn, Pepper, Tomato, Other] — the caller rejects on
+    /// argmax == Other, and keeps a confidence floor on the three crop classes.
     @objc public func runClassification(withImageData imageData: Data) -> [NSNumber] {
         guard let module = classifierModule,
               let prep = preprocessCHW(imageData, width: 260, height: 260,

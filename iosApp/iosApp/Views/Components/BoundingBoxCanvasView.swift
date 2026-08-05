@@ -32,7 +32,7 @@ private struct BoxOverlayView: View {
         let boxW = max(0, x2 - x1)
         let boxH = max(0, y2 - y1)
         
-        let className = result.className ?? "Unknown"
+        let className = result.displayName.isEmpty ? "Unknown" : result.displayName
         let cropKey = className.components(separatedBy: " ").first ?? ""
         let icon = cropIcons[cropKey] ?? "🌿"
         let pct = Int(result.score * 100)

@@ -336,7 +336,8 @@ class SyncRepository(
                         rawResults = pending.rawResults,
                         modelName = pending.modelName,
                         modelVersion = pending.modelVersion,
-                        platform = pending.platform
+                        platform = pending.platform,
+                        timestamp = pending.timestamp
                     )
                     // Only drop it once Firestore actually accepted it; otherwise leave it
                     // queued so the next drain retries rather than losing the scan.
@@ -397,7 +398,13 @@ class SyncRepository(
         rawResults: List<DetectionResult>,
         modelName: String? = null,
         modelVersion: String? = null,
-        platform: String? = null
+        platform: String? = null,
+        /**
+         * When the scan was taken. A queued scan must keep its original time: stamping the
+         * upload time both dates the scan wrongly in history and breaks its identity, so a
+         * record deleted while queued could not be matched to the document it became.
+         */
+        timestamp: Long = io.ktor.util.date.GMTDate().timestamp
     ): Boolean {
         try {
             val user = Firebase.auth.currentUser
@@ -411,7 +418,7 @@ class SyncRepository(
                 isCropMismatch = isCropMismatch,
                 imageWidth = imageWidth,
                 imageHeight = imageHeight,
-                timestamp = io.ktor.util.date.GMTDate().timestamp,
+                timestamp = timestamp,
                 matchingResults = matchingResults,
                 rawResults = rawResults,
                 modelName = modelName,
@@ -513,14 +520,24 @@ class SyncRepository(
         val docId = record.docId
         if (docId == null) {
             // Not yet uploaded — remove it from the queue so it never syncs.
-            queueLock.withLock {
+            val removed = queueLock.withLock {
                 val pending = pendingDetections.firstOrNull { it.timestamp == record.timestamp }
-                    ?: return@withLock
-                pendingDetections.remove(pending)
-                queueStore.delete(DETECTION_PREFIX + pending.id)
-                println("Removed queued detection record before upload")
+                if (pending == null) {
+                    false
+                } else {
+                    pendingDetections.remove(pending)
+                    queueStore.delete(DETECTION_PREFIX + pending.id)
+                    println("Removed queued detection record before upload")
+                    true
+                }
             }
-            return true
+            if (removed) return true
+
+            // Not in the queue either: the drain uploaded it between the list being built
+            // and the tap, so it is now a document this record has no id for. Reporting
+            // success here deleted nothing and the scan came back on the next refresh —
+            // find it by the timestamp the upload now preserves.
+            return softDeleteByTimestamp(record.timestamp)
         }
 
         return try {
@@ -534,6 +551,35 @@ class SyncRepository(
             println("Failed to soft-delete detection record: ${e.message}")
             false
         }
+    }
+
+    /**
+     * Flags the caller's document with [timestamp]. Returns false when no such document
+     * exists, so a delete that removed nothing is reported as the failure it is rather
+     * than leaving the user thinking the scan is gone.
+     */
+    private suspend fun softDeleteByTimestamp(timestamp: Long): Boolean = try {
+        val uid = Firebase.auth.currentUser?.uid ?: "anonymous"
+        val match = firestore.collection("detections")
+            .where { "userId" equalTo uid }
+            .get()
+            .documents
+            .firstOrNull { it.data(DetectionRecord.serializer()).timestamp == timestamp }
+
+        if (match == null) {
+            println("Soft delete found no document with timestamp $timestamp")
+            false
+        } else {
+            firestore.collection("detections").document(match.id).update(
+                "deleted" to true,
+                "deletedAt" to io.ktor.util.date.GMTDate().timestamp
+            )
+            println("Soft-deleted detection record ${match.id} matched by timestamp")
+            true
+        }
+    } catch (e: Exception) {
+        println("Failed to soft-delete by timestamp: ${e.message}")
+        false
     }
 
     /**

@@ -62,6 +62,10 @@ class DetectionViewModel(
             try {
                 _detectionState.update { it.copy(isDetecting = true, isClassifierRejected = false) }
 
+                // Pick up a detector change made in settings since the last run.
+                // loadModel() is a no-op when the selection is unchanged.
+                detector.loadModel()
+
                 // Stage 2: Detection
                 val results = detector.detect(imageBytes)
                 println("PyTorch detection results: $results")

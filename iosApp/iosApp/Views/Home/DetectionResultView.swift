@@ -17,23 +17,52 @@ public struct DetectionResultView: View {
     @State private var isFlagSheetPresented: Bool = false
     @State private var flagNotes: String = ""
     @StateObject private var langMgr = LanguageManager.shared
-    
+
+    /// Minimum score a detection needs for its box to be drawn. Seeded from the
+    /// inference threshold on appear, so every slider position reveals or hides
+    /// something — nothing weaker than that threshold was ever detected.
+    @State private var boxConfidence: Float = 0.10
+    @State private var boxFloor: Float = 0.10
+
     public var body: some View {
         ScrollView {
                 VStack(spacing: 20) {
                     let state = detectionStateObs.value
-                    
+                    let allResults = state.results as? [DetectionResult] ?? []
+                    // Filters what is drawn only; the detections and the diagnosis below
+                    // are untouched, so raising this never changes the result.
+                    let visibleBoxes = allResults.filter { $0.score >= boxConfidence }
+
                     // Interactive Bounding Box Canvas
                     BoundingBoxCanvasView(
                         image: image,
-                        results: state.results as? [DetectionResult] ?? [],
+                        results: visibleBoxes,
                         modelWidth: 640,
                         modelHeight: 640
                     )
                     .frame(height: 320)
                     .cornerRadius(16)
                     .shadow(radius: 4)
-                    
+
+                    if !allResults.isEmpty {
+                        VStack(spacing: 4) {
+                            HStack {
+                                LText("Box confidence")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                Spacer()
+                                Text("\(visibleBoxes.count) of \(allResults.count)  ·  \(Int(boxConfidence * 100))%")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            Slider(
+                                value: $boxConfidence,
+                                in: boxFloor...1.0
+                            )
+                        }
+                        .padding(.horizontal, 4)
+                    }
+
                     // Diagnostic Status Banner
                     if state.isClassifierRejected {
                         VStack(spacing: 8) {
@@ -87,7 +116,7 @@ public struct DetectionResultView: View {
                             let distinctList: [DetectionResult] = {
                                 var dict = [String: DetectionResult]()
                                 for det in rawList {
-                                    let key = det.className ?? "\(det.classIndex)"
+                                    let key = det.displayName.isEmpty ? "\(det.classIndex)" : det.displayName
                                     if let existing = dict[key] {
                                         if det.score > existing.score {
                                             dict[key] = det
@@ -102,12 +131,12 @@ public struct DetectionResultView: View {
                             ForEach(items) { item in
                                 let det = item.result
                                 NavigationLink {
-                                    let info = DiseaseDatabase.shared.getDiseaseInfo(diseaseName: det.className ?? L("Unknown"))
+                                    let info = DiseaseDatabase.shared.getDiseaseInfo(diseaseName: det.displayName.isEmpty ? L("Unknown") : det.displayName)
                                     DiseaseDetailView(disease: info)
                                 } label: {
                                     HStack {
                                         VStack(alignment: .leading, spacing: 2) {
-                                            Text(det.className ?? L("Unknown"))
+                                            Text(det.displayName.isEmpty ? L("Unknown") : det.displayName)
                                                 .font(.body)
                                                 .fontWeight(.semibold)
                                                 .foregroundColor(.primary)
@@ -176,6 +205,13 @@ public struct DetectionResultView: View {
             }
             .navigationTitle(L("Diagnostic Results"))
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                // Clamped so the slider range can never be empty or inverted, which
+                // would trap at runtime.
+                let floor = min(max(KoinHelper.settingsManager.getDetectionThreshold(), 0), 0.95)
+                boxFloor = floor
+                boxConfidence = floor
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(L("Done")) {

@@ -394,9 +394,20 @@ object DiseaseDatabase {
         )
     )
 
+    /**
+     * Normalizes before matching: history records can carry the raw YOLO id
+     * ("Corn_Common_Rust") and the entries here are spaced ("Corn Common Rust"), so an
+     * underscore used to miss both branches and fall through to `diseases.first()` —
+     * silently showing a different disease's treatment advice rather than failing.
+     */
     fun getDiseaseInfo(diseaseName: String): DiseaseInfo {
-        return diseases.firstOrNull { it.name.equals(diseaseName, ignoreCase = true) }
-            ?: diseases.firstOrNull { it.name.contains(diseaseName, ignoreCase = true) }
+        val normalized = diseaseName
+            .replace('_', ' ')
+            .split(' ')
+            .filter { it.isNotBlank() }
+            .joinToString(" ")
+        return diseases.firstOrNull { it.name.equals(normalized, ignoreCase = true) }
+            ?: diseases.firstOrNull { it.name.contains(normalized, ignoreCase = true) }
             ?: diseases.first()
     }
 }

@@ -93,7 +93,7 @@ fun drawBoundingBoxesOnBitmap(
         canvas.drawLine(x2, y2, x2, y2 - cornerLen, cornerPaint)
 
         // 4. Premium rounded pill text badge
-        val className = result.className ?: "Unknown"
+        val className = result.displayName.ifEmpty { "Unknown" }
         val crop = className.split(" ").firstOrNull() ?: ""
         val icon = CROP_ICONS[crop] ?: "🌿"
         val confidencePercent = (result.score * 100).toInt()

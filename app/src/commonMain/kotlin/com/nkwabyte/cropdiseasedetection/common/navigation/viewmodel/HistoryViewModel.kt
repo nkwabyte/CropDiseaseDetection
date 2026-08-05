@@ -33,6 +33,21 @@ class HistoryViewModel(
     private val _historyState = MutableStateFlow(HistoryState())
     val historyState: StateFlow<HistoryState> = _historyState.asStateFlow()
 
+    /**
+     * Records the user deleted during this session.
+     *
+     * Deleting is optimistic, but the on-disk cache is only rewritten once Firestore
+     * confirms the soft delete. Anything that repaints from that cache in between —
+     * and on iOS dismissing the detail sheet re-fires `onAppear`, so [loadHistory] runs
+     * within milliseconds of the tap — would put the row straight back. Every list the
+     * state is built from is filtered through this, so no repaint path can resurrect a
+     * record the user already dismissed.
+     */
+    private val deletedRecords = mutableListOf<DetectionRecord>()
+
+    private fun List<DetectionRecord>.withoutDeleted(): List<DetectionRecord> =
+        filterNot { candidate -> deletedRecords.any { candidate.isSameRecordAs(it) } }
+
     init {
         viewModelScope.launch {
             Firebase.auth.authStateChanged.collect { user ->
@@ -41,7 +56,9 @@ class HistoryViewModel(
                     loadHistory()
                 } else {
                     // Records belong to the account that just signed out; drop them rather
-                    // than leave one user's scans on screen for the next.
+                    // than leave one user's scans on screen for the next. The tombstones go
+                    // with them — they identify the previous account's documents.
+                    deletedRecords.clear()
                     _historyState.value = HistoryState(isGuest = true, records = emptyList())
                 }
             }
@@ -72,7 +89,9 @@ class HistoryViewModel(
                 // Queued scans live outside the cache, so fold them back in before showing it.
                 val pending = syncRepository.getPendingAsRecords()
                 _historyState.value = _historyState.value.copy(
-                    records = (cached.records + pending).sortedByDescending { it.timestamp },
+                    records = (cached.records + pending)
+                        .withoutDeleted()
+                        .sortedByDescending { it.timestamp },
                     lastUpdated = cached.fetchedAt
                 )
             }
@@ -91,7 +110,9 @@ class HistoryViewModel(
                 _historyState.value = _historyState.value.copy(
                     isLoading = false,
                     isRefreshing = false,
-                    records = records,
+                    // A refresh that started before the soft delete landed will still carry
+                    // the record; the tombstones keep it off screen either way.
+                    records = records.withoutDeleted(),
                     lastUpdated = io.ktor.util.date.GMTDate().timestamp
                 )
             } catch (e: Exception) {
@@ -110,30 +131,34 @@ class HistoryViewModel(
      */
     fun deleteRecord(record: DetectionRecord) {
         val previous = _historyState.value.records
-        _historyState.value = _historyState.value.copy(
-            records = previous.filterNot { it.isSameRecordAs(record) }
-        )
+        deletedRecords.add(record)
+        _historyState.value = _historyState.value.copy(records = previous.withoutDeleted())
 
         viewModelScope.launch {
             val ok = syncRepository.softDeleteDetectionRecord(record)
             if (ok) {
                 syncRepository.getCachedHistory()?.let { cached ->
                     // Rewrite the cache so the record does not come back on the next open.
-                    syncRepository.overwriteHistoryCache(
-                        cached.records.filterNot { it.isSameRecordAs(record) }
-                    )
+                    syncRepository.overwriteHistoryCache(cached.records.withoutDeleted())
                 }
             } else {
+                // The write failed, so the record really is still there — drop the tombstone
+                // before restoring, or the row would be filtered straight back out.
+                deletedRecords.removeAll { it.isSameRecordAs(record) }
                 _historyState.value = _historyState.value.copy(records = previous)
             }
         }
     }
 
     /**
-     * A queued scan has no document id, so identity falls back to the timestamp and image —
-     * the same pair the list uses for its keys.
+     * A queued scan has no document id, so identity falls back to the timestamp alone.
+     *
+     * Not the timestamp *and* image: a queued scan's `imageUrl` is an inline data URL and
+     * its uploaded twin's is a remote one, so comparing images made the two look like
+     * different scans — deleting one left the other to reappear on the next refresh. The
+     * upload now carries the original timestamp over, which makes it the stable identity.
      */
     private fun DetectionRecord.isSameRecordAs(other: DetectionRecord): Boolean =
         if (docId != null && other.docId != null) docId == other.docId
-        else timestamp == other.timestamp && imageUrl == other.imageUrl
+        else timestamp == other.timestamp
 }

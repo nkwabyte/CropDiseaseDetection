@@ -42,7 +42,7 @@ private struct RecommendationCardView: View {
     @StateObject private var langMgr = LanguageManager.shared
     
     var body: some View {
-        let diseaseName = det.className ?? L("Unknown Disease")
+        let diseaseName = det.displayName.isEmpty ? L("Unknown Disease") : det.displayName
         let info = DiseaseDatabase.shared.getDiseaseInfo(diseaseName: diseaseName)
         
         return VStack(alignment: .leading, spacing: 14) {
@@ -86,7 +86,7 @@ public struct RecommendationView: View {
                     let distinctResults: [DetectionResult] = {
                         var dict = [String: DetectionResult]()
                         for det in results {
-                            let key = det.className ?? "\(det.classIndex)"
+                            let key = det.displayName.isEmpty ? "\(det.classIndex)" : det.displayName
                             if let existing = dict[key] {
                                 if det.score > existing.score {
                                     dict[key] = det

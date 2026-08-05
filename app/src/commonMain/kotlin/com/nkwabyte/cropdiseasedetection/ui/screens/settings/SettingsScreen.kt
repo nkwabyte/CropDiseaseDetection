@@ -20,11 +20,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nkwabyte.cropdiseasedetection.common.navigation.appbar.AppBar
+import com.nkwabyte.cropdiseasedetection.common.model.DetectionModelCatalog
 import com.nkwabyte.cropdiseasedetection.common.model.RecommendationLanguage
 import com.nkwabyte.cropdiseasedetection.data.repository.SyncRepository
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AppViewModel
@@ -168,11 +170,7 @@ fun SettingsScreen(
                     SettingsClickableRow(
                         icon = Icons.Default.DarkMode,
                         title = "Select Object Detection Model",
-                        subtitle = when (appState.selectedDetectionModel) {
-                            "FasterRCNN" -> "Faster R-CNN (Under Training)"
-                            "VisionTransformer" -> "Vision Transformer (ViT) (Under Training)"
-                            else -> "YOLO26 (Active / Default)"
-                        },
+                        subtitle = DetectionModelCatalog.byId(appState.selectedDetectionModel).displayName,
                         onClick = { showModelDialog = true }
                     )
                 }
@@ -274,23 +272,25 @@ fun SettingsScreen(
     }
 
     if (showModelDialog) {
-        val optionsMap = mapOf(
-            "YOLO26 (Active)" to "YOLO26",
-            "Faster R-CNN (Under Training)" to "FasterRCNN",
-            "Vision Transformer (ViT) (Under Training)" to "VisionTransformer"
-        )
-        val currentDisplay = optionsMap.entries.firstOrNull { it.value == appState.selectedDetectionModel }?.key ?: "YOLO26 (Active)"
-        
+        // Every model is listed, but the ones with no shippable weights are marked and
+        // inert — selecting one would load a detector that returns nothing.
+        val optionsMap = DetectionModelCatalog.all.associate { it.listLabel to it.id }
+        val current = DetectionModelCatalog.byId(appState.selectedDetectionModel)
+
         SelectionDialog(
             title = "Select Disease Detection Model",
             options = optionsMap.keys.toList(),
-            selectedOption = currentDisplay,
+            selectedOption = current.listLabel,
             onOptionSelected = { selectedKey ->
                 optionsMap[selectedKey]?.let { modelKey ->
                     appViewModel.setSelectedDetectionModel(modelKey)
                 }
             },
-            onDismiss = { showModelDialog = false }
+            onDismiss = { showModelDialog = false },
+            disabledOptions = DetectionModelCatalog.all
+                .filterNot { it.available }
+                .map { it.listLabel }
+                .toSet()
         )
     }
 
@@ -509,7 +509,9 @@ fun SelectionDialog(
     options: List<String>,
     selectedOption: String,
     onOptionSelected: (String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    /** Shown greyed out and inert — listed so the user knows the option exists. */
+    disabledOptions: Set<String> = emptySet()
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -522,10 +524,11 @@ fun SelectionDialog(
         text = {
             Column {
                 options.forEach { option ->
+                    val isDisabled = option in disabledOptions
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
+                            .clickable(enabled = !isDisabled) {
                                 onOptionSelected(option)
                                 onDismiss()
                             }
@@ -535,6 +538,7 @@ fun SelectionDialog(
                         RadioButton(
                             selected = (option == selectedOption),
                             onClick = null, // handled by row click
+                            enabled = !isDisabled,
                             colors = RadioButtonDefaults.colors(
                                 selectedColor = MaterialTheme.colorScheme.primary
                             )
@@ -542,7 +546,12 @@ fun SelectionDialog(
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = option,
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (isDisabled) {
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            } else {
+                                Color.Unspecified
+                            }
                         )
                     }
                 }

@@ -155,6 +155,10 @@ android {
     
     androidResources {
         ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~"
+        // Store the ExecuTorch models uncompressed so their asset length is readable
+        // via openFd() — ObjectDetector uses it to detect a model change and refresh
+        // the copy cached in filesDir.
+        noCompress += "pte"
     }
 
     packaging {

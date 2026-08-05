@@ -14,8 +14,12 @@ actual class SettingsManager actual constructor() : KoinComponent {
         return prefs.getString("theme_key", "System Default") ?: "System Default"
     }
 
+    // commit() rather than apply(): apply() persists on a background thread, and a
+    // swipe-kill shortly after a settings change can drop the write, so the choice is
+    // silently lost on next launch. These are infrequent, single-key writes — the
+    // synchronous cost is not worth the lost preference.
     actual fun setTheme(theme: String) {
-        prefs.edit().putString("theme_key", theme).apply()
+        prefs.edit().putString("theme_key", theme).commit()
     }
 
     actual fun getClassifierThreshold(): Float {
@@ -23,7 +27,7 @@ actual class SettingsManager actual constructor() : KoinComponent {
     }
 
     actual fun setClassifierThreshold(value: Float) {
-        prefs.edit().putFloat("classifier_threshold", value).apply()
+        prefs.edit().putFloat("classifier_threshold", value).commit()
     }
 
     actual fun getIouThreshold(): Float {
@@ -31,7 +35,7 @@ actual class SettingsManager actual constructor() : KoinComponent {
     }
 
     actual fun setIouThreshold(value: Float) {
-        prefs.edit().putFloat("iou_threshold", value).apply()
+        prefs.edit().putFloat("iou_threshold", value).commit()
     }
 
     actual fun getDetectionThreshold(): Float {
@@ -39,7 +43,7 @@ actual class SettingsManager actual constructor() : KoinComponent {
     }
 
     actual fun setDetectionThreshold(value: Float) {
-        prefs.edit().putFloat("detection_threshold", value).apply()
+        prefs.edit().putFloat("detection_threshold", value).commit()
     }
 
     actual fun getRecommendationLanguage(): String {
@@ -47,7 +51,7 @@ actual class SettingsManager actual constructor() : KoinComponent {
     }
 
     actual fun setRecommendationLanguage(value: String) {
-        prefs.edit().putString("recommendation_language", value).apply()
+        prefs.edit().putString("recommendation_language", value).commit()
     }
 
     actual fun getDetectionModel(): String {
@@ -55,7 +59,7 @@ actual class SettingsManager actual constructor() : KoinComponent {
     }
 
     actual fun setDetectionModel(model: String) {
-        prefs.edit().putString("detection_model", model).apply()
+        prefs.edit().putString("detection_model", model).commit()
     }
 
     actual fun getAppVersion(): String {

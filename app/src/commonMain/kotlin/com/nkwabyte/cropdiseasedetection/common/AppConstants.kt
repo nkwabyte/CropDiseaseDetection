@@ -3,7 +3,7 @@ package com.nkwabyte.cropdiseasedetection.common
 object AppConstants {
     val CLASS_LABELS = listOf(
         "Corn Cercospora Leaf Spot",
-        "Corn Common_Rust",
+        "Corn Common Rust",
         "Corn Healthy",
         "Corn Northern Leaf Blight",
         "Corn Streak",

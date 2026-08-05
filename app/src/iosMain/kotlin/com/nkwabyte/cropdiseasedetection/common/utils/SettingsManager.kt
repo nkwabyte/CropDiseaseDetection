@@ -7,8 +7,13 @@ actual class SettingsManager actual constructor() {
         return NSUserDefaults.standardUserDefaults.stringForKey("theme_key") ?: "System Default"
     }
 
+    // Every setter flushes with synchronize(). NSUserDefaults writes back lazily and on
+    // graceful termination; a force-quit shortly after a change can drop it, so the
+    // choice is silently lost on next launch. Deprecated as "unnecessary" by Apple, but
+    // that guidance assumes the app is allowed to terminate normally.
     actual fun setTheme(theme: String) {
         NSUserDefaults.standardUserDefaults.setObject(theme, "theme_key")
+        NSUserDefaults.standardUserDefaults.synchronize()
     }
 
     actual fun getClassifierThreshold(): Float {
@@ -18,6 +23,7 @@ actual class SettingsManager actual constructor() {
 
     actual fun setClassifierThreshold(value: Float) {
         NSUserDefaults.standardUserDefaults.setFloat(value, "classifier_threshold")
+        NSUserDefaults.standardUserDefaults.synchronize()
     }
 
     actual fun getIouThreshold(): Float {
@@ -27,6 +33,7 @@ actual class SettingsManager actual constructor() {
 
     actual fun setIouThreshold(value: Float) {
         NSUserDefaults.standardUserDefaults.setFloat(value, "iou_threshold")
+        NSUserDefaults.standardUserDefaults.synchronize()
     }
 
     actual fun getDetectionThreshold(): Float {
@@ -36,6 +43,7 @@ actual class SettingsManager actual constructor() {
 
     actual fun setDetectionThreshold(value: Float) {
         NSUserDefaults.standardUserDefaults.setFloat(value, "detection_threshold")
+        NSUserDefaults.standardUserDefaults.synchronize()
     }
 
     actual fun getRecommendationLanguage(): String {
@@ -44,6 +52,7 @@ actual class SettingsManager actual constructor() {
 
     actual fun setRecommendationLanguage(value: String) {
         NSUserDefaults.standardUserDefaults.setObject(value, "recommendation_language")
+        NSUserDefaults.standardUserDefaults.synchronize()
     }
 
     actual fun getDetectionModel(): String {
@@ -52,6 +61,7 @@ actual class SettingsManager actual constructor() {
 
     actual fun setDetectionModel(model: String) {
         NSUserDefaults.standardUserDefaults.setObject(model, "detection_model")
+        NSUserDefaults.standardUserDefaults.synchronize()
     }
 
     actual fun getAppVersion(): String {

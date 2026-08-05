@@ -184,7 +184,7 @@ private struct HistoryRecordRow: View {
     }
 
     private var diseaseLabel: String {
-        primaryResult?.className ?? L("No Detection")
+        primaryResult.map { $0.displayName.isEmpty ? L("No Detection") : $0.displayName } ?? L("No Detection")
     }
 
     private var confidenceText: String {
@@ -389,7 +389,7 @@ private struct HistoryDetailSheet: View {
                     ForEach(Array(record.matchingResults.enumerated()), id: \.offset) { _, result in
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(result.className ?? L("Unknown"))
+                                Text(result.displayName.isEmpty ? L("Unknown") : result.displayName)
                                     .font(.body)
                                     .fontWeight(.semibold)
                                 LText("Score: %@", "\(Int(result.score * 100))%")

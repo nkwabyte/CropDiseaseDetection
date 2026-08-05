@@ -145,7 +145,7 @@ private fun DrawScope.drawBoundingBoxes(
         }
 
         // Label pill
-        val className = result.className ?: "Unknown"
+        val className = result.displayName.ifEmpty { "Unknown" }
         val crop = className.split(" ").firstOrNull().orEmpty()
         val icon = CROP_ICONS[crop] ?: "🌿"
         val pct = (result.score * 100).toInt()

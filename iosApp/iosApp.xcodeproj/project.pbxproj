@@ -25,6 +25,8 @@
 		BA527D85B8009FFE4B66B9C3 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1103AAB8738339FDE947C16E /* HomeView.swift */; };
 		BC1E7F392FD70559009B6C63 /* crop_classifier.pte in Resources */ = {isa = PBXBuildFile; fileRef = BC1E7F382FD70559009B6C63 /* crop_classifier.pte */; };
 		BC1E7F3B2FD70566009B6C63 /* crop_disease_yolo26.pte in Resources */ = {isa = PBXBuildFile; fileRef = BC1E7F3A2FD70566009B6C63 /* crop_disease_yolo26.pte */; };
+		BC1E7F3D2FD70573009B6C63 /* crop_classifier_ood.pte in Resources */ = {isa = PBXBuildFile; fileRef = BC1E7F3C2FD70573009B6C63 /* crop_classifier_ood.pte */; };
+		BC1E7F3F2FD70580009B6C63 /* crop_disease_rtdetr.pte in Resources */ = {isa = PBXBuildFile; fileRef = BC1E7F3E2FD70580009B6C63 /* crop_disease_rtdetr.pte */; };
 		BC98B09C2FD74C170039C9F4 /* executorch in Frameworks */ = {isa = PBXBuildFile; productRef = BC98B09C2FD74C170039C9F2 /* executorch */; };
 		BCAA110000000000000001AB /* ExecuTorchBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCAA110000000000000001AA /* ExecuTorchBridge.swift */; };
 		BCAA110000000000000002AB /* backend_xnnpack in Frameworks */ = {isa = PBXBuildFile; productRef = BCAA110000000000000002AC /* backend_xnnpack */; };
@@ -57,6 +59,8 @@
 		9FD2359243684D780B4CFDF9 /* EncyclopediaView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EncyclopediaView.swift; sourceTree = "<group>"; };
 		BC1E7F382FD70559009B6C63 /* crop_classifier.pte */ = {isa = PBXFileReference; lastKnownFileType = file; path = crop_classifier.pte; sourceTree = "<group>"; };
 		BC1E7F3A2FD70566009B6C63 /* crop_disease_yolo26.pte */ = {isa = PBXFileReference; lastKnownFileType = file; path = crop_disease_yolo26.pte; sourceTree = "<group>"; };
+		BC1E7F3C2FD70573009B6C63 /* crop_classifier_ood.pte */ = {isa = PBXFileReference; lastKnownFileType = file; path = crop_classifier_ood.pte; sourceTree = "<group>"; };
+		BC1E7F3E2FD70580009B6C63 /* crop_disease_rtdetr.pte */ = {isa = PBXFileReference; lastKnownFileType = file; path = crop_disease_rtdetr.pte; sourceTree = "<group>"; };
 		BCAA110000000000000001AA /* ExecuTorchBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecuTorchBridge.swift; sourceTree = "<group>"; };
 		BCAA110000000000000001AC /* ExecuTorchBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ExecuTorchBridge.h; sourceTree = "<group>"; };
 		DDB5B99DA5A78327089E835E /* DetectionResultView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DetectionResultView.swift; sourceTree = "<group>"; };
@@ -129,6 +133,8 @@
 				09E825AEFB0318C83176FA6B /* Assets.xcassets */,
 				BC1E7F382FD70559009B6C63 /* crop_classifier.pte */,
 				BC1E7F3A2FD70566009B6C63 /* crop_disease_yolo26.pte */,
+				BC1E7F3C2FD70573009B6C63 /* crop_classifier_ood.pte */,
+				BC1E7F3E2FD70580009B6C63 /* crop_disease_rtdetr.pte */,
 				BCAA110000000000000001AA /* ExecuTorchBridge.swift */,
 				BCAA110000000000000001AC /* ExecuTorchBridge.h */,
 				998877665544332211001123 /* Localizations.json */,
@@ -288,6 +294,8 @@
 			files = (
 				BC1E7F392FD70559009B6C63 /* crop_classifier.pte in Resources */,
 				BC1E7F3B2FD70566009B6C63 /* crop_disease_yolo26.pte in Resources */,
+				BC1E7F3D2FD70573009B6C63 /* crop_classifier_ood.pte in Resources */,
+				BC1E7F3F2FD70580009B6C63 /* crop_disease_rtdetr.pte in Resources */,
 				419B5E5E2A1D000000000008 /* GoogleService-Info.plist in Resources */,
 				0A5F4FD242A3F0FF0EBEDF7A /* Assets.xcassets in Resources */,
 				998877665544332211001122 /* Localizations.json in Resources */,
