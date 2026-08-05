@@ -507,14 +507,16 @@ class SyncRepository(
     }
 
     /**
-     * Hides [record] from the user's history without destroying it.
+     * Moves [record] to the "archive" collection in Firestore and deletes it from "detections".
      *
-     * A synced record is flagged `deleted` in Firestore and stays there for training; a scan
-     * still sitting in the offline queue never reached Firestore at all, so it is simply
-     * dropped from the queue. Returns false when the write failed and the caller should keep
-     * showing the record.
+     * A synced record is copied to "archive" for model training and removed from "detections"
+     * so it never reappears in history; a scan sitting in the offline queue is dropped from
+     * the queue so it never uploads to "detections". Returns false when the write failed.
      */
-    suspend fun softDeleteDetectionRecord(record: DetectionRecord): Boolean {
+    suspend fun softDeleteDetectionRecord(record: DetectionRecord): Boolean =
+        archiveAndDeleteDetectionRecord(record)
+
+    suspend fun archiveAndDeleteDetectionRecord(record: DetectionRecord): Boolean {
         ensureQueueLoaded()
 
         val docId = record.docId
@@ -533,32 +535,39 @@ class SyncRepository(
             }
             if (removed) return true
 
-            // Not in the queue either: the drain uploaded it between the list being built
-            // and the tap, so it is now a document this record has no id for. Reporting
-            // success here deleted nothing and the scan came back on the next refresh —
-            // find it by the timestamp the upload now preserves.
-            return softDeleteByTimestamp(record.timestamp)
+            // Not in the queue either: uploaded between list being built and tap.
+            // Find document in "detections" by timestamp.
+            return archiveAndDeleteByTimestamp(record.timestamp)
         }
 
         return try {
-            firestore.collection("detections").document(docId).update(
-                "deleted" to true,
-                "deletedAt" to io.ktor.util.date.GMTDate().timestamp
+            val uid = Firebase.auth.currentUser?.uid ?: "anonymous"
+            val now = io.ktor.util.date.GMTDate().timestamp
+            val archiveData = record.copy(
+                userId = uid,
+                deleted = true,
+                deletedAt = now,
+                docId = null
             )
-            println("Soft-deleted detection record $docId")
+
+            // 1. Move record to "archive" collection in Firestore
+            firestore.collection("archive").add(archiveData)
+
+            // 2. Permanently remove document from user's "detections" collection
+            firestore.collection("detections").document(docId).delete()
+            println("Archived and deleted detection record $docId from user history")
             true
         } catch (e: Exception) {
-            println("Failed to soft-delete detection record: ${e.message}")
+            println("Failed to archive and delete detection record: ${e.message}")
             false
         }
     }
 
     /**
-     * Flags the caller's document with [timestamp]. Returns false when no such document
-     * exists, so a delete that removed nothing is reported as the failure it is rather
-     * than leaving the user thinking the scan is gone.
+     * Archives and deletes the document matching [timestamp]. Returns false when no such
+     * document exists.
      */
-    private suspend fun softDeleteByTimestamp(timestamp: Long): Boolean = try {
+    private suspend fun archiveAndDeleteByTimestamp(timestamp: Long): Boolean = try {
         val uid = Firebase.auth.currentUser?.uid ?: "anonymous"
         val match = firestore.collection("detections")
             .where { "userId" equalTo uid }
@@ -567,18 +576,23 @@ class SyncRepository(
             .firstOrNull { it.data(DetectionRecord.serializer()).timestamp == timestamp }
 
         if (match == null) {
-            println("Soft delete found no document with timestamp $timestamp")
+            println("Archive & delete found no document with timestamp $timestamp")
             false
         } else {
-            firestore.collection("detections").document(match.id).update(
-                "deleted" to true,
-                "deletedAt" to io.ktor.util.date.GMTDate().timestamp
+            val now = io.ktor.util.date.GMTDate().timestamp
+            val archiveData = match.data(DetectionRecord.serializer()).copy(
+                userId = uid,
+                deleted = true,
+                deletedAt = now,
+                docId = null
             )
-            println("Soft-deleted detection record ${match.id} matched by timestamp")
+            firestore.collection("archive").add(archiveData)
+            firestore.collection("detections").document(match.id).delete()
+            println("Archived and deleted detection record ${match.id} matched by timestamp")
             true
         }
     } catch (e: Exception) {
-        println("Failed to soft-delete by timestamp: ${e.message}")
+        println("Failed to archive and delete by timestamp: ${e.message}")
         false
     }
 

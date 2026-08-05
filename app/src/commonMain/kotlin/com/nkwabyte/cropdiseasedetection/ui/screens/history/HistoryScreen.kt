@@ -516,6 +516,14 @@ fun HistoryDetailDialog(
     val isHealthy = diseaseLabel.lowercase().contains("healthy")
     val confidence = primaryResult?.let { "${(it.score * 100).toInt()}%" } ?: "0%"
 
+    val isSupportedCrop = remember(record) {
+        if (record.isCropMismatch) false
+        else {
+            val c = record.cropName.lowercase()
+            c != "other" && c.isNotEmpty() && (c.contains("corn") || c.contains("tomato") || c.contains("pepper"))
+        }
+    }
+
     // Look up contextual remedies from the local DiseaseDatabase
     val diseaseInfo = remember(diseaseLabel) {
         DiseaseDatabase.diseases.find { it.name.equals(diseaseLabel, ignoreCase = true) }
@@ -546,14 +554,14 @@ fun HistoryDetailDialog(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = record.cropName.uppercase(),
+                            text = if (isSupportedCrop) record.cropName.uppercase() else "${record.cropName.uppercase()} (UNSUPPORTED CROP)",
                             style = MaterialTheme.typography.bodySmall.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                                color = if (isSupportedCrop) MaterialTheme.colorScheme.primary else Color(0xFFE65100)
                             )
                         )
                         Text(
-                            text = diseaseLabel,
+                            text = if (isSupportedCrop) diseaseLabel else "Unsupported Crop Image",
                             style = MaterialTheme.typography.titleLarge.copy(
                                 fontWeight = FontWeight.ExtraBold,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -590,6 +598,39 @@ fun HistoryDetailDialog(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    if (!isSupportedCrop) {
+                        Card(
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFFFFF3E0)
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Text("⚠️", style = MaterialTheme.typography.titleMedium)
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(
+                                        text = "Not a Supported Target Crop",
+                                        style = MaterialTheme.typography.titleSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFFE65100)
+                                        )
+                                    )
+                                    Text(
+                                        text = "This scanned image was not recognized as one of our supported target crops (Corn, Tomato, or Pepper). Disease detection models only run on supported target crops.",
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            color = Color(0xFF5D4037)
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     // Full Leaf Scan Image
                     if (record.imageUrl.isNotEmpty()) {
                         Image(
@@ -628,10 +669,10 @@ fun HistoryDetailDialog(
                             ) {
                                 Text(stringResource(Res.string.history_result_type), style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)))
                                 Text(
-                                    text = if (isHealthy) "✓ Healthy" else "⚠️ Disease",
+                                    text = if (!isSupportedCrop) "⚠️ Unsupported Crop" else if (isHealthy) "✓ Healthy" else "⚠️ Disease",
                                     style = MaterialTheme.typography.bodyMedium.copy(
                                         fontWeight = FontWeight.Bold,
-                                        color = if (isHealthy) Color(0xFF2E7D32) else Color(0xFFC62828)
+                                        color = if (!isSupportedCrop) Color(0xFFE65100) else if (isHealthy) Color(0xFF2E7D32) else Color(0xFFC62828)
                                     )
                                 )
                             }

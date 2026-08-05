@@ -82,6 +82,7 @@ class DetectionViewModel(
                             isDetecting = false,
                             isDetected = true,
                             isDetectionSuccessful = false,
+                            isCropMissMatch = true,
                             isClassifierRejected = true,
                             classifierConfidence = classification.confidence,
                             classificationLabel = classification.label,
@@ -98,20 +99,21 @@ class DetectionViewModel(
                         matchingResults = emptyList(),
                         rawResults = results,
                         detectionSuccessful = false,
-                        isCropMismatch = false
+                        isCropMismatch = true
                     )
                     return@launch
                 }
 
                 if (results.isEmpty()) {
-                    println("No detection results found")
+                    val isRejected = classification != null && !classification.isAccepted
+                    println("No detection results found. Classifier rejected: $isRejected")
                     _detectionState.update {
                         it.copy(
                             results = emptyList(),
                             isDetecting = false,
                             isDetected = true,
                             isDetectionSuccessful = false,
-                            isCropMissMatch = false,
+                            isCropMissMatch = isRejected,
                             classifierConfidence = classification?.confidence ?: 0f,
                             classificationLabel = classification?.label,
                             imageWidth = width,
@@ -126,7 +128,7 @@ class DetectionViewModel(
                         matchingResults = emptyList(),
                         rawResults = results,
                         detectionSuccessful = false,
-                        isCropMismatch = false
+                        isCropMismatch = isRejected
                     )
                     return@launch
                 }
@@ -140,7 +142,7 @@ class DetectionViewModel(
                 }
                 println("Matching results: $matchingResults")
 
-                val isMismatch = matchingResults.isEmpty()
+                val isMismatch = matchingResults.isEmpty() || (classification != null && !classification.isAccepted)
                 println("Crop mismatch: $isMismatch")
 
                 _detectionState.update {

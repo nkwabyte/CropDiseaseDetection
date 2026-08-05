@@ -1,9 +1,11 @@
 package com.nkwabyte.cropdiseasedetection.ui.screens.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
@@ -80,9 +82,23 @@ fun DetectionResultScreen(
     // starting there keeps every slider position meaningful.
     val boxFloor = appState.detectionThreshold.coerceIn(0f, 0.95f)
     var boxConfidence by remember(boxFloor) { mutableStateOf(boxFloor) }
+    var selectedDiseaseFilter by remember { mutableStateOf<String?>(null) }
 
-    val visibleBoxes by remember(detectionResults, boxConfidence) {
-        derivedStateOf { detectionResults.filter { it.score >= boxConfidence } }
+    val distinctDiseaseNames by remember(detectionResults) {
+        derivedStateOf {
+            detectionResults.map { it.displayName.ifEmpty { "Unknown" } }.distinct()
+        }
+    }
+
+    val visibleBoxes by remember(detectionResults, boxConfidence, selectedDiseaseFilter) {
+        derivedStateOf {
+            detectionResults.filter { result ->
+                val scorePass = result.score >= boxConfidence
+                val name = result.displayName.ifEmpty { "Unknown" }
+                val filterPass = selectedDiseaseFilter == null || name.equals(selectedDiseaseFilter, ignoreCase = true)
+                scorePass && filterPass
+            }
+        }
     }
 
     val distinctDetectionResults by remember(detectionResults) {
@@ -234,6 +250,44 @@ fun DetectionResultScreen(
                             }
 
                             if (detectionResults.isNotEmpty()) {
+                                if (distinctDiseaseNames.size > 1) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .horizontalScroll(rememberScrollState())
+                                            .padding(bottom = 8.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        FilterChip(
+                                            selected = selectedDiseaseFilter == null,
+                                            onClick = { selectedDiseaseFilter = null },
+                                            label = {
+                                                Text(
+                                                    text = "All (${detectionResults.size})",
+                                                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold)
+                                                )
+                                            }
+                                        )
+                                        distinctDiseaseNames.forEach { diseaseName ->
+                                            val count = detectionResults.count { it.displayName.ifEmpty { "Unknown" }.equals(diseaseName, ignoreCase = true) }
+                                            val isSelected = selectedDiseaseFilter.equals(diseaseName, ignoreCase = true)
+                                            FilterChip(
+                                                selected = isSelected,
+                                                onClick = {
+                                                    selectedDiseaseFilter = if (isSelected) null else diseaseName
+                                                },
+                                                label = {
+                                                    Text(
+                                                        text = "$diseaseName ($count)",
+                                                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold)
+                                                    )
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+
                                 BoxConfidenceSlider(
                                     value = boxConfidence,
                                     onValueChange = { boxConfidence = it },

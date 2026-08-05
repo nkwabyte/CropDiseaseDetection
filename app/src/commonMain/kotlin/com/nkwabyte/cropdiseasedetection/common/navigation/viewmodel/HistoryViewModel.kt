@@ -123,8 +123,8 @@ class HistoryViewModel(
     }
 
     /**
-     * Removes [record] from the user's history. The document is only flagged in Firestore, so
-     * it stays available for model training.
+     * Removes [record] from the user's history. The document is moved to the "archive"
+     * collection in Firestore for training data and permanently deleted from "detections".
      *
      * The row is dropped from the list first and put back if the write fails, so the tap feels
      * immediate without lying about what was actually stored.
@@ -135,7 +135,7 @@ class HistoryViewModel(
         _historyState.value = _historyState.value.copy(records = previous.withoutDeleted())
 
         viewModelScope.launch {
-            val ok = syncRepository.softDeleteDetectionRecord(record)
+            val ok = syncRepository.archiveAndDeleteDetectionRecord(record)
             if (ok) {
                 syncRepository.getCachedHistory()?.let { cached ->
                     // Rewrite the cache so the record does not come back on the next open.

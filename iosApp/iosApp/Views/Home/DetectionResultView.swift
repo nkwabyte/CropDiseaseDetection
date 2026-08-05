@@ -23,15 +23,33 @@ public struct DetectionResultView: View {
     /// something — nothing weaker than that threshold was ever detected.
     @State private var boxConfidence: Float = 0.10
     @State private var boxFloor: Float = 0.10
+    @State private var selectedDiseaseFilter: String? = nil
 
     public var body: some View {
         ScrollView {
                 VStack(spacing: 20) {
                     let state = detectionStateObs.value
                     let allResults = state.results as? [DetectionResult] ?? []
-                    // Filters what is drawn only; the detections and the diagnosis below
-                    // are untouched, so raising this never changes the result.
-                    let visibleBoxes = allResults.filter { $0.score >= boxConfidence }
+                    
+                    let distinctDiseaseNames: [String] = {
+                        var names = [String]()
+                        for det in allResults {
+                            let name = det.displayName.isEmpty ? L("Unknown") : det.displayName
+                            if !names.contains(name) {
+                                names.append(name)
+                            }
+                        }
+                        return names
+                    }()
+
+                    let visibleBoxes = allResults.filter { det in
+                        let scorePass = det.score >= boxConfidence
+                        if let filter = selectedDiseaseFilter {
+                            let name = det.displayName.isEmpty ? L("Unknown") : det.displayName
+                            return scorePass && name == filter
+                        }
+                        return scorePass
+                    }
 
                     // Interactive Bounding Box Canvas
                     BoundingBoxCanvasView(
@@ -45,7 +63,57 @@ public struct DetectionResultView: View {
                     .shadow(radius: 4)
 
                     if !allResults.isEmpty {
-                        VStack(spacing: 4) {
+                        VStack(spacing: 8) {
+                            // Disease Filter Chips Row
+                            if distinctDiseaseNames.count > 1 {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 8) {
+                                        Button {
+                                            selectedDiseaseFilter = nil
+                                        } label: {
+                                            HStack(spacing: 4) {
+                                                Image(systemName: "line.3.horizontal.decrease.circle.fill")
+                                                LText("All (%@)", "\(allResults.count)")
+                                            }
+                                            .font(.caption)
+                                            .fontWeight(.bold)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 6)
+                                            .background(selectedDiseaseFilter == nil ? Color.green : Color(uiColor: .tertiarySystemFill))
+                                            .foregroundColor(selectedDiseaseFilter == nil ? .white : .primary)
+                                            .cornerRadius(16)
+                                        }
+
+                                        ForEach(distinctDiseaseNames, id: \.self) { diseaseName in
+                                            let count = allResults.filter { ($0.displayName.isEmpty ? L("Unknown") : $0.displayName) == diseaseName }.count
+                                            let isSelected = selectedDiseaseFilter == diseaseName
+                                            
+                                            Button {
+                                                if isSelected {
+                                                    selectedDiseaseFilter = nil
+                                                } else {
+                                                    selectedDiseaseFilter = diseaseName
+                                                }
+                                            } label: {
+                                                HStack(spacing: 4) {
+                                                    Text(diseaseName)
+                                                    Text("(\(count))")
+                                                        .font(.caption2)
+                                                        .opacity(0.8)
+                                                }
+                                                .font(.caption)
+                                                .fontWeight(.bold)
+                                                .padding(.horizontal, 12)
+                                                .padding(.vertical, 6)
+                                                .background(isSelected ? Color.green : Color(uiColor: .tertiarySystemFill))
+                                                .foregroundColor(isSelected ? .white : .primary)
+                                                .cornerRadius(16)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
                             HStack {
                                 LText("Box confidence")
                                     .font(.subheadline)

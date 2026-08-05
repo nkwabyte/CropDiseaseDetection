@@ -74,10 +74,105 @@ private struct RecommendationCardView: View {
 public struct RecommendationView: View {
     public let results: [DetectionResult]
     @StateObject private var langMgr = LanguageManager.shared
+    @State private var selectedLanguageCode: String = KoinHelper.settingsManager.getRecommendationLanguage()
+    @State private var showAudioComingSoonAlert: Bool = false
+    
+    private struct LanguageOption: Hashable {
+        let code: String
+        let displayName: String
+        let flag: String
+    }
+    
+    private let languages: [LanguageOption] = [
+        LanguageOption(code: "ENGLISH", displayName: "English", flag: "🇬🇧"),
+        LanguageOption(code: "HAUSA", displayName: "Hausa", flag: "🇬🇭"),
+        LanguageOption(code: "EWE", displayName: "Ewe (Eʋe)", flag: "🇬🇭"),
+        LanguageOption(code: "ASANTE_TWI", displayName: "Asante Twi", flag: "🇬🇭"),
+        LanguageOption(code: "GA", displayName: "Ga", flag: "🇬🇭"),
+        LanguageOption(code: "FRENCH", displayName: "French (Français)", flag: "🇫🇷")
+    ]
     
     public var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
+            VStack(spacing: 16) {
+                // ── Top Header Control Row (Language Selector & Play Audio Button) ─────
+                let currentOpt = languages.first(where: { $0.code == selectedLanguageCode }) ?? languages[0]
+                
+                HStack {
+                    // Language Picker Menu
+                    Menu {
+                        Picker(L("Language"), selection: $selectedLanguageCode) {
+                            ForEach(languages, id: \.code) { lang in
+                                Text("\(lang.flag) \(lang.displayName)").tag(lang.code)
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "globe")
+                                .foregroundColor(.green)
+                            Text("\(currentOpt.flag) \(currentOpt.displayName)")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.primary)
+                            Image(systemName: "chevron.down")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color(uiColor: .tertiarySystemFill))
+                        .cornerRadius(20)
+                    }
+                    .onChange(of: selectedLanguageCode) { newLang in
+                        let recLang = RecommendationLanguage.from(code: newLang)
+                        KoinHelper.settingsManager.setRecommendationLanguage(value: newLang)
+                        KoinHelper.appViewModel.setRecommendationLanguage(language: recLang)
+                        LanguageManager.shared.setLanguage(recLang.localeCode)
+                    }
+
+                    Spacer()
+
+                    // Play Audio Button (Future feature placeholder)
+                    Button {
+                        showAudioComingSoonAlert = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "play.fill")
+                                .font(.caption)
+                            LText("Play Audio")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(Color.green)
+                        .foregroundColor(.white)
+                        .cornerRadius(20)
+                    }
+                }
+                .padding(.horizontal, 4)
+
+                // Translation pending banner if non-English
+                if selectedLanguageCode != "ENGLISH" {
+                    HStack(spacing: 10) {
+                        Image(systemName: "character.bubble.fill")
+                            .foregroundColor(.orange)
+                        VStack(alignment: .leading, spacing: 2) {
+                            LText("%@ %@ — Translation coming soon", currentOpt.flag, currentOpt.displayName)
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(Color(red: 0.75, green: 0.2, blue: 0.05))
+                            LText("Content is currently displayed in English.")
+                                .font(.caption2)
+                                .foregroundColor(.orange)
+                        }
+                        Spacer()
+                    }
+                    .padding(12)
+                    .background(Color.orange.opacity(0.12))
+                    .cornerRadius(12)
+                }
+
                 if results.isEmpty {
                     LText("No disease information required.")
                         .foregroundColor(.secondary)
@@ -107,6 +202,20 @@ public struct RecommendationView: View {
         }
         .navigationTitle(L("Treatment Guidelines"))
         .navigationBarTitleDisplayMode(.inline)
+        .alert(isPresented: $showAudioComingSoonAlert) {
+            let currentOpt = languages.first(where: { $0.code == selectedLanguageCode }) ?? languages[0]
+            return Alert(
+                title: Text(L("Audio Playback")),
+                message: Text(L("Audio playback in %@ is coming soon!", currentOpt.displayName)),
+                dismissButton: .default(Text(L("OK")))
+            )
+        }
+        .onAppear {
+            let currentRecLang = KoinHelper.settingsManager.getRecommendationLanguage()
+            self.selectedLanguageCode = currentRecLang
+            let recLang = RecommendationLanguage.from(code: currentRecLang)
+            LanguageManager.shared.setLanguage(recLang.localeCode)
+        }
     }
 }
 

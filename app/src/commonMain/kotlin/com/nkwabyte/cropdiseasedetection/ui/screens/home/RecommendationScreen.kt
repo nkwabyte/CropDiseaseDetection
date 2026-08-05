@@ -49,6 +49,12 @@ import com.nkwabyte.cropdiseasedetection.ui.screens.encyclopedia.getCropTheme
 import com.nkwabyte.cropdiseasedetection.ui.screens.encyclopedia.getDiseaseDrawable
 import org.jetbrains.compose.resources.painterResource
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.PlayArrow
+import com.nkwabyte.cropdiseasedetection.ui.screens.settings.SelectionDialog
+import kotlinx.coroutines.launch
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecommendationScreen(
@@ -61,6 +67,10 @@ fun RecommendationScreen(
     val detectionState by detectionViewModel.detectionState.collectAsState()
     val appState by appViewModel.appState.collectAsState()
     val selectedLanguage = appState.recommendationLanguage
+
+    var showLanguageDialog by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     val detectedDiseases: List<Pair<DiseaseInfo, Int>> = remember(detectionState.results) {
         detectionState.results
@@ -83,6 +93,7 @@ fun RecommendationScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             AppBar(
                 title = {
@@ -113,10 +124,15 @@ fun RecommendationScreen(
                 .fillMaxSize()
                 .padding(contentPadding)
         ) {
-            // ── Sticky language selector ────────────────────────────────────────
-            LanguageSelectorBar(
+            // ── Top header control row (Language selector & Play Audio button) ─────
+            HeaderControlRow(
                 selectedLanguage = selectedLanguage,
-                onSelect = { appViewModel.setRecommendationLanguage(it) }
+                onLanguageClick = { showLanguageDialog = true },
+                onPlayAudioClick = {
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("Audio playback in ${selectedLanguage.displayName} coming soon!")
+                    }
+                }
             )
 
             if (detectedDiseases.isEmpty()) {
@@ -163,15 +179,33 @@ fun RecommendationScreen(
                 }
             }
         }
+
+        if (showLanguageDialog) {
+            val langMap = RecommendationLanguage.entries.associateBy { "${it.flag} ${it.displayName} (${it.nativeName})" }
+            val currentDisplay = "${selectedLanguage.flag} ${selectedLanguage.displayName} (${selectedLanguage.nativeName})"
+            
+            SelectionDialog(
+                title = "Select Language",
+                options = langMap.keys.toList(),
+                selectedOption = currentDisplay,
+                onOptionSelected = { selectedKey ->
+                    langMap[selectedKey]?.let { selectedLang ->
+                        appViewModel.setRecommendationLanguage(selectedLang)
+                    }
+                },
+                onDismiss = { showLanguageDialog = false }
+            )
+        }
     }
 }
 
-// ── Language selector ──────────────────────────────────────────────────────────
+// ── Top header control row ───────────────────────────────────────────────────────
 
 @Composable
-private fun LanguageSelectorBar(
+private fun HeaderControlRow(
     selectedLanguage: RecommendationLanguage,
-    onSelect: (RecommendationLanguage) -> Unit
+    onLanguageClick: () -> Unit,
+    onPlayAudioClick: () -> Unit
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -181,28 +215,70 @@ private fun LanguageSelectorBar(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.Language,
-                    contentDescription = "Language",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp)
-                )
-                RecommendationLanguage.entries.forEach { language ->
-                    FilterChip(
-                        selected = selectedLanguage == language,
-                        onClick = { onSelect(language) },
-                        label = {
-                            Text(
-                                text = "${language.flag} ${language.displayName}",
-                                style = MaterialTheme.typography.bodySmall
+                // Language Selector Button
+                Surface(
+                    onClick = onLanguageClick,
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Language,
+                            contentDescription = "Select Language",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = "${selectedLanguage.flag} ${selectedLanguage.displayName}",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
-                        }
+                        )
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
+                // Play Audio Button (Future feature placeholder)
+                FilledTonalButton(
+                    onClick = onPlayAudioClick,
+                    shape = RoundedCornerShape(20.dp),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     )
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = "Play Audio",
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = "Play Audio",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                    }
                 }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))

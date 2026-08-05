@@ -45,13 +45,6 @@ service cloud.firestore {
         && request.resource.data.timestamp is number
         && request.resource.data.cropName is string;
 
-      // Two owner-only edits are permitted, and nothing else.
-      //
-      // anonymizeUserData(): detach the record by rewriting userId to "anonymous".
-      //
-      // Soft delete: hide the record from the owner's history. The document is only
-      // flagged, never removed, so it stays available as training data — which is also
-      // why a hard delete remains denied below.
       allow update: if isSignedIn()
         && resource.data.userId == request.auth.uid
         && (
@@ -66,7 +59,18 @@ service cloud.firestore {
           )
         );
 
-      allow delete: if false;
+      allow delete: if isSignedIn()
+        && (resource.data.userId == request.auth.uid || resource.data.userId == 'anonymous');
+    }
+
+    // Archived records. When a user deletes a record from history, it is moved here
+    // for dataset training and removed from the active detections collection.
+    match /archive/{docId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+
+      allow create: if isSignedIn();
+
+      allow update, delete: if false;
     }
 
     // Expert feedback submitted from the flag-detection dialog. Write-only from
