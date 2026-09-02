@@ -1,6 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
 import java.io.FileInputStream
+import co.touchlab.skie.configuration.SuppressSkieWarning
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -14,6 +15,10 @@ plugins {
 }
 
 kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
     androidTarget {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_21)
@@ -28,6 +33,7 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
+            binaryOption("bundleId", "com.nkwabyte.cropdiseasedetection")
         }
         iosTarget.compilations.getByName("main") {
             cinterops {
@@ -193,5 +199,19 @@ buildkonfig {
         buildConfigField(com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING, "CLOUDINARY_API_SECRET", credsProps.getProperty("CLOUDINARY_API_SECRET", ""))
         buildConfigField(com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING, "CLOUDINARY_CLOUD_NAME", "dxdun6eym")
         buildConfigField(com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING, "GOOGLE_WEB_CLIENT_ID", credsProps.getProperty("GOOGLE_WEB_CLIENT_ID", ""))
+    }
+}
+
+skie {
+    features {
+        group("com.nkwabyte.cropdiseasedetection.common.data.DiseaseInfo.description") {
+            SuppressSkieWarning.NameCollision(true)
+        }
+        group("com.nkwabyte.cropdiseasedetection.common.data.DiseaseTranslation.description") {
+            SuppressSkieWarning.NameCollision(true)
+        }
+        group("androidx.compose.ui.unit.Density.toSp") {
+            SuppressSkieWarning.NameCollision(true)
+        }
     }
 }

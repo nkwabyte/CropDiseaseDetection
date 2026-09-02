@@ -22,9 +22,9 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Policy
 import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.MenuBook
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -278,7 +278,7 @@ fun AppDrawer(
                 onClick = { onNavigate("encyclopedia") },
                 icon = {
                     Icon(
-                        Icons.Outlined.MenuBook,
+                        Icons.AutoMirrored.Outlined.MenuBook,
                         contentDescription = null,
                         tint = Color.White
                     )
@@ -324,7 +324,7 @@ fun AppDrawer(
                 onClick = { onNavigate("help") },
                 icon = {
                     Icon(
-                        Icons.Outlined.HelpOutline,
+                        Icons.AutoMirrored.Outlined.HelpOutline,
                         contentDescription = null,
                         tint = Color.White
                     )
