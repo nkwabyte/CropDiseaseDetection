@@ -135,19 +135,63 @@ android {
     sourceSets["main"].resources.srcDirs("src/commonMain/resources")
     sourceSets["main"].assets.srcDirs("src/androidMain/assets", "src/commonMain/assets")
 
+    val versionPropsFile = rootProject.file("version.properties")
+    val versionProps = Properties()
+    if (versionPropsFile.exists()) {
+        versionProps.load(FileInputStream(versionPropsFile))
+    }
+    val defaultVersionCode = versionProps.getProperty("VERSION_CODE", "1").toIntOrNull() ?: 1
+    val defaultVersionName = versionProps.getProperty("VERSION_NAME", "1.0.0")
+
+    val finalVersionCode = project.findProperty("appVersionCode")?.toString()?.toIntOrNull() ?: defaultVersionCode
+    val finalVersionName = project.findProperty("appVersionName")?.toString() ?: defaultVersionName
+
     defaultConfig {
         applicationId = "com.nkwabyte.cropdiseasedetection"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = finalVersionCode
+        versionName = finalVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        create("release") {
+            val keystorePropsFile = rootProject.file("secrets/keystore.properties")
+            val keystoreProps = Properties()
+            if (keystorePropsFile.exists()) {
+                keystoreProps.load(FileInputStream(keystorePropsFile))
+            }
+
+            val keystorePath = System.getenv("KEYSTORE_PATH")
+                ?: keystoreProps.getProperty("KEYSTORE_PATH")
+                ?: "secrets/release.keystore"
+            val keystoreFile = rootProject.file(keystorePath)
+
+            val storePass = System.getenv("KEYSTORE_PASSWORD")
+                ?: keystoreProps.getProperty("KEYSTORE_PASSWORD")
+            val alias = System.getenv("KEY_ALIAS")
+                ?: keystoreProps.getProperty("KEY_ALIAS")
+            val keyPass = System.getenv("KEY_PASSWORD")
+                ?: keystoreProps.getProperty("KEY_PASSWORD")
+
+            if (keystoreFile.exists() && !storePass.isNullOrBlank() && !alias.isNullOrBlank()) {
+                storeFile = keystoreFile
+                storePassword = storePass
+                keyAlias = alias
+                keyPassword = keyPass ?: storePass
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            val releaseSigning = signingConfigs.getByName("release")
+            if (releaseSigning.storeFile != null) {
+                signingConfig = releaseSigning
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

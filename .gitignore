@@ -3306,3 +3306,14 @@ google-services.json
 
 # Allow secrets.zip to be committed
 !/secrets.zip
+
+# AI Agent & Assistant Files
+.claude/
+.agent/
+.agents/
+CLAUDE.md
+.gemini/
+.github/prompts/
+.github/hooks/
+.github/agents/
+.github/agent/
