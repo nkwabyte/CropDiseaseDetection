@@ -43,6 +43,7 @@ import com.nkwabyte.cropdiseasedetection.generated.resources.flag_submit_button
 import com.nkwabyte.cropdiseasedetection.generated.resources.flag_cancel_button
 import com.nkwabyte.cropdiseasedetection.generated.resources.flag_success_message
 import org.jetbrains.compose.resources.stringResource
+import com.nkwabyte.cropdiseasedetection.common.pipeline.BOX_COORDINATE_SPACE
 import com.nkwabyte.cropdiseasedetection.common.utils.BoundingBoxImage
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,18 +63,13 @@ fun DetectionResultScreen(
     var selectedDisease by remember { mutableStateOf<DiseaseInfo?>(null) }
     var showFlagDialog by remember { mutableStateOf(false) }
 
-    val detectionResults by remember(detectionState.results, appState.selectedCrop) {
-        derivedStateOf {
-            val selectedCrop = appState.selectedCrop
-            if (selectedCrop.isNullOrEmpty()) {
-                detectionState.results
-            } else {
-                detectionState.results.filter {
-                    it.className?.contains(selectedCrop, ignoreCase = true) == true
-                }
-            }
-        }
-    }
+    // detectionState.results is already routed: DetectionPipeline filtered it to
+    // the classifier-derived crop's exact class ids before it ever reached the UI.
+    // This screen used to re-filter with className.contains(selectedCrop), which
+    // was a second, weaker copy of the routing rule — and one that matched nothing
+    // at all whenever the app was running in a language other than English,
+    // because selectedCrop is a translated display string.
+    val detectionResults = detectionState.results
 
     // Boxes are drawn for every detection that cleared the inference threshold, which on a
     // leaf with many lesions buries the image. This filters what is drawn only — the
@@ -178,8 +174,11 @@ fun DetectionResultScreen(
                         BoundingBoxImage(
                             imageBytes = selectedImageBytes,
                             results = visibleBoxes,
-                            modelWidth = 640,
-                            modelHeight = 640,
+                            // The square canvas detections are expressed in, defined
+                            // once in commonMain — not the image's own pixel size.
+                            // detectionState.imageWidth/Height carry the same value.
+                            modelWidth = BOX_COORDINATE_SPACE,
+                            modelHeight = BOX_COORDINATE_SPACE,
                             contentDescription = stringResource(Res.string.detected_image_content_description),
                             modifier = Modifier
                                 .fillMaxSize()

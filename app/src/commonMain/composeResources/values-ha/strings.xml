@@ -107,6 +107,7 @@
     <string name="no_detection_message">Ba a sami cuta a wannan hoto ba.</string>
     <string name="error_detecting_message">An sami kuskure wajen binciken hoton, sake gwada.</string>
     <string name="classifier_rejection_message">Wannan ba ganyen masara, barkono ko tumatir bane mai kyau.</string>
+    <string name="crop_mismatch_message">Wannan yana kama da ganyen %1$s, amma an zabi %2$s. Canza zabin amfanin gona ko ka duba ganyen %2$s.</string>
 
     <!-- Flag functionality strings -->
     <string name="flag_button_text">Maka</string>

@@ -4,7 +4,11 @@ import kotlinx.serialization.Serializable
 
 @Serializable()
 data class AppData(
+    /** The selected crop as the user sees it — translated, for display only. */
     val selectedCrop: String? = null,
+    /** The same selection as a canonical [SupportedCrop] id. This is the value
+     *  routing uses; [selectedCrop] must never be used for that. */
+    val selectedCropId: String? = null,
     val detectionResult: List<DetectionResult> = emptyList(),
     val isLoading: Boolean = false,
     val errorMessage: String? = null,

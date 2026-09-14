@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -26,6 +27,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nkwabyte.cropdiseasedetection.common.navigation.appbar.AppBar
+import com.nkwabyte.cropdiseasedetection.common.helpers.ObjectDetector
+import com.nkwabyte.cropdiseasedetection.common.utils.formatDecimals
 import com.nkwabyte.cropdiseasedetection.common.model.DetectionModelCatalog
 import com.nkwabyte.cropdiseasedetection.common.model.RecommendationLanguage
 import com.nkwabyte.cropdiseasedetection.data.repository.SyncRepository
@@ -64,6 +67,11 @@ fun SettingsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val syncRepository: SyncRepository = koinInject()
+    val objectDetector: ObjectDetector = koinInject()
+    var benchmarkRunning by remember { mutableStateOf(false) }
+    var benchmarkSummary by remember { mutableStateOf<String?>(null) }
+    var extendedBenchmarkRunning by remember { mutableStateOf(false) }
+    var extendedBenchmarkSummary by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         modifier = modifier,
@@ -199,6 +207,89 @@ fun SettingsScreen(
                         subtitle = "Overlap threshold for duplicate boxes",
                         value = appState.iouThreshold,
                         onValueChange = { appViewModel.setIouThreshold(it) }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Developer - Benchmark Section
+                // Added for Phase 3 of the accompanying research project: measures
+                // real on-device latency (warmup + repeated timed runs, synthetic
+                // images) so the README's previously unmeasured "~18ms"/"~24ms"/
+                // "sub-100ms" claims can be replaced with an instrumented number.
+                SettingsSectionHeader("Developer — Benchmark")
+                SettingsCard {
+                    SettingsActionRow(
+                        icon = Icons.Default.Speed,
+                        title = if (benchmarkRunning) "Running benchmark…" else "Run Latency Benchmark",
+                        subtitle = benchmarkSummary
+                            ?: "Measures on-device classifier + detector latency (warmup + 50 timed runs) and saves a CSV",
+                        titleColor = MaterialTheme.colorScheme.onSurface,
+                        onClick = {
+                            if (!benchmarkRunning) {
+                                benchmarkRunning = true
+                                benchmarkSummary = null
+                                coroutineScope.launch {
+                                    try {
+                                        objectDetector.loadClassifierModel()
+                                        objectDetector.loadModel()
+                                        val results = objectDetector.runLatencyBenchmark()
+                                        benchmarkSummary = if (results.isEmpty()) {
+                                            "No measurements — load a model first, then try again"
+                                        } else {
+                                            results.joinToString("  •  ") { r ->
+                                                "${r.stage}: ${r.stats.meanMs.formatDecimals(1)}ms mean"
+                                            }
+                                        }
+                                        snackbarHostState.showSnackbar(
+                                            if (results.isEmpty()) {
+                                                "Benchmark produced no measurements"
+                                            } else {
+                                                "Benchmark complete — CSV saved to app storage (${results.size} result rows)"
+                                            }
+                                        )
+                                    } catch (e: Exception) {
+                                        benchmarkSummary = "Benchmark failed: ${e.message}"
+                                        snackbarHostState.showSnackbar("Benchmark failed: ${e.message}")
+                                    } finally {
+                                        benchmarkRunning = false
+                                    }
+                                }
+                            }
+                        }
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    SettingsActionRow(
+                        icon = Icons.Default.Speed,
+                        title = if (extendedBenchmarkRunning) "Running extended benchmark…" else "Run Extended Benchmark (Publication Protocol)",
+                        subtitle = extendedBenchmarkSummary
+                            ?: "Cold load, per-stage, end-to-end, memory/CPU/thermal (10 warmup + 100 measured runs); flags metrics this device can't measure defensibly. Saves JSON+CSV.",
+                        titleColor = MaterialTheme.colorScheme.onSurface,
+                        onClick = {
+                            if (!extendedBenchmarkRunning) {
+                                extendedBenchmarkRunning = true
+                                extendedBenchmarkSummary = null
+                                coroutineScope.launch {
+                                    try {
+                                        val export = objectDetector.runExtendedBenchmark()
+                                        val flaggedCount = export.notes.size
+                                        extendedBenchmarkSummary = "end-to-end mean ${export.endToEnd.stats.meanMs.formatDecimals(1)}ms, " +
+                                            "p95 ${export.endToEnd.stats.p95Ms.formatDecimals(1)}ms  •  " +
+                                            "${export.endToEnd.offlineSuccessCount} ok / ${export.endToEnd.offlineFailureCount} failed  •  " +
+                                            "$flaggedCount caveat(s) in export — see JSON/CSV notes before citing any figure"
+                                        snackbarHostState.showSnackbar(
+                                            "Extended benchmark complete on ${export.deviceEnvironment.manufacturer} ${export.deviceEnvironment.model}" +
+                                                if (export.deviceEnvironment.isEmulator) " (EMULATOR — not physical-device performance)" else ""
+                                        )
+                                    } catch (e: Exception) {
+                                        extendedBenchmarkSummary = "Extended benchmark failed: ${e.message}"
+                                        snackbarHostState.showSnackbar("Extended benchmark failed: ${e.message}")
+                                    } finally {
+                                        extendedBenchmarkRunning = false
+                                    }
+                                }
+                            }
+                        }
                     )
                 }
 

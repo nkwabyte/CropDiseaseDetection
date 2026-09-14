@@ -36,6 +36,7 @@ import com.nkwabyte.cropdiseasedetection.generated.resources.no_detection_messag
 import com.nkwabyte.cropdiseasedetection.generated.resources.ok_text
 import com.nkwabyte.cropdiseasedetection.generated.resources.error_detecting_message
 import com.nkwabyte.cropdiseasedetection.generated.resources.classifier_rejection_message
+import com.nkwabyte.cropdiseasedetection.generated.resources.crop_mismatch_message
 import com.nkwabyte.cropdiseasedetection.generated.resources.home_permission_denied
 import com.nkwabyte.cropdiseasedetection.generated.resources.home_selected_image_description
 import com.nkwabyte.cropdiseasedetection.generated.resources.home_clear_image_description
@@ -68,28 +69,45 @@ fun HomeScreen(
     val okText = stringResource(Res.string.ok_text)
     val errorDetectingMessage = stringResource(Res.string.error_detecting_message)
     val classifierRejectionMessage = stringResource(Res.string.classifier_rejection_message)
+    // Both crop names are resolved through the string resources, so the message
+    // is translated even though routing itself never touches translated text.
+    val predictedCropName = stringResource(cropIdDisplayNameRes(detectionData.predictedCropId))
+    val selectedCropName = stringResource(cropIdDisplayNameRes(appState.selectedCropId))
+    val cropMismatchTemplate = stringResource(Res.string.crop_mismatch_message)
+    val cropMismatchMessage: (String, String) -> String = { predicted, selected ->
+        cropMismatchTemplate.replace("%1\$s", predicted).replace("%2\$s", selected)
+    }
 
-    LaunchedEffect(detectionData) {
-        if (detectionData.isClassifierRejected) {
-            snackBarHostState.showSnackbar(
+    // One terminal state, one message. Each branch is a distinct thing that
+    // happened, and they are mutually exclusive: the old version could show two
+    // snackbars for one result, and had no way to say "that is a crop, just not
+    // the one you picked" or to tell an inference failure apart from a clean scan
+    // that found nothing.
+    LaunchedEffect(detectionData.outcome, detectionData.isDetected, detectionData.results) {
+        if (!detectionData.isDetected) return@LaunchedEffect
+
+        when {
+            detectionData.isClassifierRejected -> snackBarHostState.showSnackbar(
                 message = classifierRejectionMessage,
                 actionLabel = okText
             )
-            return@LaunchedEffect
-        }
 
-        if (detectionData.results.isNotEmpty() || detectionData.isDetectionSuccessful) {
-            navigateToResult(detectionData.results)
-        }
-        if (detectionData.isDetected && detectionData.results.isEmpty()) {
-            snackBarHostState.showSnackbar(
-                message = noDetectionMessage,
+            detectionData.isCropMissMatch -> snackBarHostState.showSnackbar(
+                message = cropMismatchMessage(predictedCropName, selectedCropName),
                 actionLabel = okText
             )
-        }
-        if (detectionData.results.isEmpty() && (detectionData.isDetected && !detectionData.isCropMissMatch)) {
-            snackBarHostState.showSnackbar(
+
+            // A model failure is never reported as "no disease found" — that
+            // would read as a clean bill of health for a scan that never ran.
+            detectionData.isInferenceError -> snackBarHostState.showSnackbar(
                 message = errorDetectingMessage,
+                actionLabel = okText
+            )
+
+            detectionData.isDetectionSuccessful -> navigateToResult(detectionData.results)
+
+            else -> snackBarHostState.showSnackbar(
+                message = noDetectionMessage,
                 actionLabel = okText
             )
         }
@@ -146,8 +164,10 @@ fun HomeScreen(
                     } else {
                         selectedImageData?.let { bytes ->
                             appViewModel.setSelectedImageByteArray(bytes)
-                            val targetCrop = appState.selectedCrop ?: ""
-                            detectionViewModel.detect(bytes, targetCrop, 640, 640)
+                            // The CANONICAL id, not the translated display name:
+                            // routing must not depend on the app's language.
+                            val targetCropId = appState.selectedCropId ?: ""
+                            detectionViewModel.detect(bytes, targetCropId)
                         } ?: run {
                             scope.launch {
                                 snackBarHostState.showSnackbar(

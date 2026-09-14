@@ -114,6 +114,7 @@
     <string name="no_detection_message">No detection found for this image, try a different one or take a better image.</string>
     <string name="error_detecting_message">There was an error analysing this image, try again</string>
     <string name="classifier_rejection_message">This does not appear to be a Corn, Pepper, or Tomato leaf. Please scan a valid leaf image.</string>
+    <string name="crop_mismatch_message">This looks like a %1$s leaf, but %2$s is selected. Change your crop selection or scan a %2$s leaf.</string>
 
     <!-- Flag functionality strings -->
     <string name="flag_button_text">Flag</string>

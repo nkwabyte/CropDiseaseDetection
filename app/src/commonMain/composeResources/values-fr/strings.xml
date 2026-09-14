@@ -107,6 +107,7 @@
     <string name="no_detection_message">Aucune maladie détectée sur cette image.</string>
     <string name="error_detecting_message">Erreur lors de l'analyse de l'image, veuillez réessayer.</string>
     <string name="classifier_rejection_message">Ceci ne semble pas être une feuille de maïs, piment ou tomate valide.</string>
+    <string name="crop_mismatch_message">Ceci ressemble à une feuille de %1$s, mais %2$s est sélectionné. Changez votre choix de culture ou scannez une feuille de %2$s.</string>
 
     <!-- Flag functionality strings -->
     <string name="flag_button_text">Signaler</string>

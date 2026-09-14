@@ -9,6 +9,11 @@ import com.nkwabyte.cropdiseasedetection.data.network.CloudinaryApi
 import com.nkwabyte.cropdiseasedetection.data.repository.SyncRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
+import com.nkwabyte.cropdiseasedetection.common.pipeline.DetectionPipeline
+import com.nkwabyte.cropdiseasedetection.common.pipeline.DetectionStateReducer
+import com.nkwabyte.cropdiseasedetection.common.pipeline.ObjectDetectorEngine
+import com.nkwabyte.cropdiseasedetection.common.pipeline.PipelineOutcome
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 sealed class FlagState {
@@ -23,6 +28,15 @@ class DetectionViewModel(
     private val cloudinaryApi: CloudinaryApi,
     private val syncRepository: SyncRepository
 ) : ViewModel() {
+
+    /** The shared production pipeline — the same object the extended benchmark
+     *  drives, so the app and the measurements can never describe different
+     *  architectures. */
+    private val pipeline = DetectionPipeline(ObjectDetectorEngine(detector))
+
+    /** Guards against a second request starting while one is in flight. */
+    private var detectJob: Job? = null
+
     private val detectionData = DetectionData(
         isModelLoading = true,
         isDetecting = false,
@@ -57,124 +71,79 @@ class DetectionViewModel(
         }
     }
 
-    fun detect(imageBytes: ByteArray, crop: String, width: Int, height: Int) {
-        viewModelScope.launch(Dispatchers.Default) {
+    /**
+     * Runs one two-stage request: classify, route, and only then detect.
+     *
+     * The call order is the point. This used to run the detector first and use
+     * the classifier afterwards purely as a display flag, filtering results with
+     * `className.contains(selectedCrop)` — which paid for a full detector pass on
+     * every out-of-distribution photo, and which silently matched nothing
+     * whenever the app was not in English, because the selected crop arrived as a
+     * translated display string. The decision now lives in [DetectionPipeline] /
+     * `CropRoutingPolicy`, is made from the classifier's verdict, and filters on
+     * detector class ids.
+     *
+     * @param selectedCropId the user's crop as a CANONICAL id
+     *        ([com.nkwabyte.cropdiseasedetection.common.model.SupportedCrop]),
+     *        never a localized label. Blank means "no preference", in which case
+     *        the classifier's own crop is used as the route.
+     */
+    fun detect(imageBytes: ByteArray, selectedCropId: String) {
+        // A recomposition or a double-tap must not start a second inference pass
+        // over models that are neither reentrant nor cheap. The in-flight job is
+        // the guard; the request completes exactly once.
+        if (detectJob?.isActive == true) {
+            println("Detection already in flight; ignoring duplicate request")
+            return
+        }
+        detectJob = viewModelScope.launch(Dispatchers.Default) {
             try {
-                _detectionState.update { it.copy(isDetecting = true, isClassifierRejected = false) }
+                // Clears the previous run's results, label and confidence, so a
+                // slow request never shows stale findings while it runs.
+                _detectionState.update { DetectionStateReducer.starting(it) }
 
-                // Pick up a detector change made in settings since the last run.
-                // loadModel() is a no-op when the selection is unchanged.
-                detector.loadModel()
+                val result = pipeline.run(imageBytes, selectedCropId)
+                println(
+                    "Pipeline outcome=${result.outcome} " +
+                        "classifier=${result.classification?.label}@${result.classification?.confidence} " +
+                        "detectorExecuted=${result.detectorExecuted} " +
+                        "raw=${result.rawResults.size} routed=${result.routedResults.size}"
+                )
 
-                // Stage 2: Detection
-                val results = detector.detect(imageBytes)
-                println("PyTorch detection results: $results")
+                _detectionState.update { DetectionStateReducer.from(result, selectedCropId) }
 
-                // Stage 1: Classifier
-                val classification = detector.classify(imageBytes)
-                println("Classifier result: $classification")
-
-                // If detector found nothing AND classifier rejected the image as not a crop leaf:
-                if (results.isEmpty() && classification != null && !classification.isAccepted) {
-                    println("Classification rejected: Not a Corn, Pepper, or Tomato crop.")
-                    _detectionState.update {
-                        it.copy(
-                            isDetecting = false,
-                            isDetected = true,
-                            isDetectionSuccessful = false,
-                            isCropMissMatch = true,
-                            isClassifierRejected = true,
-                            classifierConfidence = classification.confidence,
-                            classificationLabel = classification.label,
-                            imageWidth = width,
-                            imageHeight = height,
-                            results = emptyList()
-                        )
-                    }
-                    syncDetection(
-                        imageBytes = imageBytes,
-                        crop = crop,
-                        width = width,
-                        height = height,
-                        matchingResults = emptyList(),
-                        rawResults = results,
-                        detectionSuccessful = false,
-                        isCropMismatch = true
-                    )
-                    return@launch
-                }
-
-                if (results.isEmpty()) {
-                    val isRejected = classification != null && !classification.isAccepted
-                    println("No detection results found. Classifier rejected: $isRejected")
-                    _detectionState.update {
-                        it.copy(
-                            results = emptyList(),
-                            isDetecting = false,
-                            isDetected = true,
-                            isDetectionSuccessful = false,
-                            isCropMissMatch = isRejected,
-                            classifierConfidence = classification?.confidence ?: 0f,
-                            classificationLabel = classification?.label,
-                            imageWidth = width,
-                            imageHeight = height,
-                        )
-                    }
-                    syncDetection(
-                        imageBytes = imageBytes,
-                        crop = crop,
-                        width = width,
-                        height = height,
-                        matchingResults = emptyList(),
-                        rawResults = results,
-                        detectionSuccessful = false,
-                        isCropMismatch = isRejected
-                    )
-                    return@launch
-                }
-
-                val matchingResults = if (crop.isBlank()) {
-                    results
-                } else {
-                    results.filter {
-                        it.className?.contains(crop, ignoreCase = true) == true
-                    }
-                }
-                println("Matching results: $matchingResults")
-
-                val isMismatch = matchingResults.isEmpty() || (classification != null && !classification.isAccepted)
-                println("Crop mismatch: $isMismatch")
-
-                _detectionState.update {
-                    it.copy(
-                        results = matchingResults,
-                        isDetecting = false,
-                        isDetected = true,
-                        isDetectionSuccessful = matchingResults.isNotEmpty(),
-                        isCropMissMatch = isMismatch,
-                        classifierConfidence = classification?.confidence ?: 0f,
-                        classificationLabel = classification?.label,
-                        imageWidth = width,
-                        imageHeight = height,
-                    )
-                }
-
+                // Only the truthful terminal result is persisted: a rejected or
+                // mismatched scan syncs with empty detections, never with
+                // fabricated detector output.
                 syncDetection(
                     imageBytes = imageBytes,
-                    crop = crop,
-                    width = width,
-                    height = height,
-                    matchingResults = matchingResults,
-                    rawResults = results,
-                    detectionSuccessful = matchingResults.isNotEmpty(),
-                    isCropMismatch = isMismatch
+                    crop = result.routedCrop?.canonicalLabel
+                        ?: selectedCropId.ifBlank { result.classification?.label ?: "Unknown" },
+                    width = result.boxCoordinateSpace,
+                    height = result.boxCoordinateSpace,
+                    matchingResults = result.routedResults,
+                    rawResults = result.rawResults,
+                    detectionSuccessful = result.isSuccessful,
+                    isCropMismatch = result.outcome == PipelineOutcome.CROP_MISMATCH ||
+                        result.outcome == PipelineOutcome.REJECTED_OUT_OF_DISTRIBUTION,
                 )
             } catch (e: Exception) {
-                println("PyTorch detection failed: ${e.message}")
-            } finally {
+                println("Detection pipeline failed: ${e.message}")
                 _detectionState.update {
-                    it.copy(isDetecting = false)
+                    it.copy(
+                        isDetecting = false,
+                        isDetected = true,
+                        isDetectionSuccessful = false,
+                        isInferenceError = true,
+                        results = emptyList(),
+                        outcome = PipelineOutcome.DETECTOR_ERROR.name,
+                        errorMessage = e.message,
+                    )
                 }
+            } finally {
+                // Belt and braces: every path above already publishes a terminal
+                // state, but a cancellation must not leave the UI spinning.
+                _detectionState.update { it.copy(isDetecting = false) }
             }
         }
     }
@@ -296,6 +265,8 @@ class DetectionViewModel(
     }
 
     fun reset() {
+        detectJob?.cancel()
+        detectJob = null
         _detectionState.update {
             DetectionData(
                 isModelLoading = true,

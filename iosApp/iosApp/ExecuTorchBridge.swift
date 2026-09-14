@@ -1,5 +1,7 @@
 import Foundation
 import UIKit
+import Darwin
+import CryptoKit
 import ExecuTorch
 
 private struct PreprocessResult {
@@ -60,6 +62,13 @@ public class ExecuTorchBridge: NSObject {
     }
 
     // MARK: - Inference
+    //
+    // runDetection / runDetectionStretched / runClassification are unchanged in
+    // behavior from before this revision: each is now a thin composition of the
+    // private stage-helpers below (decodeImageOrNil, correctOrientation,
+    // resizeAndNormalize, unletterboxBoxes, runForward), extracted so the
+    // *StageTimed methods further down can time each step individually without
+    // touching what gets computed. Same inputs in, same outputs out.
 
     /// YOLO26: input 640×640, letterboxed with gray (114, 114, 114) background, pixel/255 normalization (mean=0, std=1).
     /// Output: raw float array flattened from [1, 27, N] with bounding boxes un-letterboxed to original aspect ratio.
@@ -69,51 +78,15 @@ public class ExecuTorchBridge: NSObject {
                                         mean: (0.0, 0.0, 0.0),
                                         std: (1.0, 1.0, 1.0),
                                         isLetterbox: true) else { return [] }
-        
-        var rawOutput = runForward(module: module, data: prep.data,
-                                  shape: [1, 3, 640, 640],
-                                  tag: "detection")
+
+        let rawOutput = runForward(module: module, data: prep.data,
+                                    shape: [1, 3, 640, 640],
+                                    tag: "detection")
         if rawOutput.isEmpty { return [] }
-        
-        let numClasses = 23
-        let rowStride = numClasses + 4
-        let n = rawOutput.count / rowStride
-        if n <= 0 { return rawOutput }
-        
-        let scale = prep.scale
-        let padLeft = prep.padLeft
-        let padTop = prep.padTop
-        let origWidth = prep.origWidth
-        let origHeight = prep.origHeight
-        
-        for i in 0..<n {
-            let cx = rawOutput[0 * n + i].floatValue
-            let cy = rawOutput[1 * n + i].floatValue
-            let w  = rawOutput[2 * n + i].floatValue
-            let h  = rawOutput[3 * n + i].floatValue
-            
-            let x1Lb = cx - w / 2.0
-            let y1Lb = cy - h / 2.0
-            let x2Lb = cx + w / 2.0
-            let y2Lb = cy + h / 2.0
-            
-            let x1 = min(max(0.0, ((x1Lb - padLeft) / scale / origWidth) * 640.0), 640.0)
-            let y1 = min(max(0.0, ((y1Lb - padTop) / scale / origHeight) * 640.0), 640.0)
-            let x2 = min(max(0.0, ((x2Lb - padLeft) / scale / origWidth) * 640.0), 640.0)
-            let y2 = min(max(0.0, ((y2Lb - padTop) / scale / origHeight) * 640.0), 640.0)
-            
-            let newCx = (x1 + x2) / 2.0
-            let newCy = (y1 + y2) / 2.0
-            let newW  = max(0.0, x2 - x1)
-            let newH  = max(0.0, y2 - y1)
-            
-            rawOutput[0 * n + i] = NSNumber(value: newCx)
-            rawOutput[1 * n + i] = NSNumber(value: newCy)
-            rawOutput[2 * n + i] = NSNumber(value: newW)
-            rawOutput[3 * n + i] = NSNumber(value: newH)
-        }
-        
-        return rawOutput
+
+        return unletterboxBoxes(rawOutput, numClasses: 23,
+                                 scale: prep.scale, padLeft: prep.padLeft, padTop: prep.padTop,
+                                 origWidth: prep.origWidth, origHeight: prep.origHeight)
     }
 
     /// RT-DETR: input `size`×`size`, stretched to fill (Ultralytics runs it with
@@ -147,12 +120,408 @@ public class ExecuTorchBridge: NSObject {
                           tag: "classification")
     }
 
+    /// Dimensions of the upright image plus its EXIF orientation, without
+    /// running any model. Returns
+    /// `[widthPx, heightPx, exifOrientation, orientationApplied]`, or `[]` if
+    /// the bytes cannot be decoded.
+    ///
+    /// Derived from the CGImage's stored pixel dimensions and the decoded
+    /// orientation, swapping width and height for the four orientations that
+    /// transpose the image — the identical rule Android's
+    /// `ImageOrientation.orientedSize()` applies to the EXIF tag, so the two
+    /// platforms agree on what "upright" means for the same bytes.
+    @objc public func orientedImageSize(withImageData imageData: Data) -> [NSNumber] {
+        guard let image = decodeImageOrNil(imageData), let cgImage = image.cgImage else { return [] }
+
+        let storedWidth = cgImage.width
+        let storedHeight = cgImage.height
+        let exif = Self.exifValue(for: image.imageOrientation)
+        let transposes = (exif >= 5 && exif <= 8)
+
+        return [
+            NSNumber(value: transposes ? storedHeight : storedWidth),
+            NSNumber(value: transposes ? storedWidth : storedHeight),
+            NSNumber(value: exif),
+            NSNumber(value: image.imageOrientation == .up ? 0 : 1),
+        ]
+    }
+
+    /// UIImage.Orientation -> the EXIF tag value that produces it. The mapping is
+    /// the standard one, and is what lets an iOS export be compared against an
+    /// Android export tagged with the raw EXIF value.
+    private static func exifValue(for orientation: UIImage.Orientation) -> Int {
+        switch orientation {
+        case .up:            return 1
+        case .upMirrored:    return 2
+        case .down:          return 3
+        case .downMirrored:  return 4
+        case .leftMirrored:  return 5
+        case .right:         return 6
+        case .rightMirrored: return 7
+        case .left:          return 8
+        @unknown default:    return 1
+        }
+    }
+
     @objc public func releaseModels() {
         detectionModule = nil
         classifierModule = nil
     }
 
+    // MARK: - Stage-timed inference (publication-protocol extended benchmark)
+    //
+    // Added 2026-09-14. Each method below calls the EXACT SAME private helpers
+    // as its non-timed counterpart above, in the same order — decodeImageOrNil,
+    // correctOrientation, resizeAndNormalize, runForward, and (for the
+    // letterboxed detector) unletterboxBoxes. Nothing here changes what gets
+    // computed; it only brackets each step with DispatchTime.now().uptimeNanoseconds,
+    // a monotonic tick counter (unaffected by wall-clock/NTP adjustments, unlike
+    // CFAbsoluteTimeGetCurrent() used by the pre-existing quick-benchmark methods
+    // below, which are left untouched).
+    //
+    // Return shape: a flat [NSNumber] array —
+    //   [0] imageDecodeMs, [1] orientationCorrectionMs, [2] preprocessMs,
+    //   [3] inferenceMs, [4] available (1.0 success / 0.0 failed at some step),
+    //   [5...] the raw model output (empty if [4] == 0), so Kotlin still gets a
+    //   real result to postprocess (softmax/argmax for the classifier, box
+    //   decode + NMS for the detector — both already implemented in Kotlin in
+    //   iosMain/ObjectDetector.kt) — a single call does both timing and real
+    //   work, rather than running inference twice.
+
+    @objc public func runClassificationStageTimed(withImageData imageData: Data) -> [NSNumber] {
+        let header0: [NSNumber] = [0, 0, 0, 0, 0]
+        guard let module = classifierModule else { return header0 }
+
+        let tDecode0 = monotonicNowNanos()
+        let rawImage = decodeImageOrNil(imageData)
+        let tDecode1 = monotonicNowNanos()
+        guard let rawImage = rawImage else {
+            return [msBetween(tDecode0, tDecode1), 0, 0, 0, 0]
+        }
+
+        let tOrient0 = monotonicNowNanos()
+        let uiImage = correctOrientation(rawImage)
+        let tOrient1 = monotonicNowNanos()
+
+        let tPre0 = monotonicNowNanos()
+        let prep = resizeAndNormalize(uiImage, width: 260, height: 260,
+                                       mean: (0.485, 0.456, 0.406), std: (0.229, 0.224, 0.225),
+                                       isLetterbox: false)
+        let tPre1 = monotonicNowNanos()
+        guard let prep = prep else {
+            return [msBetween(tDecode0, tDecode1), msBetween(tOrient0, tOrient1), msBetween(tPre0, tPre1), 0, 0]
+        }
+
+        let tInfer0 = monotonicNowNanos()
+        let output = runForward(module: module, data: prep.data, shape: [1, 3, 260, 260], tag: "classification-stage-timed")
+        let tInfer1 = monotonicNowNanos()
+
+        var result: [NSNumber] = [
+            msBetween(tDecode0, tDecode1),
+            msBetween(tOrient0, tOrient1),
+            msBetween(tPre0, tPre1),
+            msBetween(tInfer0, tInfer1),
+            output.isEmpty ? 0 : 1,
+        ]
+        result.append(contentsOf: output)
+        return result
+    }
+
+    @objc public func runDetectionStageTimed(withImageData imageData: Data) -> [NSNumber] {
+        let header0: [NSNumber] = [0, 0, 0, 0, 0]
+        guard let module = detectionModule else { return header0 }
+
+        let tDecode0 = monotonicNowNanos()
+        let rawImage = decodeImageOrNil(imageData)
+        let tDecode1 = monotonicNowNanos()
+        guard let rawImage = rawImage else {
+            return [msBetween(tDecode0, tDecode1), 0, 0, 0, 0]
+        }
+
+        let tOrient0 = monotonicNowNanos()
+        let uiImage = correctOrientation(rawImage)
+        let tOrient1 = monotonicNowNanos()
+
+        let tPre0 = monotonicNowNanos()
+        let prep = resizeAndNormalize(uiImage, width: 640, height: 640,
+                                       mean: (0.0, 0.0, 0.0), std: (1.0, 1.0, 1.0),
+                                       isLetterbox: true)
+        let tPre1 = monotonicNowNanos()
+        guard let prep = prep else {
+            return [msBetween(tDecode0, tDecode1), msBetween(tOrient0, tOrient1), msBetween(tPre0, tPre1), 0, 0]
+        }
+
+        let tInfer0 = monotonicNowNanos()
+        let rawOutput = runForward(module: module, data: prep.data, shape: [1, 3, 640, 640], tag: "detection-stage-timed")
+        let tInfer1 = monotonicNowNanos()
+
+        if rawOutput.isEmpty {
+            return [msBetween(tDecode0, tDecode1), msBetween(tOrient0, tOrient1), msBetween(tPre0, tPre1), msBetween(tInfer0, tInfer1), 0]
+        }
+
+        let unletterboxed = unletterboxBoxes(rawOutput, numClasses: 23,
+                                              scale: prep.scale, padLeft: prep.padLeft, padTop: prep.padTop,
+                                              origWidth: prep.origWidth, origHeight: prep.origHeight)
+        var result: [NSNumber] = [
+            msBetween(tDecode0, tDecode1),
+            msBetween(tOrient0, tOrient1),
+            msBetween(tPre0, tPre1),
+            msBetween(tInfer0, tInfer1),
+            1,
+        ]
+        result.append(contentsOf: unletterboxed)
+        return result
+    }
+
+    @objc public func runDetectionStretchedStageTimed(withImageData imageData: Data, inputSize: Int) -> [NSNumber] {
+        let header0: [NSNumber] = [0, 0, 0, 0, 0]
+        guard let module = detectionModule else { return header0 }
+
+        let tDecode0 = monotonicNowNanos()
+        let rawImage = decodeImageOrNil(imageData)
+        let tDecode1 = monotonicNowNanos()
+        guard let rawImage = rawImage else {
+            return [msBetween(tDecode0, tDecode1), 0, 0, 0, 0]
+        }
+
+        let tOrient0 = monotonicNowNanos()
+        let uiImage = correctOrientation(rawImage)
+        let tOrient1 = monotonicNowNanos()
+
+        let tPre0 = monotonicNowNanos()
+        let prep = resizeAndNormalize(uiImage, width: inputSize, height: inputSize,
+                                       mean: (0.0, 0.0, 0.0), std: (1.0, 1.0, 1.0),
+                                       isLetterbox: false)
+        let tPre1 = monotonicNowNanos()
+        guard let prep = prep else {
+            return [msBetween(tDecode0, tDecode1), msBetween(tOrient0, tOrient1), msBetween(tPre0, tPre1), 0, 0]
+        }
+
+        let tInfer0 = monotonicNowNanos()
+        let rawOutput = runForward(module: module, data: prep.data, shape: [1, 3, inputSize, inputSize], tag: "detection-stretched-stage-timed")
+        let tInfer1 = monotonicNowNanos()
+
+        var result: [NSNumber] = [
+            msBetween(tDecode0, tDecode1),
+            msBetween(tOrient0, tOrient1),
+            msBetween(tPre0, tPre1),
+            msBetween(tInfer0, tInfer1),
+            rawOutput.isEmpty ? 0 : 1,
+        ]
+        result.append(contentsOf: rawOutput)
+        return result
+    }
+
+    // MARK: - Latency benchmarking (quick developer-button protocol, unchanged)
+    //
+    // Added for Phase 3 of the accompanying research project (mobile performance
+    // evaluation). The README's existing "~18ms"/"~24ms"/"sub-100ms" latency claims
+    // had zero instrumentation behind them; these two methods are what actually
+    // measure it, on the real device, through the real ExecuTorch runtime — not a
+    // simulator. Synthetic images only: legitimate for latency (compute cost is
+    // driven by tensor shape, not pixel content), never used for accuracy.
+    //
+    // Left exactly as originally written (including its CFAbsoluteTimeGetCurrent()
+    // timing, which is wall-clock-based rather than a true monotonic tick counter —
+    // see the note on the *StageTimed methods above, which use a genuinely
+    // monotonic clock instead) to avoid any churn on already-verified code. Use
+    // the extended benchmark (runClassificationStageTimed / runDetection*StageTimed
+    // / monotonicNowMs) for anything that will be cited.
+
+    /// Runs the classifier `warmupRuns` times (discarded, lets caches/JIT/thermal
+    /// state settle) then `measuredRuns` times (timed), each on a fresh synthetic
+    /// 260×260 JPEG. Returns per-run wall-clock milliseconds for the measured runs
+    /// only, in run order.
+    @objc public func runLatencyBenchmarkForClassifier(withWarmupRuns warmupRuns: Int, measuredRuns: Int) -> [NSNumber] {
+        guard classifierModule != nil,
+              let imageData = Self.syntheticJpegData(width: 260, height: 260) else { return [] }
+
+        for _ in 0..<warmupRuns {
+            _ = runClassification(withImageData: imageData)
+        }
+
+        var latenciesMs: [NSNumber] = []
+        latenciesMs.reserveCapacity(measuredRuns)
+        for _ in 0..<measuredRuns {
+            let t0 = CFAbsoluteTimeGetCurrent()
+            _ = runClassification(withImageData: imageData)
+            let t1 = CFAbsoluteTimeGetCurrent()
+            latenciesMs.append(NSNumber(value: (t1 - t0) * 1000.0))
+        }
+        return latenciesMs
+    }
+
+    /// Same protocol as the classifier benchmark, but for the detector at a given
+    /// synthetic capture resolution (`imageWidth`×`imageHeight`, before the model's
+    /// own `inputSize` resize/letterbox) — decode and preprocessing cost scale with
+    /// input resolution, so this is swept across plausible camera-capture sizes
+    /// rather than measured at only the model's fixed input size.
+    @objc public func runLatencyBenchmarkForDetector(withInputSize inputSize: Int, isLetterbox: Bool, imageWidth: Int, imageHeight: Int, warmupRuns: Int, measuredRuns: Int) -> [NSNumber] {
+        guard detectionModule != nil,
+              let imageData = Self.syntheticJpegData(width: imageWidth, height: imageHeight) else { return [] }
+
+        func runOnce() {
+            if isLetterbox {
+                _ = runDetection(withImageData: imageData)
+            } else {
+                _ = runDetectionStretched(withImageData: imageData, inputSize: inputSize)
+            }
+        }
+
+        for _ in 0..<warmupRuns {
+            runOnce()
+        }
+
+        var latenciesMs: [NSNumber] = []
+        latenciesMs.reserveCapacity(measuredRuns)
+        for _ in 0..<measuredRuns {
+            let t0 = CFAbsoluteTimeGetCurrent()
+            runOnce()
+            let t1 = CFAbsoluteTimeGetCurrent()
+            latenciesMs.append(NSNumber(value: (t1 - t0) * 1000.0))
+        }
+        return latenciesMs
+    }
+
+    /// Builds a deterministic synthetic JPEG (a striped pattern, not a photo of
+    /// anything real) at the given resolution.
+    private static func syntheticJpegData(width: Int, height: Int) -> Data? {
+        let size = CGSize(width: width, height: height)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1.0
+        format.opaque = true
+        let renderer = UIGraphicsImageRenderer(size: size, format: format)
+        let stripe = max(1, width / 32)
+        let image = renderer.image { context in
+            var x = 0
+            var stripeIndex = 0
+            while x < width {
+                let color: UIColor = stripeIndex % 2 == 0
+                    ? UIColor(red: 60.0 / 255.0, green: 140.0 / 255.0, blue: 60.0 / 255.0, alpha: 1.0)
+                    : UIColor(red: 160.0 / 255.0, green: 200.0 / 255.0, blue: 160.0 / 255.0, alpha: 1.0)
+                color.setFill()
+                context.fill(CGRect(x: x, y: 0, width: stripe, height: height))
+                x += stripe
+                stripeIndex += 1
+            }
+        }
+        return image.jpegData(compressionQuality: 0.9)
+    }
+
+    // MARK: - Publication-protocol utilities (device/build/resource metrics, hashing)
+    //
+    // Added 2026-09-14 so the extended benchmark's device/model/resource metadata
+    // can be collected without hand-rolling C interop on the Kotlin/Native side.
+
+    /// A monotonic clock in nanoseconds since an arbitrary reference point (NOT
+    /// wall-clock time — unaffected by clock/NTP adjustments), for the Kotlin side
+    /// to time cold-loads, end-to-end runs, and Kotlin-side postprocessing.
+    @objc public func monotonicNowMs() -> Double {
+        return Double(monotonicNowNanos()) / 1_000_000.0
+    }
+
+    @objc public func sha256Hex(ofFileAtPath path: String) -> String {
+        guard let data = FileManager.default.contents(atPath: path) else { return "" }
+        return sha256Hex(ofData: data)
+    }
+
+    @objc public func sha256Hex(ofData data: Data) -> String {
+        let digest = SHA256.hash(data: data)
+        return digest.map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// Process-level (not per-thread — iOS does not expose an equivalent to
+    /// Android's Debug.threadCpuTimeNanos() without private APIs) user+system CPU
+    /// time via getrusage(). A CPU-utilization proxy, not a true per-thread figure;
+    /// see the extended benchmark's notes for why this differs from the Android
+    /// metric it sits next to in the same export schema.
+    @objc public func processCpuTimeMs() -> Double {
+        var usage = rusage()
+        getrusage(RUSAGE_SELF, &usage)
+        let userMs = Double(usage.ru_utime.tv_sec) * 1000.0 + Double(usage.ru_utime.tv_usec) / 1000.0
+        let sysMs = Double(usage.ru_stime.tv_sec) * 1000.0 + Double(usage.ru_stime.tv_usec) / 1000.0
+        return userMs + sysMs
+    }
+
+    /// Resident memory (mach_task_basic_info.resident_size) — conceptually closer
+    /// to RSS than to Android's PSS (iOS exposes no PSS-equivalent to third-party
+    /// code), so it is not directly comparable across platforms. Flagged as such
+    /// in the extended benchmark's notes.
+    @objc public func residentMemoryBytes() -> UInt64 {
+        var info = mach_task_basic_info()
+        var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size / MemoryLayout<integer_t>.size)
+        let kerr: kern_return_t = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                task_info(mach_task_self_, task_flavor_t(MACH_TASK_BASIC_INFO), $0, &count)
+            }
+        }
+        return kerr == KERN_SUCCESS ? info.resident_size : 0
+    }
+
+    /// Sum of file sizes under the app's own bundle — the closest same-effort
+    /// equivalent to Android's base-APK-file-size figure. Excludes on-device
+    /// install-time optimizations, App Thinning slicing already applied by the
+    /// App Store, and any data the app has written since install, so — like the
+    /// Android figure it sits next to — this is a best-effort under-count, not a
+    /// true "installed size" as Settings > General > iPhone Storage would report.
+    @objc public func installedAppSizeBytes() -> Int64 {
+        let bundleURL = Bundle.main.bundleURL
+        guard let enumerator = FileManager.default.enumerator(
+            at: bundleURL, includingPropertiesForKeys: [.fileSizeKey], options: [], errorHandler: nil
+        ) else { return 0 }
+        var total: Int64 = 0
+        for case let fileURL as URL in enumerator {
+            if let sizeValue = try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize {
+                total += Int64(sizeValue)
+            }
+        }
+        return total
+    }
+
+    @objc public func isRunningOnSimulator() -> Bool {
+        #if targetEnvironment(simulator)
+        return true
+        #else
+        return false
+        #endif
+    }
+
+    @objc public func cpuArchitecture() -> String {
+        #if arch(arm64)
+        return "arm64"
+        #elseif arch(x86_64)
+        return "x86_64"
+        #else
+        return "unknown"
+        #endif
+    }
+
+    /// The raw hardware identifier (e.g. "iPhone16,2"), more specific than
+    /// UIDevice.currentDevice.model ("iPhone"). Empty string on failure.
+    @objc public func deviceModelIdentifier() -> String {
+        var systemInfo = utsname()
+        uname(&systemInfo)
+        let mirror = Mirror(reflecting: systemInfo.machine)
+        return mirror.children.reduce("") { partial, element in
+            guard let value = element.value as? Int8, value != 0 else { return partial }
+            return partial + String(UnicodeScalar(UInt8(value)))
+        }
+    }
+
     // MARK: - Private helpers
+
+    private func monotonicNowNanos() -> UInt64 {
+        return DispatchTime.now().uptimeNanoseconds
+    }
+
+    /// Elapsed milliseconds between two monotonic timestamps, boxed as NSNumber.
+    ///
+    /// Every caller puts the value straight into an `[NSNumber]` result array for
+    /// Kotlin, and Swift will not implicitly bridge a `Double` into one, so the
+    /// boxing happens here rather than at eighteen call sites.
+    private func msBetween(_ start: UInt64, _ end: UInt64) -> NSNumber {
+        return NSNumber(value: Double(end - start) / 1_000_000.0)
+    }
 
     private func runForward(module: Module, data: Data,
                              shape: [Int], tag: String) -> [NSNumber] {
@@ -172,14 +541,72 @@ public class ExecuTorchBridge: NSObject {
         }
     }
 
+    /// Un-letterboxes a YOLO-layout [1, 4+numClasses, N] raw output's boxes back to
+    /// original-aspect-ratio 640×640 canvas space, in place, and returns it — the
+    /// exact box-rewrite loop `runDetection` used to inline, extracted so
+    /// `runDetectionStageTimed` can call the identical logic.
+    private func unletterboxBoxes(_ rawOutput: [NSNumber], numClasses: Int,
+                                   scale: Float, padLeft: Float, padTop: Float,
+                                   origWidth: Float, origHeight: Float) -> [NSNumber] {
+        var output = rawOutput
+        let rowStride = numClasses + 4
+        let n = output.count / rowStride
+        if n <= 0 { return output }
+
+        for i in 0..<n {
+            let cx = output[0 * n + i].floatValue
+            let cy = output[1 * n + i].floatValue
+            let w  = output[2 * n + i].floatValue
+            let h  = output[3 * n + i].floatValue
+
+            let x1Lb = cx - w / 2.0
+            let y1Lb = cy - h / 2.0
+            let x2Lb = cx + w / 2.0
+            let y2Lb = cy + h / 2.0
+
+            let x1 = min(max(0.0, ((x1Lb - padLeft) / scale / origWidth) * 640.0), 640.0)
+            let y1 = min(max(0.0, ((y1Lb - padTop) / scale / origHeight) * 640.0), 640.0)
+            let x2 = min(max(0.0, ((x2Lb - padLeft) / scale / origWidth) * 640.0), 640.0)
+            let y2 = min(max(0.0, ((y2Lb - padTop) / scale / origHeight) * 640.0), 640.0)
+
+            let newCx = (x1 + x2) / 2.0
+            let newCy = (y1 + y2) / 2.0
+            let newW  = max(0.0, x2 - x1)
+            let newH  = max(0.0, y2 - y1)
+
+            output[0 * n + i] = NSNumber(value: newCx)
+            output[1 * n + i] = NSNumber(value: newCy)
+            output[2 * n + i] = NSNumber(value: newW)
+            output[3 * n + i] = NSNumber(value: newH)
+        }
+
+        return output
+    }
+
+    private func decodeImageOrNil(_ data: Data) -> UIImage? {
+        return UIImage(data: data)
+    }
+
+    private func correctOrientation(_ image: UIImage) -> UIImage {
+        return image.fixOrientation()
+    }
+
     /// Decodes JPEG/PNG bytes, resizes to (width × height) with optional letterboxing, returns CHW float array and preprocessing metadata.
     private func preprocessCHW(_ data: Data, width: Int, height: Int,
                                 mean: (Float, Float, Float),
                                 std: (Float, Float, Float),
                                 isLetterbox: Bool = false) -> PreprocessResult? {
-        guard let rawImage = UIImage(data: data) else { return nil }
-        let uiImage = rawImage.fixOrientation()
+        guard let rawImage = decodeImageOrNil(data) else { return nil }
+        let uiImage = correctOrientation(rawImage)
+        return resizeAndNormalize(uiImage, width: width, height: height, mean: mean, std: std, isLetterbox: isLetterbox)
+    }
 
+    /// The resize/letterbox + pixel-normalization half of preprocessCHW, extracted
+    /// so the *StageTimed methods can time it separately from decode/orientation.
+    private func resizeAndNormalize(_ uiImage: UIImage, width: Int, height: Int,
+                                     mean: (Float, Float, Float),
+                                     std: (Float, Float, Float),
+                                     isLetterbox: Bool) -> PreprocessResult? {
         let origW = Float(uiImage.size.width)
         let origH = Float(uiImage.size.height)
         if origW <= 0 || origH <= 0 { return nil }
@@ -259,4 +686,3 @@ public class ExecuTorchBridge: NSObject {
         )
     }
 }
-

@@ -37,6 +37,7 @@ import com.nkwabyte.cropdiseasedetection.generated.resources.*
 import com.nkwabyte.cropdiseasedetection.common.navigation.appbar.AppBar
 import com.nkwabyte.cropdiseasedetection.ui.components.CropTileButton
 import com.nkwabyte.cropdiseasedetection.common.model.CropOption
+import com.nkwabyte.cropdiseasedetection.common.model.SupportedCrop
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AppViewModel
 import com.nkwabyte.cropdiseasedetection.ui.theme.CropDiseaseDetectionTheme
 import org.koin.compose.koinInject
@@ -80,9 +81,9 @@ fun SelectCropScreen(
 
     val cropOptions = remember {
         listOf(
-            CropOption(Res.string.crop_corn, Res.drawable.corn_image, Res.string.crop_corn_image_desc),
-            CropOption(Res.string.crop_tomato, Res.drawable.tomato_image, Res.string.crop_tomato_image_desc),
-            CropOption(Res.string.crop_pepper, Res.drawable.pepper_image, Res.string.crop_pepper_image_desc),
+            CropOption(SupportedCrop.CORN, Res.string.crop_corn, Res.drawable.corn_image, Res.string.crop_corn_image_desc),
+            CropOption(SupportedCrop.TOMATO, Res.string.crop_tomato, Res.drawable.tomato_image, Res.string.crop_tomato_image_desc),
+            CropOption(SupportedCrop.PEPPER, Res.string.crop_pepper, Res.drawable.pepper_image, Res.string.crop_pepper_image_desc),
             // Add more crops here if needed
         )
     }
@@ -168,8 +169,10 @@ fun SelectCropScreen(
                         cropImageContentDescResId = crop.imageContentDescriptionResId,
                         isSelected = isSelected,
                         onClick = {
-                            println("SelectCropScreen::ONClick: Selected crop: $cropNameStr")
-                            appViewModel.setSelectedCrop(cropNameStr)
+                            println("SelectCropScreen::ONClick: Selected crop: $cropNameStr (${crop.crop.canonicalLabel})")
+                            // The display name goes to the UI, the canonical id
+                            // goes to the pipeline — see CropOption's doc comment.
+                            appViewModel.setSelectedCrop(cropNameStr, crop.crop.canonicalLabel)
                         }
                     )
                 }

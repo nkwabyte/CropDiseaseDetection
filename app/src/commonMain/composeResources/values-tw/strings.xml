@@ -107,6 +107,7 @@
     <string name="no_detection_message">Yɛanhu yareɛ biara wɔ mfonini yi so.</string>
     <string name="error_detecting_message">Mfomso bi kɔɔ so, yɛsrɛ wo yɛ bio.</string>
     <string name="classifier_rejection_message">Eyi nyɛ aburo, mako, anaa ntoosi ahaban pa.</string>
+    <string name="crop_mismatch_message">Eyi te sɛ %1$s ahaban, nanso woapaw %2$s. Sesa wo dua a woapaw no anaa scan %2$s ahaban.</string>
 
     <!-- Flag functionality strings -->
     <string name="flag_button_text">Hyɛ Nso</string>

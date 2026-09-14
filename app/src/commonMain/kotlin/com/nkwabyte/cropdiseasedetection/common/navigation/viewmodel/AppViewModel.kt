@@ -21,6 +21,7 @@ class AppViewModel(
     private val _appState = MutableStateFlow(
         AppData(
             selectedCrop = null,
+            selectedCropId = null,
             selectedImageByteArray = null,
             detectionResult = emptyList(),
             isLoading = false,
@@ -57,10 +58,18 @@ class AppViewModel(
         _appState.update { it.copy(recommendationLanguage = language) }
     }
 
-    fun setSelectedCrop(crop: String) {
+    /**
+     * Records the user's crop choice.
+     *
+     * @param crop the translated display name, for the UI only.
+     * @param cropId the canonical [SupportedCrop] id, which is what the
+     *        detection pipeline routes on.
+     */
+    fun setSelectedCrop(crop: String, cropId: String) {
         _appState.update { currentState ->
             currentState.copy(
                 selectedCrop = crop,
+                selectedCropId = cropId,
                 selectedImageByteArray = null,
                 detectionResult = emptyList()
             )
@@ -148,6 +157,7 @@ class AppViewModel(
         _appState.update { currentState ->
             AppData(
                 selectedCrop = null,
+                selectedCropId = null,
                 selectedImageByteArray = null,
                 detectionResult = emptyList(),
                 isLoading = false,

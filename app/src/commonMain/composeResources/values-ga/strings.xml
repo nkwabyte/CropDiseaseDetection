@@ -107,6 +107,7 @@
     <string name="no_detection_message">Anaaa hela ko yɛ mfoniri yi no o.</string>
     <string name="error_detecting_message">Tɔmɔ ko ba yɛ taomɔ lɔ mli, ka tsɔɔmɔ ekonn.</string>
     <string name="classifier_rejection_message">Eji ablona, shito alo amɔdu baa kpakpa o.</string>
+    <string name="crop_mismatch_message">Enɛ tamɔ %1$s baa, shi ohala %2$s. Tsake nɔ ni ohala lɛ aloo kwɛ %2$s baa.</string>
 
     <!-- Flag functionality strings -->
     <string name="flag_button_text">Kadimɔ</string>

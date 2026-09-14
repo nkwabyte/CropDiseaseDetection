@@ -1,16 +1,54 @@
 package com.nkwabyte.cropdiseasedetection.common.helpers
 
+import android.app.ActivityManager
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.BatteryManager
+import android.os.Build
+import android.os.Debug
+import android.os.PowerManager
+import android.os.Process
 import android.util.Log
 import androidx.core.graphics.scale
+import com.nkwabyte.cropdiseasedetection.common.utils.ImageOrientation
+import com.nkwabyte.cropdiseasedetection.BuildKonfig
 import com.nkwabyte.cropdiseasedetection.common.AppConstants
+import com.nkwabyte.cropdiseasedetection.common.model.BENCHMARK_COLD_LOAD_RUNS
+import com.nkwabyte.cropdiseasedetection.common.model.BENCHMARK_EXTENDED_MEASURED_RUNS
+import com.nkwabyte.cropdiseasedetection.common.model.BENCHMARK_EXTENDED_WARMUP_RUNS
+import com.nkwabyte.cropdiseasedetection.common.model.BENCHMARK_MEASURED_RUNS
+import com.nkwabyte.cropdiseasedetection.common.model.BENCHMARK_WARMUP_RUNS
+import com.nkwabyte.cropdiseasedetection.common.model.BenchmarkExport
+import com.nkwabyte.cropdiseasedetection.common.model.BenchmarkImageManifestEntry
+import com.nkwabyte.cropdiseasedetection.common.model.BenchmarkResult
 import com.nkwabyte.cropdiseasedetection.common.model.ClassificationResult
+import com.nkwabyte.cropdiseasedetection.common.model.ColdLoadBenchmark
+import com.nkwabyte.cropdiseasedetection.common.model.CpuUtilization
 import com.nkwabyte.cropdiseasedetection.common.model.DetectionModelCatalog
 import com.nkwabyte.cropdiseasedetection.common.model.DetectionModelSpec
 import com.nkwabyte.cropdiseasedetection.common.model.DetectionOutputLayout
 import com.nkwabyte.cropdiseasedetection.common.model.DetectionResult
+import com.nkwabyte.cropdiseasedetection.common.model.DeviceEnvironment
+import com.nkwabyte.cropdiseasedetection.common.model.EndToEndBenchmark
+import com.nkwabyte.cropdiseasedetection.common.model.MemorySample
+import com.nkwabyte.cropdiseasedetection.common.model.ModelArtifact
+import com.nkwabyte.cropdiseasedetection.common.model.OrientedImageSize
+import com.nkwabyte.cropdiseasedetection.common.model.BenchmarkPath
+import com.nkwabyte.cropdiseasedetection.common.model.SupportedCrop
+import com.nkwabyte.cropdiseasedetection.common.pipeline.BOX_COORDINATE_SPACE
+import com.nkwabyte.cropdiseasedetection.common.pipeline.DetectionPipeline
+import com.nkwabyte.cropdiseasedetection.common.pipeline.ObjectDetectorEngine
+import com.nkwabyte.cropdiseasedetection.common.pipeline.PipelineOutcome
+import com.nkwabyte.cropdiseasedetection.common.pipeline.RoutingDecision
+import com.nkwabyte.cropdiseasedetection.common.model.StageLatencyMs
+import com.nkwabyte.cropdiseasedetection.common.model.computeLatencyStats
+import com.nkwabyte.cropdiseasedetection.common.model.computeStageBenchmark
+import com.nkwabyte.cropdiseasedetection.common.model.formatBenchmarkCsv
+import com.nkwabyte.cropdiseasedetection.common.model.formatBenchmarkExportCsv
+import com.nkwabyte.cropdiseasedetection.common.model.formatBenchmarkExportJson
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import org.pytorch.executorch.EValue
@@ -18,6 +56,7 @@ import org.pytorch.executorch.Module
 import org.pytorch.executorch.Tensor
 import java.io.File
 import java.io.FileOutputStream
+import java.security.MessageDigest
 import kotlin.math.roundToInt
 
 actual class ObjectDetector actual constructor() : KoinComponent {
@@ -67,38 +106,52 @@ actual class ObjectDetector actual constructor() : KoinComponent {
         }
     }
 
-    actual fun classify(imageBytes: ByteArray): ClassificationResult? {
-        val module = _classifierModule ?: return null
-        val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-            ?: return null
+    // -------------------------------------------------------------------------------
+    // Public inference entry points.
+    //
+    // Each is a one-line delegation to the stage-timed implementation further
+    // down, which is the only copy of the algorithm. Neither does any crop
+    // routing: the two-stage gating lives in commonMain's DetectionPipeline /
+    // CropRoutingPolicy so both platforms and the benchmark share one decision.
+    // -------------------------------------------------------------------------------
 
-        val resizedBitmap = bitmap.scale(260, 260)
-        
-        val floatArray = bitmapToFloat32Array(
-            resizedBitmap,
-            TORCHVISION_NORM_MEAN_RGB,
-            TORCHVISION_NORM_STD_RGB
-        )
-        
-        val inputTensor = Tensor.fromBlob(
-            floatArray,
-            longArrayOf(1, 3, 260, 260)
-        )
+    actual fun classify(imageBytes: ByteArray): ClassificationResult? =
+        classifyStageTimed(imageBytes).first
 
+    actual fun detect(imageBytes: ByteArray): List<DetectionResult> =
+        detectStageTimed(imageBytes).first
+
+    actual fun orientedImageSize(imageBytes: ByteArray): OrientedImageSize? =
+        ImageOrientation.orientedSize(imageBytes)
+
+    // -------------------------------------------------------------------------------
+    // Stage helpers extracted from classify()/detect(). Each does exactly what the
+    // corresponding inline code used to do — nothing here changes behavior, it only
+    // gives each step a name and a boundary a timer can be placed around.
+    // -------------------------------------------------------------------------------
+
+    /**
+     * The one decode path for both models. Applies EXIF orientation so the
+     * classifier and the detector always receive the same visually upright
+     * image, and so Android matches what iOS's `UIImage.fixOrientation()` has
+     * always done — see common/utils/ImageOrientation.kt and the C025 worklog
+     * entry. Returns null only when the bytes cannot be decoded at all.
+     */
+    private fun decodeUprightOrNull(imageBytes: ByteArray): ImageOrientation.Decoded? =
+        ImageOrientation.decodeUpright(imageBytes)
+
+    private fun runClassifierInference(module: Module, floatArray: FloatArray): FloatArray? {
+        val inputTensor = Tensor.fromBlob(floatArray, longArrayOf(1, 3, 260, 260))
         val outputTensors = module.forward(EValue.from(inputTensor))
-        if (outputTensors == null || outputTensors.isEmpty()) {
-            return null
-        }
-        
+        if (outputTensors == null || outputTensors.isEmpty()) return null
         val outputTensor = outputTensors[0].toTensor()
         val outputArray = outputTensor.getDataAsFloatArray()
+        if (outputArray == null || outputArray.size < CROP_CLASSES.size) return null
+        return outputArray
+    }
 
-        if (outputArray == null || outputArray.size < CROP_CLASSES.size) {
-            return null
-        }
-
+    private fun postprocessClassification(outputArray: FloatArray): ClassificationResult {
         val probs = softmax(outputArray, CROP_CLASSES.size)
-
         var maxProb = -1f
         var maxIdx = -1
         for (i in probs.indices) {
@@ -107,13 +160,11 @@ actual class ObjectDetector actual constructor() : KoinComponent {
                 maxIdx = i
             }
         }
-
         // Two rejection mechanisms that fail differently: the learned "Other" class
         // catches the non-crop species it was trained on, the confidence floor still
         // catches confidently-wrong predictions on species it has never seen.
         val threshold = settingsManager.getClassifierThreshold()
         val label = if (maxIdx == OTHER_INDEX || maxProb < threshold) "unknown" else CROP_CLASSES[maxIdx]
-
         return ClassificationResult(
             label = label,
             confidence = maxProb,
@@ -121,57 +172,48 @@ actual class ObjectDetector actual constructor() : KoinComponent {
         )
     }
 
-    actual fun detect(imageBytes: ByteArray): List<DetectionResult> {
-        val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-            ?: return emptyList()
-        val module = _module ?: return emptyList()
-        val spec = _loadedSpec ?: return emptyList()
+    private data class DetectorPreprocessResult(
+        val bitmap: Bitmap,
+        val scale: Float,
+        val padLeft: Float,
+        val padTop: Float,
+    )
 
-        val origWidth = bitmap.width
-        val origHeight = bitmap.height
-        val size = spec.inputSize
-
+    private fun preprocessDetectorBitmap(bitmap: Bitmap, spec: DetectionModelSpec, size: Int): DetectorPreprocessResult {
         // YOLO was trained with letterboxing, so stretching to 640×640 distorts the
         // aspect ratio and costs detections. RT-DETR is exported the way Ultralytics
         // runs it — LetterBox(auto=false, scaleFill=true), i.e. a plain stretch — so
         // padding it would be the mismatch instead.
-        val scale: Float
-        val padLeft: Float
-        val padTop: Float
-        val inputBitmap: Bitmap
-        if (spec.letterbox) {
+        return if (spec.letterbox) {
             val (letterboxed, meta) = letterboxBitmap(bitmap, size)
-            inputBitmap = letterboxed
-            scale = meta[0]; padLeft = meta[1]; padTop = meta[2]
+            DetectorPreprocessResult(letterboxed, meta[0], meta[1], meta[2])
         } else {
-            inputBitmap = bitmap.scale(size, size)
-            scale = 1f; padLeft = 0f; padTop = 0f
+            DetectorPreprocessResult(bitmap.scale(size, size), 1f, 0f, 0f)
         }
+    }
 
-        val floatArray = bitmapToFloat32Array(
-            inputBitmap,
-            floatArrayOf(0f, 0f, 0f),
-            floatArrayOf(1f, 1f, 1f)
-        )
-        // Bitmap.scale() can hand back the source itself when the dimensions already
-        // match, so recycling unconditionally would free a bitmap we don't own.
-        if (inputBitmap !== bitmap) inputBitmap.recycle()
-
-        val inputTensor = Tensor.fromBlob(
-            floatArray,
-            longArrayOf(1, 3, size.toLong(), size.toLong())
-        )
-
+    private fun runDetectorInference(module: Module, floatArray: FloatArray, size: Int): Pair<FloatArray, LongArray>? {
+        val inputTensor = Tensor.fromBlob(floatArray, longArrayOf(1, 3, size.toLong(), size.toLong()))
         val outputTensors = module.forward(EValue.from(inputTensor))
-        if (outputTensors == null || outputTensors.isEmpty()) {
-            return emptyList()
-        }
-
+        if (outputTensors == null || outputTensors.isEmpty()) return null
         val outputTensor = outputTensors[0].toTensor()
-        val outputArray = outputTensor.getDataAsFloatArray()
+        val outputArray = outputTensor.getDataAsFloatArray() ?: return null
         val outputShape = outputTensor.shape()
-        val threshold = settingsManager.getDetectionThreshold()
+        return outputArray to outputShape
+    }
 
+    private fun decodeDetections(
+        outputArray: FloatArray,
+        outputShape: LongArray,
+        spec: DetectionModelSpec,
+        size: Int,
+        scale: Float,
+        padLeft: Float,
+        padTop: Float,
+        origWidth: Int,
+        origHeight: Int,
+        threshold: Float,
+    ): List<DetectionResult> {
         val preliminaryDetections = mutableListOf<DetectionResult>()
 
         when (spec.layout) {
@@ -238,12 +280,903 @@ actual class ObjectDetector actual constructor() : KoinComponent {
             }
         }
 
+        return preliminaryDetections
+    }
+
+    // -------------------------------------------------------------------------------
+    // Quick developer-button benchmark (unchanged from the original instrumentation).
+    // -------------------------------------------------------------------------------
+
+    actual suspend fun runLatencyBenchmark(): List<BenchmarkResult> {
+        val deviceInfo = "${Build.MANUFACTURER} ${Build.MODEL} (Android ${Build.VERSION.RELEASE}, SDK ${Build.VERSION.SDK_INT})"
+        val results = mutableListOf<BenchmarkResult>()
+
+        if (_classifierModule != null) {
+            val imageBytes = syntheticJpegBytes(260, 260)
+            val latencies = mutableListOf<Double>()
+            repeat(BENCHMARK_WARMUP_RUNS) { classify(imageBytes) }
+            repeat(BENCHMARK_MEASURED_RUNS) {
+                val t0 = System.nanoTime()
+                classify(imageBytes)
+                val t1 = System.nanoTime()
+                latencies.add((t1 - t0) / 1_000_000.0)
+            }
+            results.add(
+                BenchmarkResult(
+                    modelName = CLASSIFIER_ASSET,
+                    stage = "classifier",
+                    deviceInfo = deviceInfo,
+                    warmupRuns = BENCHMARK_WARMUP_RUNS,
+                    measuredRuns = BENCHMARK_MEASURED_RUNS,
+                    stats = computeLatencyStats(latencies),
+                    rawLatenciesMs = latencies
+                )
+            )
+        }
+
+        val spec = _loadedSpec
+        if (_module != null && spec != null) {
+            // Detection latency depends on the pre-resize image resolution too (decode +
+            // letterbox/scale cost scales with it), so sweep resolutions a real camera
+            // capture could plausibly hand in, rather than just the model's fixed input size.
+            for ((w, h) in BENCHMARK_IMAGE_SIZES) {
+                val imageBytes = syntheticJpegBytes(w, h)
+                val latencies = mutableListOf<Double>()
+                repeat(BENCHMARK_WARMUP_RUNS) { detect(imageBytes) }
+                repeat(BENCHMARK_MEASURED_RUNS) {
+                    val t0 = System.nanoTime()
+                    detect(imageBytes)
+                    val t1 = System.nanoTime()
+                    latencies.add((t1 - t0) / 1_000_000.0)
+                }
+                results.add(
+                    BenchmarkResult(
+                        modelName = "${spec.assetName}@${w}x${h}",
+                        stage = "detector",
+                        deviceInfo = deviceInfo,
+                        warmupRuns = BENCHMARK_WARMUP_RUNS,
+                        measuredRuns = BENCHMARK_MEASURED_RUNS,
+                        stats = computeLatencyStats(latencies),
+                        rawLatenciesMs = latencies
+                    )
+                )
+            }
+        }
+
+        if (results.isNotEmpty()) {
+            writeBenchmarkCsv(results)
+        }
+        return results
+    }
+
+    // -------------------------------------------------------------------------------
+    // Publication-protocol extended benchmark.
+    //
+    // Every timed call below goes through classify()/detect() or the same private
+    // stage-helpers they call — this function adds System.nanoTime() timers around
+    // existing calls, it does not reimplement or alter what they compute. Metrics
+    // this platform/run cannot measure defensibly are still reported, with an
+    // explicit caveat appended to `notes` — never silently omitted or invented.
+    // -------------------------------------------------------------------------------
+
+    actual suspend fun runExtendedBenchmark(
+        warmupRuns: Int,
+        measuredRuns: Int,
+    ): BenchmarkExport {
+        // Idempotent no-ops if already loaded — makes device/model metadata and cold
+        // load timing meaningful even if this is called before anything else has run.
+        loadClassifierModel()
+        loadModel()
+
+        val notes = mutableListOf<String>()
+        notes.add(
+            "Timing uses monotonic clocks (System.nanoTime()) around the same " +
+                "classify()/detect() code paths used in production; no external " +
+                "tool or automation-layer round-trip time is included in any " +
+                "figure in this export."
+        )
+
+        // ---- Cold model-loading time ------------------------------------------------
+        val classifierColdLoadMs = mutableListOf<Double>()
+        val detectorColdLoadMs = mutableListOf<Double>()
+        repeat(BENCHMARK_COLD_LOAD_RUNS) {
+            release()
+            val t0 = System.nanoTime()
+            loadClassifierModel()
+            val t1 = System.nanoTime()
+            loadModel()
+            val t2 = System.nanoTime()
+            classifierColdLoadMs.add((t1 - t0) / 1_000_000.0)
+            detectorColdLoadMs.add((t2 - t1) / 1_000_000.0)
+        }
+        val coldLoad = ColdLoadBenchmark(
+            classifierColdLoad = if (classifierColdLoadMs.isNotEmpty()) computeLatencyStats(classifierColdLoadMs) else null,
+            detectorColdLoad = if (detectorColdLoadMs.isNotEmpty()) computeLatencyStats(detectorColdLoadMs) else null,
+            repetitions = BENCHMARK_COLD_LOAD_RUNS,
+            note = "Each repetition calls release() first, so this is a genuine cold " +
+                "load (module and spec state cleared), not the idempotent no-op " +
+                "loadModel()/loadClassifierModel() take when the requested model " +
+                "is already resident. release() is only invoked this way from the " +
+                "benchmark path — normal app usage never forces a mid-session " +
+                "cold reload.",
+        )
+
+        val spec = _loadedSpec
+        val classifierModule = _classifierModule
+        val detectorModule = _module
+
+        // ---- Model artifacts (size + SHA-256) ---------------------------------------
+        val modelArtifacts = mutableListOf<ModelArtifact>()
+        try {
+            val classifierPath = File(assetFilePath(context, CLASSIFIER_ASSET))
+            modelArtifacts.add(
+                ModelArtifact(
+                    name = "classifier",
+                    assetFileName = CLASSIFIER_ASSET,
+                    sizeBytes = classifierPath.length(),
+                    sha256 = sha256Of(classifierPath),
+                )
+            )
+        } catch (e: Exception) {
+            notes.add("Could not hash the classifier model file: ${e.message}")
+        }
+        if (spec != null) {
+            try {
+                val detectorPath = File(assetFilePath(context, spec.assetName))
+                modelArtifacts.add(
+                    ModelArtifact(
+                        name = "detector (${spec.displayName})",
+                        assetFileName = spec.assetName,
+                        sizeBytes = detectorPath.length(),
+                        sha256 = sha256Of(detectorPath),
+                    )
+                )
+            } catch (e: Exception) {
+                notes.add("Could not hash the detector model file: ${e.message}")
+            }
+        } else {
+            notes.add("No detector model was loaded; the detector model artifact and all detector stage benchmarks are omitted (not zero-filled).")
+        }
+
+        // ---- Deterministic benchmark images + manifest ------------------------------
+        val classifierImageBytes = syntheticJpegBytes(260, 260)
+        val detectorImagesBySize = BENCHMARK_IMAGE_SIZES.associateWith { pair -> syntheticJpegBytes(pair.first, pair.second) }
+        val imageManifest = mutableListOf<BenchmarkImageManifestEntry>()
+        imageManifest.add(
+            BenchmarkImageManifestEntry(
+                id = "classifier_260x260",
+                widthPx = 260,
+                heightPx = 260,
+                sizeBytes = classifierImageBytes.size.toLong(),
+                sha256 = sha256Of(classifierImageBytes),
+                source = "synthetic_striped_pattern",
+            )
+        )
+        for ((w, h) in BENCHMARK_IMAGE_SIZES) {
+            val bytes = detectorImagesBySize.getValue(w to h)
+            imageManifest.add(
+                BenchmarkImageManifestEntry(
+                    id = "detector_${w}x${h}",
+                    widthPx = w,
+                    heightPx = h,
+                    sizeBytes = bytes.size.toLong(),
+                    sha256 = sha256Of(bytes),
+                    source = "synthetic_striped_pattern",
+                )
+            )
+        }
+        notes.add(
+            "All benchmark images are deterministic synthetic striped patterns " +
+                "(syntheticJpegBytes), not photographs. Legitimate for latency-only " +
+                "timing since ExecuTorch's compute cost is driven by tensor shape, " +
+                "not pixel content — but NOT used for any accuracy or output-" +
+                "agreement claim here. The cross-platform output-agreement " +
+                "procedure uses real checksum-locked images instead."
+        )
+
+        // ---- Classifier stage benchmark ----------------------------------------------
+        val classifierStage = if (classifierModule == null) {
+            // Reporting a zero-filled StageBenchmark here would be indistinguishable
+            // from an immeasurably fast classifier. Omit it and say why instead.
+            notes.add(
+                "Classifier model was not loaded; classifierStage is omitted entirely " +
+                    "rather than zero-filled, and no end-to-end routing path could run."
+            )
+            null
+        } else {
+            repeat(warmupRuns) { classifyStageTimed(classifierImageBytes) }
+            val classifierRuns = mutableListOf<StageLatencyMs>()
+            repeat(measuredRuns) { classifierRuns.add(classifyStageTimed(classifierImageBytes).second) }
+            if (classifierRuns.isEmpty()) {
+                notes.add("measuredRuns was 0, so classifierStage is omitted rather than zero-filled.")
+                null
+            } else {
+                computeStageBenchmark("classifier_260x260", warmupRuns, classifierRuns)
+            }
+        }
+
+        // ---- Detector stage benchmark per resolution ---------------------------------
+        val detectorStageBySize = mutableMapOf<String, com.nkwabyte.cropdiseasedetection.common.model.StageBenchmark>()
+        if (detectorModule != null && spec != null) {
+            for ((w, h) in BENCHMARK_IMAGE_SIZES) {
+                val bytes = detectorImagesBySize.getValue(w to h)
+                repeat(warmupRuns) { detectStageTimed(bytes) }
+                val runs = mutableListOf<StageLatencyMs>()
+                repeat(measuredRuns) { runs.add(detectStageTimed(bytes).second) }
+                if (runs.isNotEmpty()) {
+                    detectorStageBySize["${w}x${h}"] = computeStageBenchmark("detector_${w}x${h}", warmupRuns, runs)
+                }
+            }
+        } else {
+            notes.add("No detector model was loaded; detector stage benchmarks are omitted entirely.")
+        }
+
+        // ---- End-to-end benchmark: the CORRECTED production pipeline ----------------
+        // DetectionPipeline is the same object DetectionViewModel.detect() drives,
+        // so this measures the shipped decision sequence rather than an idealized
+        // one: ensure classifier loaded -> decode + EXIF orientation -> classifier
+        // preprocess/inference/postprocess -> routing decision -> (only if routed)
+        // ensure detector loaded -> detector stages -> exact class-id filtering.
+        val pipeline = DetectionPipeline(ObjectDetectorEngine(this))
+        val (e2eWidth, e2eHeight) = BENCHMARK_IMAGE_SIZES.first()
+        val e2eImageBytes = detectorImagesBySize.getValue(e2eWidth to e2eHeight)
+        val e2eImageId = "detector_${e2eWidth}x${e2eHeight}"
+
+        val correctedStageOrder = listOf(
+            "ensureClassifierLoaded(idempotent)",
+            "decode+exifOrientation",
+            "classifierPreprocess+inference+postprocess",
+            "routingDecision",
+            "ensureDetectorLoaded(idempotent, routed only)",
+            "detectorPreprocess+inference+postprocess(routed only)",
+            "classIdFiltering(routed only)",
+        )
+
+        suspend fun measurePath(
+            pathId: String,
+            selectedCropId: String?,
+        ): EndToEndBenchmark {
+            repeat(warmupRuns) { pipeline.run(e2eImageBytes, selectedCropId) }
+            val latencies = mutableListOf<Double>()
+            var successCount = 0
+            var failureCount = 0
+            var detectorExecuted = 0
+            var detectorSkipped = 0
+            val failureMessages = mutableListOf<String>()
+            // The pipeline's own per-stage timings for these same runs — the only
+            // place the routing stage can actually be measured.
+            val stageRuns = mutableListOf<StageLatencyMs>()
+            repeat(measuredRuns) {
+                try {
+                    val t0 = System.nanoTime()
+                    val result = pipeline.run(e2eImageBytes, selectedCropId, instrumented = true)
+                    val t1 = System.nanoTime()
+                    latencies.add((t1 - t0) / 1_000_000.0)
+                    if (result.detectorExecuted) detectorExecuted++ else detectorSkipped++
+                    result.timing?.let { stageRuns.add(it) }
+                    if (result.outcome == PipelineOutcome.CLASSIFIER_ERROR ||
+                        result.outcome == PipelineOutcome.DETECTOR_ERROR
+                    ) {
+                        failureCount++
+                        if (failureMessages.size < 20) {
+                            failureMessages.add(result.errorMessage ?: result.outcome.name)
+                        }
+                    } else {
+                        successCount++
+                    }
+                } catch (e: Exception) {
+                    failureCount++
+                    if (failureMessages.size < 20) {
+                        failureMessages.add(e.message ?: e.javaClass.simpleName)
+                    }
+                }
+            }
+            return EndToEndBenchmark(
+                observedStageOrder = correctedStageOrder,
+                representativeImageId = e2eImageId,
+                stats = computeLatencyStats(latencies.ifEmpty { listOf(0.0) }),
+                offlineSuccessCount = successCount,
+                offlineFailureCount = failureCount,
+                failureMessages = failureMessages,
+                warmupRuns = warmupRuns,
+                measuredRuns = measuredRuns,
+                path = pathId,
+                detectorExecutedCount = detectorExecuted,
+                detectorSkippedCount = detectorSkipped,
+                stageBreakdown = if (stageRuns.isEmpty()) {
+                    null
+                } else {
+                    computeStageBenchmark("end_to_end_$pathId", warmupRuns, stageRuns)
+                },
+            )
+        }
+
+        // Which routing paths this image can actually drive is a property of the
+        // classifier's verdict on it, which the benchmark must not fake. Probe
+        // once, then measure only the paths that genuinely occur and say so in
+        // the notes for the ones that do not.
+        val probe = pipeline.run(e2eImageBytes, null)
+        val endToEndByPath = mutableMapOf<String, EndToEndBenchmark>()
+
+        when (val decision = probe.decision) {
+            is RoutingDecision.Accepted -> {
+                endToEndByPath[BenchmarkPath.ACCEPTED] =
+                    measurePath(BenchmarkPath.ACCEPTED, decision.crop.canonicalLabel)
+                val otherCrop = SupportedCrop.entries.first { it != decision.crop }
+                endToEndByPath[BenchmarkPath.MISMATCH] =
+                    measurePath(BenchmarkPath.MISMATCH, otherCrop.canonicalLabel)
+                notes.add(
+                    "The benchmark image classifies as ${decision.crop.canonicalLabel}, so the " +
+                        "accepted path and the selected-crop-mismatch path (selecting " +
+                        "${otherCrop.canonicalLabel} against a ${decision.crop.canonicalLabel} " +
+                        "prediction) are both measured. The out-of-distribution rejection path " +
+                        "is NOT measured in this export: forcing it would require either a real " +
+                        "non-crop photograph or changing the classifier threshold, and this " +
+                        "benchmark does neither. Its absence is not a zero."
+                )
+            }
+
+            is RoutingDecision.Rejected -> {
+                endToEndByPath[BenchmarkPath.REJECTED] = measurePath(BenchmarkPath.REJECTED, null)
+                notes.add(
+                    "The synthetic benchmark image is rejected by the classifier " +
+                        "(label=\"${decision.label}\", confidence=${decision.confidence}), so only " +
+                        "the out-of-distribution path is measured here — and it correctly never " +
+                        "invokes the detector. The accepted and selected-crop-mismatch paths " +
+                        "require an image the classifier accepts and are NOT measured in this " +
+                        "export; their absence is not a zero. Per-stage detector latency is " +
+                        "still measured separately in detectorStageBySize."
+                )
+            }
+
+            else -> {
+                notes.add(
+                    "Routing probe returned ${probe.outcome} (${probe.errorMessage ?: "no detail"}); " +
+                        "no end-to-end routing path could be measured for this run."
+                )
+            }
+        }
+
+        // The v2 `endToEnd` field is retained for existing readers. It carries
+        // whichever path this run could measure, and `path` says which one — it is
+        // never a blend of paths with and without detector inference.
+        val endToEnd = endToEndByPath[BenchmarkPath.ACCEPTED]
+            ?: endToEndByPath[BenchmarkPath.REJECTED]
+            ?: endToEndByPath.values.firstOrNull()
+            ?: EndToEndBenchmark(
+                observedStageOrder = correctedStageOrder,
+                representativeImageId = e2eImageId,
+                stats = computeLatencyStats(listOf(0.0)),
+                offlineSuccessCount = 0,
+                offlineFailureCount = measuredRuns,
+                failureMessages = listOf("No routing path was measurable in this run"),
+                warmupRuns = warmupRuns,
+                measuredRuns = 0,
+                path = "unmeasured",
+                detectorExecutedCount = 0,
+                detectorSkippedCount = 0,
+            )
+
+        notes.add(
+            "endToEnd/endToEndByPath measure DetectionPipeline.run(), the same entry " +
+                "point DetectionViewModel.detect() calls in the app. The classifier " +
+                "runs first and gates the detector; a rejected or crop-mismatched " +
+                "image never reaches detector inference, which is verifiable in this " +
+                "export as detectorExecutedCount == 0 for those paths."
+        )
+        notes.add(
+            "Latency is NOT comparable across entries of endToEndByPath: only the " +
+                "accepted path includes detector inference. Do not average them " +
+                "together or quote one as \"the\" end-to-end figure without its path."
+        )
+        notes.add(
+            "endToEnd.stats and the classifierStage/detectorStageBySize per-stage " +
+                "breakdowns come from separate measured loops (both calling the " +
+                "identical stage-timed functions classify()/detect() delegate to in " +
+                "production), so their absolute numbers can differ by normal run-to-" +
+                "run jitter — do not expect the per-stage means to sum exactly to the " +
+                "end-to-end mean."
+        )
+        notes.add(
+            "\"Offline\" here means no network call occurs anywhere in classify()/" +
+                "detect()/routing — all run entirely against on-device ExecuTorch " +
+                "modules. offlineFailureCount counts classifier/detector error " +
+                "outcomes and thrown exceptions during the timed call, not prediction " +
+                "accuracy or correctness."
+        )
+
+        // ---- CPU utilization (single-thread proxy) -----------------------------------
+        val cpuUtilization = try {
+            val threadT0 = Debug.threadCpuTimeNanos()
+            val wallT0 = System.nanoTime()
+            // Same corrected pipeline as the end-to-end loop, so the CPU proxy
+            // describes the work the app actually does.
+            repeat(measuredRuns) { pipeline.run(e2eImageBytes, null) }
+            val threadT1 = Debug.threadCpuTimeNanos()
+            val wallT1 = System.nanoTime()
+            if (threadT0 < 0 || threadT1 < 0) {
+                CpuUtilization(
+                    threadCpuTimeMs = 0.0,
+                    wallClockMs = (wallT1 - wallT0) / 1_000_000.0,
+                    utilizationRatio = 0.0,
+                    measuredOnThread = Thread.currentThread().name,
+                    available = false,
+                    note = "Debug.threadCpuTimeNanos() returned a negative value on this device/run; per-thread CPU time is not available here.",
+                )
+            } else {
+                val threadMs = (threadT1 - threadT0) / 1_000_000.0
+                val wallMs = (wallT1 - wallT0) / 1_000_000.0
+                CpuUtilization(
+                    threadCpuTimeMs = threadMs,
+                    wallClockMs = wallMs,
+                    utilizationRatio = if (wallMs > 0) threadMs / wallMs else 0.0,
+                    measuredOnThread = Thread.currentThread().name,
+                    available = true,
+                    note = "Single-thread (the calling thread) CPU-time proxy via " +
+                        "Debug.threadCpuTimeNanos(), not a whole-process CPU% — the " +
+                        "ratio can exceed 1.0 under multi-threaded XNNPACK kernels, " +
+                        "which is expected, not an error.",
+                )
+            }
+        } catch (e: Exception) {
+            CpuUtilization(
+                threadCpuTimeMs = 0.0, wallClockMs = 0.0, utilizationRatio = 0.0,
+                measuredOnThread = Thread.currentThread().name, available = false,
+                note = "CPU utilization sampling threw: ${e.message}",
+            )
+        }
+
+        // ---- Memory samples (outside the timed loop) ---------------------------------
+        val memorySamples = mutableListOf<MemorySample>()
+        memorySamples.add(sampleMemory("before_measured_loop"))
+        memorySamples.add(sampleMemory("after_measured_loop"))
+        notes.add(
+            "Memory samples are PSS snapshots taken immediately before and after " +
+                "the measured loop, never inside a timed call, so sampling itself " +
+                "never perturbs the reported latency numbers — but for the same " +
+                "reason they cannot capture a transient peak during a single " +
+                "inference call."
+        )
+
+        // ---- Device environment -------------------------------------------------------
+        val deviceEnvironment = collectDeviceEnvironment()
+        deviceEnvironment.thermalStatusNote?.let { notes.add(it) }
+        deviceEnvironment.installedAppSizeNote?.let { notes.add(it) }
+        if (deviceEnvironment.isEmulator) {
+            notes.add(
+                "This export was produced on an ANDROID EMULATOR " +
+                    "(${deviceEnvironment.manufacturer} ${deviceEnvironment.model}), " +
+                    "NOT a Samsung Galaxy A10 or any physical device. Do not cite " +
+                    "any figure in this export as physical-device performance."
+            )
+        }
+
+        val export = BenchmarkExport(
+            generatedAtEpochMs = System.currentTimeMillis(),
+            deviceEnvironment = deviceEnvironment,
+            modelArtifacts = modelArtifacts,
+            imageManifest = imageManifest,
+            coldLoad = coldLoad,
+            classifierStage = classifierStage,
+            detectorStageBySize = detectorStageBySize,
+            endToEnd = endToEnd,
+            endToEndByPath = endToEndByPath,
+            cpuUtilization = cpuUtilization,
+            memorySamples = memorySamples,
+            notes = notes,
+        )
+
+        writeExtendedBenchmarkExport(export)
+        return export
+    }
+
+    // -------------------------------------------------------------------------------
+    // The stage-timed inference implementations.
+    //
+    // These are not mirrors of classify()/detect() — they ARE classify() and
+    // detect(); the public functions are one-line delegations to them. Keeping a
+    // single implementation is deliberate: the previous split let the production
+    // path and the benchmark path drift, which is exactly how the detect-before-
+    // classify defect survived in the benchmark's stage order for so long. The
+    // added cost to production is a handful of System.nanoTime() calls per request.
+    // -------------------------------------------------------------------------------
+
+    /**
+     * The single implementation of the classifier path: decode, EXIF
+     * orientation correction, preprocess, inference, postprocess, each timed
+     * with System.nanoTime(). `classify()` calls this and drops the timings;
+     * the extended benchmark calls it and keeps them. There is no second copy
+     * of this algorithm to drift from.
+     */
+    actual fun classifyStageTimed(imageBytes: ByteArray): Pair<ClassificationResult?, StageLatencyMs> {
+        val tStart = System.nanoTime()
+        val module = _classifierModule
+
+        val tDecode0 = System.nanoTime()
+        val decoded = decodeUprightOrNull(imageBytes)
+        val tDecode1 = System.nanoTime()
+        // decodeUpright times EXIF parsing + transformation internally and
+        // reports it separately, so it is not double-counted in imageDecodeMs.
+        val orientationMs = decoded?.orientationCorrectionMs ?: 0.0
+        val decodeMs = ((tDecode1 - tDecode0) / 1_000_000.0 - orientationMs).coerceAtLeast(0.0)
+
+        if (module == null || decoded == null) {
+            val tEnd = System.nanoTime()
+            return null to StageLatencyMs(
+                imageDecodeMs = decodeMs,
+                orientationCorrectionMs = orientationMs,
+                preprocessMs = 0.0,
+                classifierInferenceMs = 0.0,
+                routingMs = 0.0,
+                detectorInferenceMs = 0.0,
+                postprocessNmsMs = 0.0,
+                totalMs = (tEnd - tStart) / 1_000_000.0,
+                detectorExecuted = false,
+            )
+        }
+        val bitmap = decoded.bitmap
+
+        val tPre0 = System.nanoTime()
+        val resizedBitmap = bitmap.scale(260, 260)
+        val floatArray = bitmapToFloat32Array(resizedBitmap, TORCHVISION_NORM_MEAN_RGB, TORCHVISION_NORM_STD_RGB)
+        val tPre1 = System.nanoTime()
+
+        val tInfer0 = System.nanoTime()
+        val outputArray = runClassifierInference(module, floatArray)
+        val tInfer1 = System.nanoTime()
+
+        val result = outputArray?.let { postprocessClassification(it) }
+        val tEnd = System.nanoTime()
+
+        // Bitmap.scale() hands back the source when the dimensions already match,
+        // so only the genuinely new bitmap is freed, and never the one still in use.
+        if (resizedBitmap !== bitmap) resizedBitmap.recycle()
+        if (!bitmap.isRecycled) bitmap.recycle()
+
+        return result to StageLatencyMs(
+            imageDecodeMs = decodeMs,
+            orientationCorrectionMs = orientationMs,
+            preprocessMs = (tPre1 - tPre0) / 1_000_000.0,
+            classifierInferenceMs = (tInfer1 - tInfer0) / 1_000_000.0,
+            routingMs = 0.0,
+            detectorInferenceMs = 0.0,
+            postprocessNmsMs = 0.0,
+            totalMs = (tEnd - tStart) / 1_000_000.0,
+            detectorExecuted = false,
+        )
+    }
+
+    /**
+     * The single implementation of the detector path, timed the same way as
+     * [classifyStageTimed]. Emits detections over the full 23-class space in
+     * the shared box coordinate space; crop routing is applied afterwards by
+     * `CropRoutingPolicy`, never here.
+     */
+    actual fun detectStageTimed(imageBytes: ByteArray): Pair<List<DetectionResult>, StageLatencyMs> {
+        val tStart = System.nanoTime()
+
+        val tDecode0 = System.nanoTime()
+        val decoded = decodeUprightOrNull(imageBytes)
+        val tDecode1 = System.nanoTime()
+        val orientationMs = decoded?.orientationCorrectionMs ?: 0.0
+        val decodeMs = ((tDecode1 - tDecode0) / 1_000_000.0 - orientationMs).coerceAtLeast(0.0)
+
+        val module = _module
+        val spec = _loadedSpec
+        if (decoded == null || module == null || spec == null) {
+            decoded?.bitmap?.takeIf { !it.isRecycled }?.recycle()
+            val tEnd = System.nanoTime()
+            return emptyList<DetectionResult>() to StageLatencyMs(
+                imageDecodeMs = decodeMs,
+                orientationCorrectionMs = orientationMs,
+                preprocessMs = 0.0,
+                classifierInferenceMs = 0.0,
+                routingMs = 0.0,
+                detectorInferenceMs = 0.0,
+                postprocessNmsMs = 0.0,
+                totalMs = (tEnd - tStart) / 1_000_000.0,
+                detectorExecuted = true,
+            )
+        }
+
+        val bitmap = decoded.bitmap
+        // These are the UPRIGHT dimensions — after EXIF correction — which is the
+        // coordinate space decodeDetections() un-letterboxes back into, so boxes
+        // land on the same pixels the overlay renderer draws.
+        val origWidth = bitmap.width
+        val origHeight = bitmap.height
+        val size = spec.inputSize
+
+        val tPre0 = System.nanoTime()
+        val pre = preprocessDetectorBitmap(bitmap, spec, size)
+        val floatArray = bitmapToFloat32Array(pre.bitmap, floatArrayOf(0f, 0f, 0f), floatArrayOf(1f, 1f, 1f))
+        if (pre.bitmap !== bitmap) pre.bitmap.recycle()
+        val tPre1 = System.nanoTime()
+
+        val tInfer0 = System.nanoTime()
+        val inferenceOutput = runDetectorInference(module, floatArray, size)
+        val tInfer1 = System.nanoTime()
+
+        if (inferenceOutput == null) {
+            if (!bitmap.isRecycled) bitmap.recycle()
+            val tEnd = System.nanoTime()
+            return emptyList<DetectionResult>() to StageLatencyMs(
+                imageDecodeMs = decodeMs,
+                orientationCorrectionMs = orientationMs,
+                preprocessMs = (tPre1 - tPre0) / 1_000_000.0,
+                classifierInferenceMs = 0.0,
+                routingMs = 0.0,
+                detectorInferenceMs = (tInfer1 - tInfer0) / 1_000_000.0,
+                postprocessNmsMs = 0.0,
+                totalMs = (tEnd - tStart) / 1_000_000.0,
+                detectorExecuted = true,
+            )
+        }
+        val (outputArray, outputShape) = inferenceOutput
+        val threshold = settingsManager.getDetectionThreshold()
+
+        val tPost0 = System.nanoTime()
+        val preliminaryDetections = decodeDetections(
+            outputArray, outputShape, spec, size, pre.scale, pre.padLeft, pre.padTop, origWidth, origHeight, threshold
+        )
         // RT-DETR's query head already emits one box per object; running NMS over it
         // would merge distinct detections that legitimately overlap.
-        return if (spec.applyNms) {
+        val finalDetections = if (spec.applyNms) {
             nonMaxSuppression(preliminaryDetections, settingsManager.getIouThreshold())
         } else {
             preliminaryDetections
+        }
+        val tPost1 = System.nanoTime()
+        val tEnd = System.nanoTime()
+
+        if (!bitmap.isRecycled) bitmap.recycle()
+
+        return finalDetections to StageLatencyMs(
+            imageDecodeMs = decodeMs,
+            orientationCorrectionMs = orientationMs,
+            preprocessMs = (tPre1 - tPre0) / 1_000_000.0,
+            classifierInferenceMs = 0.0,
+            routingMs = 0.0,
+            detectorInferenceMs = (tInfer1 - tInfer0) / 1_000_000.0,
+            postprocessNmsMs = (tPost1 - tPost0) / 1_000_000.0,
+            totalMs = (tEnd - tStart) / 1_000_000.0,
+            detectorExecuted = true,
+        )
+    }
+
+    // -------------------------------------------------------------------------------
+    // Resource + provenance collection helpers for the extended benchmark.
+    // -------------------------------------------------------------------------------
+
+    private fun sampleMemory(label: String): MemorySample {
+        return try {
+            val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+            val pid = Process.myPid()
+            val memInfoArray = am?.getProcessMemoryInfo(intArrayOf(pid))
+            val pss = memInfoArray?.firstOrNull()?.totalPss ?: 0
+            val nativeHeapKb = Debug.getNativeHeapAllocatedSize() / 1024
+            val runtime = Runtime.getRuntime()
+            val javaHeapKb = (runtime.totalMemory() - runtime.freeMemory()) / 1024
+            MemorySample(
+                label = label,
+                totalPssKb = pss,
+                nativeHeapAllocatedKb = nativeHeapKb,
+                javaHeapAllocatedKb = javaHeapKb,
+                timestampEpochMs = System.currentTimeMillis(),
+                available = true,
+            )
+        } catch (e: Exception) {
+            MemorySample(
+                label = label,
+                totalPssKb = 0,
+                nativeHeapAllocatedKb = 0,
+                javaHeapAllocatedKb = 0,
+                timestampEpochMs = System.currentTimeMillis(),
+                available = false,
+                note = "Memory sampling threw: ${e.message}",
+            )
+        }
+    }
+
+    private fun collectDeviceEnvironment(): DeviceEnvironment {
+        val isEmulator = Build.FINGERPRINT.startsWith("generic") ||
+            Build.FINGERPRINT.startsWith("unknown") ||
+            Build.MODEL.contains("google_sdk") ||
+            Build.MODEL.contains("Emulator") ||
+            Build.MODEL.contains("Android SDK built for") ||
+            Build.MANUFACTURER.contains("Genymotion") ||
+            Build.HARDWARE.contains("goldfish") ||
+            Build.HARDWARE.contains("ranchu") ||
+            Build.PRODUCT.contains("sdk_gphone") ||
+            (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic"))
+
+        val totalRamBytes = try {
+            val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+            val memInfo = ActivityManager.MemoryInfo()
+            am?.getMemoryInfo(memInfo)
+            memInfo.totalMem
+        } catch (e: Exception) {
+            null
+        }
+
+        var batteryLevelPercent: Int? = null
+        var isCharging: Boolean? = null
+        try {
+            val batteryIntent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+            val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
+            if (level >= 0 && scale > 0) {
+                batteryLevelPercent = (level * 100) / scale
+            }
+            val status = batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
+            isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+        } catch (e: Exception) {
+            // Leave both null — battery state genuinely unavailable on this device/run.
+        }
+
+        var thermalStatus: String?
+        var thermalStatusNote: String?
+        if (Build.VERSION.SDK_INT >= 29) {
+            try {
+                val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+                thermalStatus = when (pm.currentThermalStatus) {
+                    PowerManager.THERMAL_STATUS_NONE -> "none"
+                    PowerManager.THERMAL_STATUS_LIGHT -> "light"
+                    PowerManager.THERMAL_STATUS_MODERATE -> "moderate"
+                    PowerManager.THERMAL_STATUS_SEVERE -> "severe"
+                    PowerManager.THERMAL_STATUS_CRITICAL -> "critical"
+                    PowerManager.THERMAL_STATUS_EMERGENCY -> "emergency"
+                    PowerManager.THERMAL_STATUS_SHUTDOWN -> "shutdown"
+                    else -> "unknown_value_${pm.currentThermalStatus}"
+                }
+                thermalStatusNote = if (isEmulator) {
+                    "thermalStatus is reported by PowerManager, but this run is on an emulator: there is no real thermal sensor behind it — treat it as not meaningful."
+                } else {
+                    null
+                }
+            } catch (e: Exception) {
+                thermalStatus = null
+                thermalStatusNote = "PowerManager.getCurrentThermalStatus() threw: ${e.message}"
+            }
+        } else {
+            thermalStatus = null
+            thermalStatusNote = "thermalStatus unsupported_below_api_29: PowerManager.getCurrentThermalStatus() requires API 29+; this device/build reports SDK ${Build.VERSION.SDK_INT} (app minSdk is 24)."
+        }
+
+        val buildIdentifier = BuildKonfig.BUILD_GIT_SHA
+
+        var appVersionName = "unknown"
+        var appVersionCode = -1L
+        try {
+            val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            appVersionName = packageInfo.versionName ?: "unknown"
+            appVersionCode = if (Build.VERSION.SDK_INT >= 28) {
+                packageInfo.longVersionCode
+            } else {
+                @Suppress("DEPRECATION")
+                packageInfo.versionCode.toLong()
+            }
+        } catch (e: Exception) {
+            // Leave defaults — package info genuinely unavailable.
+        }
+
+        var installedAppSizeBytes: Long? = null
+        var installedAppSizeNote: String
+        try {
+            val appInfo = context.packageManager.getApplicationInfo(context.packageName, 0)
+            val apkFile = File(appInfo.sourceDir)
+            installedAppSizeBytes = apkFile.length()
+            installedAppSizeNote = "installedAppSizeBytes is the base APK file size " +
+                "(ApplicationInfo.sourceDir), not true on-disk installed size: it " +
+                "excludes unpacked odex/vdex/oat, any split APKs, and app-private " +
+                "data. A StorageStatsManager-based figure (API 26+, requires " +
+                "PACKAGE_USAGE_STATS or being the installer of record) would be " +
+                "more complete but is not used here."
+        } catch (e: Exception) {
+            installedAppSizeNote = "Could not determine installed app size: ${e.message}"
+        }
+
+        return DeviceEnvironment(
+            platform = "android",
+            manufacturer = Build.MANUFACTURER,
+            model = Build.MODEL,
+            osVersion = Build.VERSION.RELEASE,
+            apiLevelOrOsBuild = "SDK ${Build.VERSION.SDK_INT}",
+            abis = Build.SUPPORTED_ABIS?.toList() ?: emptyList(),
+            isEmulator = isEmulator,
+            totalRamBytes = totalRamBytes,
+            batteryLevelPercent = batteryLevelPercent,
+            isCharging = isCharging,
+            thermalStatus = thermalStatus,
+            thermalStatusNote = thermalStatusNote,
+            buildIdentifier = buildIdentifier,
+            appVersionName = appVersionName,
+            appVersionCode = appVersionCode,
+            installedAppSizeBytes = installedAppSizeBytes,
+            installedAppSizeNote = installedAppSizeNote,
+        )
+    }
+
+    private fun sha256Of(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buffer = ByteArray(8192)
+            var read: Int
+            while (input.read(buffer).also { read = it } != -1) {
+                digest.update(buffer, 0, read)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    private fun sha256Of(bytes: ByteArray): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        return digest.digest(bytes).joinToString("") { "%02x".format(it) }
+    }
+
+    private fun writeExtendedBenchmarkExport(export: BenchmarkExport) {
+        val dir = context.getExternalFilesDir(null) ?: context.filesDir
+        val timestamp = System.currentTimeMillis()
+        // Deliberately a different filename pattern ("extended_benchmark_*") from the
+        // quick button's "benchmark_*.csv" so neither overwrites or is confused with
+        // the other, and any previously captured evidence is left untouched.
+        val jsonFile = File(dir, "extended_benchmark_$timestamp.json")
+        val csvFile = File(dir, "extended_benchmark_$timestamp.csv")
+        jsonFile.writeText(formatBenchmarkExportJson(export))
+        csvFile.writeText(formatBenchmarkExportCsv(export))
+        Log.d(
+            "ObjectDetector",
+            "Extended benchmark complete - wrote ${jsonFile.absolutePath} and ${csvFile.absolutePath} " +
+                "(device=${export.deviceEnvironment.manufacturer} ${export.deviceEnvironment.model}, " +
+                "isEmulator=${export.deviceEnvironment.isEmulator}, endToEnd mean=" +
+                "${"%.2f".format(export.endToEnd.stats.meanMs)}ms p95=${"%.2f".format(export.endToEnd.stats.p95Ms)}ms)"
+        )
+        for (note in export.notes) {
+            Log.d("ObjectDetector", "  NOTE: $note")
+        }
+    }
+
+    /**
+     * Builds a deterministic synthetic JPEG (a striped pattern, not a photo of anything
+     * real) at the given resolution. Legitimate for *latency-only* benchmarking, since
+     * ExecuTorch's compute cost is driven by tensor shape, not pixel content — this is
+     * not used anywhere accuracy is being measured.
+     */
+    private fun syntheticJpegBytes(width: Int, height: Int): ByteArray {
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
+        val paint = android.graphics.Paint()
+        val stripe = maxOf(1, width / 32)
+        var x = 0
+        var stripeIndex = 0
+        while (x < width) {
+            paint.color = if (stripeIndex % 2 == 0) {
+                android.graphics.Color.rgb(60, 140, 60)
+            } else {
+                android.graphics.Color.rgb(160, 200, 160)
+            }
+            canvas.drawRect(x.toFloat(), 0f, (x + stripe).toFloat(), height.toFloat(), paint)
+            x += stripe
+            stripeIndex++
+        }
+        val stream = java.io.ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, stream)
+        bitmap.recycle()
+        return stream.toByteArray()
+    }
+
+    private fun writeBenchmarkCsv(results: List<BenchmarkResult>) {
+        val csv = formatBenchmarkCsv(results)
+        val dir = context.getExternalFilesDir(null) ?: context.filesDir
+        val file = File(dir, "benchmark_" + System.currentTimeMillis() + ".csv")
+        file.writeText(csv)
+        Log.d("ObjectDetector", "Latency benchmark complete - wrote " + results.size + " result rows to " + file.absolutePath)
+        for (r in results) {
+            Log.d(
+                "ObjectDetector",
+                "  " + r.stage + "/" + r.modelName + ": mean=" + "%.2f".format(r.stats.meanMs) + "ms p50=" +
+                    "%.2f".format(r.stats.p50Ms) + "ms p95=" + "%.2f".format(r.stats.p95Ms) + "ms (n=" + r.stats.n + ")"
+            )
         }
     }
 
@@ -395,7 +1328,9 @@ private fun calculateIoU(box1: FloatArray, box2: FloatArray): Float {
 
 /** Boxes are reported in this square space; drawBoundingBoxesOnBitmap is called
  *  with modelWidth = modelHeight = 640 and maps from it to the displayed image. */
-private const val DRAW_SPACE = 640f
+/** Float view of the shared box coordinate space, so Android and iOS emit
+ *  boxes in the same units. Defined once in commonMain. */
+private val DRAW_SPACE = BOX_COORDINATE_SPACE.toFloat()
 
 private val TORCHVISION_NORM_MEAN_RGB = floatArrayOf(0.485f, 0.456f, 0.406f)
 private val TORCHVISION_NORM_STD_RGB = floatArrayOf(0.229f, 0.224f, 0.225f)
@@ -405,6 +1340,11 @@ private val TORCHVISION_NORM_STD_RGB = floatArrayOf(0.229f, 0.224f, 0.225f)
 // against the old 40.8% at a 0.55 threshold — see the project's
 // docs/10_classifier_ood_adoption.md. Rejection is by argmax, with the
 // confidence floor kept on top of it.
+// Resolutions a real camera capture could plausibly hand the detector; decode +
+// letterbox/scale cost scales with input resolution, so detector latency is swept
+// across these rather than measured at just the model's fixed input size.
+private val BENCHMARK_IMAGE_SIZES = listOf(1920 to 1080, 1280 to 960, 640 to 480)
+
 private const val CLASSIFIER_ASSET = "crop_classifier_ood.pte"
 private val CROP_CLASSES = arrayOf("Corn", "Pepper", "Tomato", "Other")
 private const val OTHER_INDEX = 3

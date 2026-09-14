@@ -15,6 +15,10 @@ public struct HomeView: View {
     @State private var isCropAlertPresented: Bool = false
     @StateObject private var langMgr = LanguageManager.shared
     
+    // The first element is the CANONICAL crop id (SupportedCrop.canonicalLabel),
+    // not display text: it is what the detection pipeline routes on, and LText()
+    // translates it for display. Keeping the two apart is what stops routing from
+    // depending on the interface language.
     private let crops = [
         ("Corn", "🌽", "Maize Crops"),
         ("Pepper", "🫑", "Bell Peppers"),
@@ -53,7 +57,7 @@ public struct HomeView: View {
                             ForEach(crops, id: \.0) { cropName, icon, subtitle in
                                 let isSelected = (appStateObs.value.selectedCrop == cropName)
                                 Button {
-                                    KoinHelper.appViewModel.setSelectedCrop(crop: cropName)
+                                    KoinHelper.appViewModel.setSelectedCrop(crop: cropName, cropId: cropName)
                                 } label: {
                                     VStack(spacing: 6) {
                                         Text(icon)
@@ -161,7 +165,12 @@ public struct HomeView: View {
                                 for (idx, byte) in bytes.enumerated() {
                                     ktByteArray.set(index: Int32(idx), value: Int8(bitPattern: byte))
                                 }
-                                KoinHelper.detectionViewModel.detect(imageBytes: ktByteArray, crop: crop, width: 640, height: 640)
+                                // The canonical id, never the displayed name. The
+                                // image dimensions are no longer passed in: the
+                                // pipeline reports the authoritative post-orientation
+                                // size and the box coordinate space itself.
+                                let cropId = appStateObs.value.selectedCropId ?? crop
+                                KoinHelper.detectionViewModel.detect(imageBytes: ktByteArray, selectedCropId: cropId)
                                 isResultPresented = true
                             }
                         } label: {

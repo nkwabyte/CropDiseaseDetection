@@ -107,6 +107,7 @@
     <string name="no_detection_message">Woméke Ɖe dɔléle aɖeke ŋu le nɔnɔmetata sia dzi o.</string>
     <string name="error_detecting_message">Vɔvɔli aɖe dzɔ le numekuku me, gba agbagba ake.</string>
     <string name="classifier_rejection_message">Esi menye bli, atadi alo timati aŋa nyuite o.</string>
+    <string name="crop_mismatch_message">Esia le abe %1$s aŋgba ene, gake ètia %2$s. Trɔ wò nuku si nètia alo dzro %2$s aŋgba.</string>
 
     <!-- Flag functionality strings -->
     <string name="flag_button_text">Ɖo Dzesi</string>
