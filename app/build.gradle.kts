@@ -277,11 +277,23 @@ compose.resources {
 // Project.exec {} was removed in Gradle 9, so the build identifier is read
 // through the provider API instead. Same value as before: the short commit SHA,
 // or "unknown" outside a git checkout.
+// A "-dirty" suffix is appended when the working tree has uncommitted tracked
+// changes. Without it a build made from a modified tree stamps the parent
+// commit's SHA and is indistinguishable from a build of that commit — which
+// would silently falsify the provenance field the physical-device benchmark
+// protocol relies on to prove which source produced a measurement. Any export
+// whose buildIdentifier ends in "-dirty" must not be cited as results for a
+// committed build.
 val gitCommitSha: String = try {
-    providers.exec {
+    val sha = providers.exec {
         commandLine("git", "rev-parse", "--short=12", "HEAD")
         isIgnoreExitValue = true
     }.standardOutput.asText.get().trim().ifBlank { "unknown" }
+    val dirty = providers.exec {
+        commandLine("git", "status", "--porcelain", "--untracked-files=no")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.get().trim().isNotEmpty()
+    if (sha != "unknown" && dirty) "$sha-dirty" else sha
 } catch (e: Exception) {
     "unknown"
 }

@@ -470,8 +470,24 @@ actual class ObjectDetector actual constructor() : KoinComponent {
                 "load (module/spec state cleared), not the idempotent no-op " +
                 "loadModel()/loadClassifierModel() take when already loaded. " +
                 "release() is only invoked this way from the benchmark path; normal " +
-                "app usage never forces a mid-session cold reload.",
+                "app usage never forces a mid-session cold reload. CAVEAT: these " +
+                "figures are sub-millisecond, which is far too fast to have read a " +
+                "30 MB / 9 MB .pte off storage — ExecuTorch's Module load is " +
+                "mmap-backed and lazy, so this measures only program-header setup. " +
+                "Method initialisation and the page-in of the weights are deferred " +
+                "to the first forward() and therefore land inside the first " +
+                "inference, not here. Do not cite this as 'time until the model is " +
+                "ready to infer'; after the first repetition the file is also warm " +
+                "in the page cache.",
         )
+
+        // ---- Memory: opening bracket ---------------------------------------------------
+        // Taken here, before any measured loop runs, so the pair below genuinely
+        // brackets the measured work. Taking both samples together at the end (as
+        // an earlier revision did) made the delta identically zero and the
+        // accompanying note false.
+        val memorySamples = mutableListOf<MemorySample>()
+        memorySamples.add(sampleMemory("before_measured_loop"))
 
         val spec = _loadedSpec
 
@@ -827,16 +843,17 @@ actual class ObjectDetector actual constructor() : KoinComponent {
             CpuUtilization(0.0, 0.0, 0.0, "unknown", false, "Skipped: no end-to-end benchmark image available.")
         }
 
-        // ---- Memory samples (outside the timed loop) -----------------------------------
-        val memorySamples = mutableListOf<MemorySample>()
-        memorySamples.add(sampleMemory("before_measured_loop"))
+        // ---- Memory: closing bracket ----------------------------------------------------
         memorySamples.add(sampleMemory("after_measured_loop"))
         notes.add(
-            "Memory samples are resident-memory snapshots taken immediately before " +
-                "and after the measured loop, never inside a timed call, so sampling " +
-                "itself never perturbs the reported latency numbers — but for the " +
-                "same reason they cannot capture a transient peak during a single " +
-                "inference call."
+            "Memory samples are resident-memory snapshots bracketing the whole " +
+                "measured phase: 'before_measured_loop' is taken after cold-load " +
+                "timing but before any stage, per-path or CPU loop runs, and " +
+                "'after_measured_loop' after all of them complete. Neither is taken " +
+                "inside a timed call, so sampling never perturbs the reported " +
+                "latency numbers — but for the same reason they cannot capture a " +
+                "transient peak during a single inference call, and the delta " +
+                "covers every measured loop together rather than any one of them."
         )
 
         // ---- Device environment ---------------------------------------------------------
