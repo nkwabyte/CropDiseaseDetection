@@ -32,22 +32,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 // MARK: - Inference
 
-/**
- * Run YOLO26 detection on JPEG/PNG image bytes. Letterboxes to 640×640 and
- * un-letterboxes the returned boxes back to the original aspect ratio.
- * Returns the raw output float array (shape [1 × 27 × N] flattened).
- * Returns an empty array on failure.
- */
-- (NSArray<NSNumber *> *)runDetectionWithImageData:(NSData *)imageData;
 
-/**
- * Run a stretch-preprocessed detector (RT-DETR) on JPEG/PNG image bytes.
- * Returns the raw output float array (shape [1 × numQueries × (4 + numClasses)]
- * flattened) with boxes left normalized to 0…1 and no box rewriting applied.
- * Returns an empty array on failure.
- */
-- (NSArray<NSNumber *> *)runDetectionStretchedWithImageData:(NSData *)imageData
-                                                  inputSize:(NSInteger)inputSize;
 
 /**
  * Run EfficientNet-B2 classification on JPEG/PNG image bytes.
@@ -80,10 +65,46 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (NSArray<NSNumber *> *)runClassificationStageTimedWithImageData:(NSData *)imageData;
 
-- (NSArray<NSNumber *> *)runDetectionStageTimedWithImageData:(NSData *)imageData;
+/**
+ * Detector with per-stage timing, returning its raw output as a CONTIGUOUS
+ * Float32 buffer rather than a boxed NSNumber array.
+ *
+ * Boxing the full output tensor cost ~226,800 NSNumber objects per call for
+ * YOLO26's [1, 27, 8400] — about 11.7 MB retained per call, which drove the
+ * extended benchmark past 1.5 GB and got the app killed by jetsam on a physical
+ * iPhone. The buffer form is a single ~907 KB copy.
+ *
+ * Returned keys (all present whenever `available` is 1):
+ *   available        NSNumber(BOOL)    0 when no output was produced
+ *   imageDecodeMs    NSNumber(double)
+ *   orientationMs    NSNumber(double)
+ *   preprocessMs     NSNumber(double)
+ *   inferenceMs      NSNumber(double)  model forward only
+ *   outputTransferMs NSNumber(double)  tensor -> [Float] -> NSData copies
+ *   count            NSNumber(NSInteger) Float32 element count in `output`
+ *   output           NSData            count * 4 bytes, native byte order
+ *
+ * `output` is a COPY and is owned by the caller — it never aliases
+ * ExecuTorch-owned tensor memory, which is not guaranteed to outlive the call.
+ * Callers must validate `output.length == count * 4` before decoding.
+ */
+- (NSDictionary<NSString *, id> *)runDetectionStageTimedBufferWithImageData:(NSData *)imageData;
 
-- (NSArray<NSNumber *> *)runDetectionStretchedStageTimedWithImageData:(NSData *)imageData
-                                                             inputSize:(NSInteger)inputSize;
+/** Stretch-preprocessed (RT-DETR) counterpart. Same keys; boxes are left
+ *  normalized to 0…1 with no box rewriting applied. */
+- (NSDictionary<NSString *, id> *)runDetectionStretchedStageTimedBufferWithImageData:(NSData *)imageData
+                                                                           inputSize:(NSInteger)inputSize;
+
+/**
+ * Diagnostic A/B of the two raw-output transports from ONE forward pass.
+ * Keys: available (NSNumber BOOL), count (NSNumber), boxed (NSArray<NSNumber *>),
+ * buffer (NSData, Float32 native byte order). Both carry the same post-
+ * unletterbox data, so a caller can prove the NSData transport is lossless.
+ * Diagnostic only — production never calls this.
+ */
+- (NSDictionary<NSString *, id> *)runDetectionEquivalenceProbeWithImageData:(NSData *)imageData
+                                                                isLetterbox:(BOOL)isLetterbox
+                                                                  inputSize:(NSInteger)inputSize;
 
 // MARK: - Latency benchmarking (quick developer-button protocol)
 

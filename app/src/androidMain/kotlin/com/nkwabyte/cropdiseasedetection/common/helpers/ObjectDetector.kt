@@ -49,6 +49,8 @@ import com.nkwabyte.cropdiseasedetection.common.model.computeStageBenchmark
 import com.nkwabyte.cropdiseasedetection.common.model.formatBenchmarkCsv
 import com.nkwabyte.cropdiseasedetection.common.model.formatBenchmarkExportCsv
 import com.nkwabyte.cropdiseasedetection.common.model.formatBenchmarkExportJson
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import org.pytorch.executorch.EValue
@@ -68,6 +70,15 @@ actual class ObjectDetector actual constructor() : KoinComponent {
     /** The spec the currently loaded module was built from — detect() decodes
      *  against this, and a settings change is detected by comparing ids. */
     private var _loadedSpec: DetectionModelSpec? = null
+
+    private var _lastExtendedBenchmarkFiles: List<String> = emptyList()
+    private var _lastLatencyBenchmarkFile: String? = null
+
+    actual val lastExtendedBenchmarkFiles: List<String>
+        get() = _lastExtendedBenchmarkFiles
+
+    actual val lastLatencyBenchmarkFile: String?
+        get() = _lastLatencyBenchmarkFile
 
     actual val isLoaded: Boolean
         get() = _module != null
@@ -192,14 +203,35 @@ actual class ObjectDetector actual constructor() : KoinComponent {
         }
     }
 
-    private fun runDetectorInference(module: Module, floatArray: FloatArray, size: Int): Pair<FloatArray, LongArray>? {
+    /** Detector output plus the split between the forward pass and materializing
+     *  a usable primitive array — the same boundary iOS reports, so the two
+     *  platforms' detectorInference figures cover the same work. */
+    private data class DetectorInferenceResult(
+        val outputArray: FloatArray,
+        val outputShape: LongArray,
+        val forwardMs: Double,
+        val outputTransferMs: Double,
+    )
+
+    private fun runDetectorInference(module: Module, floatArray: FloatArray, size: Int): DetectorInferenceResult? {
         val inputTensor = Tensor.fromBlob(floatArray, longArrayOf(1, 3, size.toLong(), size.toLong()))
+        val t0 = System.nanoTime()
         val outputTensors = module.forward(EValue.from(inputTensor))
+        val t1 = System.nanoTime()
         if (outputTensors == null || outputTensors.isEmpty()) return null
         val outputTensor = outputTensors[0].toTensor()
+        // getDataAsFloatArray() is Android's materialization step: it is the
+        // counterpart of iOS's tensor -> buffer copy and belongs in the same
+        // bucket, so it is timed separately and folded into the same total.
         val outputArray = outputTensor.getDataAsFloatArray() ?: return null
         val outputShape = outputTensor.shape()
-        return outputArray to outputShape
+        val t2 = System.nanoTime()
+        return DetectorInferenceResult(
+            outputArray = outputArray,
+            outputShape = outputShape,
+            forwardMs = (t1 - t0) / 1_000_000.0,
+            outputTransferMs = (t2 - t1) / 1_000_000.0,
+        )
     }
 
     private fun decodeDetections(
@@ -287,7 +319,10 @@ actual class ObjectDetector actual constructor() : KoinComponent {
     // Quick developer-button benchmark (unchanged from the original instrumentation).
     // -------------------------------------------------------------------------------
 
-    actual suspend fun runLatencyBenchmark(): List<BenchmarkResult> {
+    actual suspend fun runLatencyBenchmark(): List<BenchmarkResult> =
+        withContext(Dispatchers.Default) { runLatencyBenchmarkOnCurrentThread() }
+
+    private suspend fun runLatencyBenchmarkOnCurrentThread(): List<BenchmarkResult> {
         val deviceInfo = "${Build.MANUFACTURER} ${Build.MODEL} (Android ${Build.VERSION.RELEASE}, SDK ${Build.VERSION.SDK_INT})"
         val results = mutableListOf<BenchmarkResult>()
 
@@ -360,6 +395,19 @@ actual class ObjectDetector actual constructor() : KoinComponent {
     // -------------------------------------------------------------------------------
 
     actual suspend fun runExtendedBenchmark(
+        warmupRuns: Int,
+        measuredRuns: Int,
+    ): BenchmarkExport = withContext(Dispatchers.Default) {
+        // Runs on Dispatchers.Default, the SAME dispatcher DetectionViewModel uses
+        // for real inference — so the numbers describe the thread production
+        // actually runs on, and a caller on the UI thread (either platform's
+        // Settings screen) cannot freeze the interface for the length of a
+        // 100-run protocol. `measuredOnThread` in the export records which
+        // thread it landed on.
+        runExtendedBenchmarkOnCurrentThread(warmupRuns, measuredRuns)
+    }
+
+    private suspend fun runExtendedBenchmarkOnCurrentThread(
         warmupRuns: Int,
         measuredRuns: Int,
     ): BenchmarkExport {
@@ -893,9 +941,7 @@ actual class ObjectDetector actual constructor() : KoinComponent {
         if (pre.bitmap !== bitmap) pre.bitmap.recycle()
         val tPre1 = System.nanoTime()
 
-        val tInfer0 = System.nanoTime()
         val inferenceOutput = runDetectorInference(module, floatArray, size)
-        val tInfer1 = System.nanoTime()
 
         if (inferenceOutput == null) {
             if (!bitmap.isRecycled) bitmap.recycle()
@@ -906,13 +952,14 @@ actual class ObjectDetector actual constructor() : KoinComponent {
                 preprocessMs = (tPre1 - tPre0) / 1_000_000.0,
                 classifierInferenceMs = 0.0,
                 routingMs = 0.0,
-                detectorInferenceMs = (tInfer1 - tInfer0) / 1_000_000.0,
+                detectorInferenceMs = 0.0,
                 postprocessNmsMs = 0.0,
                 totalMs = (tEnd - tStart) / 1_000_000.0,
                 detectorExecuted = true,
             )
         }
-        val (outputArray, outputShape) = inferenceOutput
+        val outputArray = inferenceOutput.outputArray
+        val outputShape = inferenceOutput.outputShape
         val threshold = settingsManager.getDetectionThreshold()
 
         val tPost0 = System.nanoTime()
@@ -937,10 +984,13 @@ actual class ObjectDetector actual constructor() : KoinComponent {
             preprocessMs = (tPre1 - tPre0) / 1_000_000.0,
             classifierInferenceMs = 0.0,
             routingMs = 0.0,
-            detectorInferenceMs = (tInfer1 - tInfer0) / 1_000_000.0,
+            // Forward pass PLUS materializing a usable primitive array — the same
+            // boundary iOS reports, so the two stay comparable.
+            detectorInferenceMs = inferenceOutput.forwardMs + inferenceOutput.outputTransferMs,
             postprocessNmsMs = (tPost1 - tPost0) / 1_000_000.0,
             totalMs = (tEnd - tStart) / 1_000_000.0,
             detectorExecuted = true,
+            outputTransferMs = inferenceOutput.outputTransferMs,
         )
     }
 
@@ -1124,6 +1174,7 @@ actual class ObjectDetector actual constructor() : KoinComponent {
         val csvFile = File(dir, "extended_benchmark_$timestamp.csv")
         jsonFile.writeText(formatBenchmarkExportJson(export))
         csvFile.writeText(formatBenchmarkExportCsv(export))
+        _lastExtendedBenchmarkFiles = listOf(jsonFile.absolutePath, csvFile.absolutePath)
         Log.d(
             "ObjectDetector",
             "Extended benchmark complete - wrote ${jsonFile.absolutePath} and ${csvFile.absolutePath} " +
@@ -1170,6 +1221,7 @@ actual class ObjectDetector actual constructor() : KoinComponent {
         val dir = context.getExternalFilesDir(null) ?: context.filesDir
         val file = File(dir, "benchmark_" + System.currentTimeMillis() + ".csv")
         file.writeText(csv)
+        _lastLatencyBenchmarkFile = file.absolutePath
         Log.d("ObjectDetector", "Latency benchmark complete - wrote " + results.size + " result rows to " + file.absolutePath)
         for (r in results) {
             Log.d(

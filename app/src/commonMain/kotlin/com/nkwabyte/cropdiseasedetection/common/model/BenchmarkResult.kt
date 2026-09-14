@@ -56,8 +56,22 @@ const val BENCHMARK_COLD_LOAD_RUNS = 5
  * must be updated — that order was the defect, not the contract.
  * The quick-benchmark CSV ([BenchmarkResult]/[formatBenchmarkCsv]) is
  * unversioned and unchanged.
+ *
+ * v4 (2026-09-14) — additive. [StageLatencyMs] and [StageBenchmark] gain
+ * `outputTransfer`: the cost of materializing the detector's raw output into a
+ * usable contiguous primitive buffer. It is a SUB-COMPONENT of
+ * `detectorInference`, not an addition to it, and is reported separately only
+ * so the transfer can be seen on its own. A v3 reader that ignores the new
+ * field still reads a correct, comparable `detectorInference`.
+ *
+ * IMPORTANT for cross-version comparison: iOS `detectorInference` figures from
+ * BEFORE v4 are NOT comparable with v4 and later. Until then the iOS bridge
+ * boxed the entire raw output tensor into ~226,800 NSNumber objects inside the
+ * measured span; v4 replaced that with a contiguous Float32 buffer. Android was
+ * never affected — it has always read the output via
+ * `Tensor.getDataAsFloatArray()`. See worklog ENTRY 014.
  */
-const val BENCHMARK_EXPORT_SCHEMA_VERSION = 3
+const val BENCHMARK_EXPORT_SCHEMA_VERSION = 4
 
 /** Named pipeline stages this project's benchmark instrumentation times individually. */
 object BenchmarkStage {
@@ -178,6 +192,16 @@ data class StageLatencyMs(
     val postprocessNmsMs: Double,
     val totalMs: Double,
     val detectorExecuted: Boolean = false,
+    /**
+     * Cost of turning the detector's raw model output into a usable contiguous
+     * primitive buffer — on iOS the tensor -> Float buffer -> NSData copies plus
+     * the NSData -> FloatArray copy, on Android `getDataAsFloatArray()`.
+     *
+     * Already INCLUDED in [detectorInferenceMs]; reported separately so the
+     * transfer is visible without being double-counted. Both platforms draw the
+     * boundary the same way, so `detectorInferenceMs` stays comparable.
+     */
+    val outputTransferMs: Double = 0.0,
 )
 
 /** An all-zero sample carrying only a total — used when a stage breakdown is
@@ -192,6 +216,7 @@ fun emptyStageLatency(totalMs: Double): StageLatencyMs = StageLatencyMs(
     postprocessNmsMs = 0.0,
     totalMs = totalMs,
     detectorExecuted = false,
+    outputTransferMs = 0.0,
 )
 
 /**
@@ -208,6 +233,7 @@ fun StageLatencyMs.mergeWithDetector(detector: StageLatencyMs): StageLatencyMs =
     postprocessNmsMs = detector.postprocessNmsMs,
     totalMs = totalMs + detector.totalMs,
     detectorExecuted = true,
+    outputTransferMs = detector.outputTransferMs,
 )
 
 /** Aggregated statistics across N runs, one [LatencyStats] per named stage. */
@@ -224,6 +250,8 @@ data class StageBenchmark(
     val detectorInference: LatencyStats,
     val postprocessNms: LatencyStats,
     val endToEnd: LatencyStats,
+    /** Sub-component of [detectorInference]; see [StageLatencyMs.outputTransferMs]. */
+    val outputTransfer: LatencyStats,
     val rawRuns: List<StageLatencyMs>,
 )
 
@@ -242,6 +270,7 @@ fun computeStageBenchmark(label: String, warmupRuns: Int, runs: List<StageLatenc
         detectorInference = computeLatencyStats(runs.map { it.detectorInferenceMs }),
         postprocessNms = computeLatencyStats(runs.map { it.postprocessNmsMs }),
         endToEnd = computeLatencyStats(runs.map { it.totalMs }),
+        outputTransfer = computeLatencyStats(runs.map { it.outputTransferMs }),
         rawRuns = runs,
     )
 }
@@ -532,6 +561,7 @@ fun formatBenchmarkExportCsv(export: BenchmarkExport): String {
         statsRow("orientation_correction", stage.orientationCorrection)
         statsRow("preprocess", stage.preprocess)
         statsRow("detector_inference", stage.detectorInference)
+        statsRow("output_transfer (subset of detector_inference)", stage.outputTransfer)
         statsRow("postprocess_nms", stage.postprocessNms)
         statsRow("end_to_end_detector_only", stage.endToEnd)
     }
@@ -553,6 +583,7 @@ fun formatBenchmarkExportCsv(export: BenchmarkExport): String {
             statsRow("classifier_inference", br.classifierInference)
             statsRow("routing", br.routing)
             statsRow("detector_inference", br.detectorInference)
+            statsRow("output_transfer (subset of detector_inference)", br.outputTransfer)
             statsRow("postprocess_nms", br.postprocessNms)
             statsRow("pipeline_total", br.endToEnd)
         }

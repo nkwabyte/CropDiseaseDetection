@@ -37,6 +37,8 @@ import com.nkwabyte.cropdiseasedetection.common.model.formatBenchmarkCsv
 import com.nkwabyte.cropdiseasedetection.common.model.formatBenchmarkExportCsv
 import com.nkwabyte.cropdiseasedetection.common.model.formatBenchmarkExportJson
 import com.nkwabyte.cropdiseasedetection.bridge.ExecuTorchBridge
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import com.nkwabyte.cropdiseasedetection.common.utils.SettingsManager
@@ -60,6 +62,7 @@ import platform.Foundation.NSString
 import platform.Foundation.NSUTF8StringEncoding
 import platform.UIKit.UIDevice
 import platform.UIKit.UIDeviceBatteryState
+import kotlinx.cinterop.autoreleasepool
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.convert
@@ -81,6 +84,18 @@ actual class ObjectDetector actual constructor() : KoinComponent {
     actual val isClassifierLoaded: Boolean
         get() = _isClassifierLoaded
     private var _isClassifierLoaded = false
+
+    private var _lastExtendedBenchmarkFiles: List<String> = emptyList()
+    private var _lastLatencyBenchmarkFile: String? = null
+
+    /** Documents-directory paths of the JSON and CSV the last extended run wrote.
+     *  The Settings screen's share sheet hands these exact files to the user, so
+     *  the artifact that gets cited is the one the harness itself produced. */
+    actual val lastExtendedBenchmarkFiles: List<String>
+        get() = _lastExtendedBenchmarkFiles
+
+    actual val lastLatencyBenchmarkFile: String?
+        get() = _lastLatencyBenchmarkFile
 
     /**
      * Loads the detector the user selected, replacing the loaded one if the
@@ -150,6 +165,13 @@ actual class ObjectDetector actual constructor() : KoinComponent {
     // reorganized.
     // -------------------------------------------------------------------------------
 
+    // Each bridge call boxes the model's ENTIRE raw output tensor into individual
+    // NSNumber objects — 226,800 of them for YOLO26's [1, 27, 8400], and again in
+    // unletterboxBoxes — all autoreleased. Kotlin/Native worker threads have no
+    // autorelease pool of their own, so without an explicit one those objects are
+    // never reclaimed: a single scan leaks tens of MB, and a benchmark loop of a
+    // few hundred calls reaches gigabytes and is killed by jetsam. Draining per
+    // call is what keeps that bounded.
     actual fun classify(imageBytes: ByteArray): ClassificationResult? =
         classifyStageTimed(imageBytes).first
 
@@ -200,7 +222,13 @@ actual class ObjectDetector actual constructor() : KoinComponent {
         // catches confidently-wrong predictions on species it has never seen.
         val threshold = settingsManager.getClassifierThreshold()
         val label = if (maxIdx == OTHER_INDEX || maxProb < threshold) "unknown" else CROP_CLASSES[maxIdx]
-        println("[iOS-ObjectDetector] Classifier probs: ${probs.joinToString()} -> Top: ${CROP_CLASSES[maxIdx]} (${maxProb}), Floor: $threshold, Label: $label")
+        // Deliberately NOT logged per call. postprocessClassification() runs inside
+        // the region classifyStageTimed() measures, so a println here lands in the
+        // middle of a timed span and inflates classifierInferenceMs — badly, when
+        // stdout is piped over a device console during a 100-run benchmark, which
+        // is also enough extra wall-clock to get the app suspended and killed
+        // mid-run. The per-request outcome is still logged once, by
+        // DetectionViewModel, outside any timed region.
         return ClassificationResult(
             label = label,
             confidence = maxProb,
@@ -208,7 +236,12 @@ actual class ObjectDetector actual constructor() : KoinComponent {
         )
     }
 
-    private fun decodeAndFilterDetections(rawOutput: List<*>, spec: DetectionModelSpec): List<DetectionResult> {
+    /**
+     * Unchanged decode/threshold/NMS logic; only the container changed from a
+     * boxed `List<NSNumber>` to a primitive `FloatArray`. Class indexing, box
+     * transformations, thresholds and NMS behaviour are identical.
+     */
+    private fun decodeAndFilterDetections(rawOutput: FloatArray, spec: DetectionModelSpec): List<DetectionResult> {
         val stride = spec.numClasses + 4
         val n = rawOutput.size / stride
         if (n <= 0) return emptyList()
@@ -226,25 +259,25 @@ actual class ObjectDetector actual constructor() : KoinComponent {
                 // [1, 4 + numClasses, n] — a prediction's fields are n apart.
                 DetectionOutputLayout.YOLO_ATTRIBUTE_MAJOR -> {
                     for (j in 0 until spec.numClasses) {
-                        val score = (rawOutput[(j + 4) * n + i] as NSNumber).floatValue
+                        val score = rawOutput[(j + 4) * n + i]
                         if (score > maxScore) { maxScore = score; classId = j }
                     }
-                    cx = (rawOutput[0 * n + i] as NSNumber).floatValue
-                    cy = (rawOutput[1 * n + i] as NSNumber).floatValue
-                    w  = (rawOutput[2 * n + i] as NSNumber).floatValue
-                    h  = (rawOutput[3 * n + i] as NSNumber).floatValue
+                    cx = rawOutput[0 * n + i]
+                    cy = rawOutput[1 * n + i]
+                    w  = rawOutput[2 * n + i]
+                    h  = rawOutput[3 * n + i]
                 }
                 // [1, numQueries, 4 + numClasses] — one contiguous row per query.
                 DetectionOutputLayout.DETR_QUERY_MAJOR -> {
                     val row = i * stride
                     for (j in 0 until spec.numClasses) {
-                        val score = (rawOutput[row + 4 + j] as NSNumber).floatValue
+                        val score = rawOutput[row + 4 + j]
                         if (score > maxScore) { maxScore = score; classId = j }
                     }
-                    cx = (rawOutput[row + 0] as NSNumber).floatValue
-                    cy = (rawOutput[row + 1] as NSNumber).floatValue
-                    w  = (rawOutput[row + 2] as NSNumber).floatValue
-                    h  = (rawOutput[row + 3] as NSNumber).floatValue
+                    cx = rawOutput[row + 0]
+                    cy = rawOutput[row + 1]
+                    w  = rawOutput[row + 2]
+                    h  = rawOutput[row + 3]
                 }
             }
 
@@ -273,7 +306,10 @@ actual class ObjectDetector actual constructor() : KoinComponent {
     // Quick developer-button benchmark (unchanged from the original instrumentation).
     // -------------------------------------------------------------------------------
 
-    actual suspend fun runLatencyBenchmark(): List<BenchmarkResult> {
+    actual suspend fun runLatencyBenchmark(): List<BenchmarkResult> =
+        withContext(Dispatchers.Default) { runLatencyBenchmarkOnCurrentThread() }
+
+    private suspend fun runLatencyBenchmarkOnCurrentThread(): List<BenchmarkResult> {
         val device = UIDevice.currentDevice
         val deviceInfo = "Apple ${device.model} (iOS ${device.systemVersion})"
         val results = mutableListOf<BenchmarkResult>()
@@ -346,7 +382,9 @@ actual class ObjectDetector actual constructor() : KoinComponent {
         val docsDir = docsDirs.firstOrNull() as? String ?: return
         val fileName = "benchmark_" + (NSDate().timeIntervalSince1970 * 1000).toLong() + ".csv"
         val path = "$docsDir/$fileName"
-        (csv as NSString).writeToFile(path, atomically = true, encoding = NSUTF8StringEncoding, error = null)
+        val written = (csv as NSString)
+            .writeToFile(path, atomically = true, encoding = NSUTF8StringEncoding, error = null)
+        _lastLatencyBenchmarkFile = if (written) path else null
         println("[iOS-ObjectDetector] Latency benchmark complete - wrote ${results.size} result rows to $path")
         for (r in results) {
             println(
@@ -372,10 +410,23 @@ actual class ObjectDetector actual constructor() : KoinComponent {
     actual suspend fun runExtendedBenchmark(
         warmupRuns: Int,
         measuredRuns: Int,
+    ): BenchmarkExport = withContext(Dispatchers.Default) {
+        // Runs on Dispatchers.Default, the SAME dispatcher DetectionViewModel uses
+        // for real inference. This matters more on iOS than on Android: SwiftUI
+        // calls this from the main actor, and a 100-run protocol on the main
+        // thread would freeze the interface for the whole run and report timings
+        // from a thread production never uses.
+        runExtendedBenchmarkOnCurrentThread(warmupRuns, measuredRuns)
+    }
+
+    private suspend fun runExtendedBenchmarkOnCurrentThread(
+        warmupRuns: Int,
+        measuredRuns: Int,
     ): BenchmarkExport {
         loadClassifierModel()
         loadModel()
 
+        tracePhase("start")
         val notes = mutableListOf<String>()
         notes.add(
             "Timing uses a monotonic clock (DispatchTime.now().uptimeNanoseconds, " +
@@ -407,6 +458,7 @@ actual class ObjectDetector actual constructor() : KoinComponent {
             classifierColdLoadMs.add(t1 - t0)
             detectorColdLoadMs.add(t2 - t1)
         }
+        tracePhase("after_cold_load_loop")
         val coldLoad = ColdLoadBenchmark(
             classifierColdLoad = if (classifierColdLoadMs.isNotEmpty()) computeLatencyStats(classifierColdLoadMs) else null,
             detectorColdLoad = if (detectorColdLoadMs.isNotEmpty()) computeLatencyStats(detectorColdLoadMs) else null,
@@ -505,9 +557,12 @@ actual class ObjectDetector actual constructor() : KoinComponent {
                 "procedure uses real checksum-locked images instead."
         )
 
+        tracePhase("after_artifacts_and_images")
         // ---- Classifier stage benchmark -----------------------------------------------
         val classifierRuns = mutableListOf<StageLatencyMs>()
         if (classifierImageData != null) {
+            // The pool drains after each iteration's StageLatencyMs is already
+            // computed, so the reclaim cost never lands inside a measured span.
             repeat(warmupRuns) { classifyStageTimed(classifierImageData) }
             repeat(measuredRuns) { classifierRuns.add(classifyStageTimed(classifierImageData).second) }
         }
@@ -524,6 +579,7 @@ actual class ObjectDetector actual constructor() : KoinComponent {
             computeStageBenchmark("classifier_260x260", warmupRuns, classifierRuns)
         }
 
+        tracePhase("after_classifier_stage")
         // ---- Detector stage benchmark per resolution -----------------------------------
         val detectorStageBySize = mutableMapOf<String, StageBenchmark>()
         if (_isLoaded && spec != null) {
@@ -535,11 +591,13 @@ actual class ObjectDetector actual constructor() : KoinComponent {
                 if (runs.isNotEmpty()) {
                     detectorStageBySize["${w}x${h}"] = computeStageBenchmark("detector_${w}x${h}", warmupRuns, runs)
                 }
+                tracePhase("detector_stage_${w}x${h}_done")
             }
         } else {
             notes.add("No detector model was loaded; detector stage benchmarks are omitted entirely.")
         }
 
+        tracePhase("after_detector_stages")
         // ---- End-to-end benchmark: the CORRECTED production pipeline -----------------
         // DetectionPipeline is the same object DetectionViewModel.detect() drives:
         // ensure classifier loaded -> decode + EXIF orientation -> classifier
@@ -698,6 +756,7 @@ actual class ObjectDetector actual constructor() : KoinComponent {
                 "and thrown exceptions during the timed call, not prediction accuracy."
         )
 
+        tracePhase("after_end_to_end")
         // ---- CPU utilization (process-level proxy, not per-thread) --------------------
         val cpuUtilization = if (e2eBytes != null) {
             try {
@@ -784,6 +843,21 @@ actual class ObjectDetector actual constructor() : KoinComponent {
     // measure different code.
     // -------------------------------------------------------------------------------
 
+    // Every bridge call boxes the model's ENTIRE raw output tensor into individual
+    // NSNumber objects — 226,800 of them for YOLO26's [1, 27, 8400] output, and
+    // unletterboxBoxes writes a second set — all autoreleased. Kotlin/Native worker
+    // threads carry no autorelease pool of their own, so nothing ever reclaims
+    // them: one scan leaks tens of MB, and a benchmark of a few hundred calls
+    // reaches gigabytes and is killed by jetsam ("Terminated due to memory issue"),
+    // which is what happened on the iPhone 15 Pro Max.
+    //
+    // These two functions are the single choke point every caller goes through —
+    // production classify()/detect(), DetectionPipeline via ObjectDetectorEngine,
+    // and the benchmark stage loops — so draining here bounds all of them. They are
+    // also the only place it CAN go: Kotlin forbids calling a suspend function
+    // inside autoreleasepool {} (KT-50786), which rules out the benchmark loops and
+    // anything calling pipeline.run(). The pool drains after the inner function has
+    // already produced its StageLatencyMs, so no measured span includes the reclaim.
     actual fun classifyStageTimed(imageBytes: ByteArray): Pair<ClassificationResult?, StageLatencyMs> {
         val nsData = imageBytes.toNSData()
             ?: return null to emptyStageLatency(0.0)
@@ -796,7 +870,10 @@ actual class ObjectDetector actual constructor() : KoinComponent {
         return detectStageTimed(nsData)
     }
 
-    private fun classifyStageTimed(imageData: NSData): Pair<ClassificationResult?, StageLatencyMs> {
+    private fun classifyStageTimed(imageData: NSData): Pair<ClassificationResult?, StageLatencyMs> =
+        autoreleasepool { classifyStageTimedInPool(imageData) }
+
+    private fun classifyStageTimedInPool(imageData: NSData): Pair<ClassificationResult?, StageLatencyMs> {
         val tStart = bridge.monotonicNowMs()
         if (!_isClassifierLoaded) {
             val tEnd = bridge.monotonicNowMs()
@@ -830,7 +907,16 @@ actual class ObjectDetector actual constructor() : KoinComponent {
         )
     }
 
-    private fun detectStageTimed(imageData: NSData): Pair<List<DetectionResult>, StageLatencyMs> {
+    // The pool lives on the NSData overloads, not the ByteArray ones, because the
+    // benchmark loops call these directly — wrapping only the ByteArray entry
+    // points left the 100-run stage loops draining nothing, which is why resident
+    // memory still climbed through the detector stages while a 500-call soak
+    // (which goes through the ByteArray path) plateaued. Every caller funnels
+    // through here: production, DetectionPipeline, and the benchmark.
+    private fun detectStageTimed(imageData: NSData): Pair<List<DetectionResult>, StageLatencyMs> =
+        autoreleasepool { detectStageTimedInPool(imageData) }
+
+    private fun detectStageTimedInPool(imageData: NSData): Pair<List<DetectionResult>, StageLatencyMs> {
         val tStart = bridge.monotonicNowMs()
         val spec = _loadedSpec
         if (!_isLoaded || spec == null) {
@@ -839,22 +925,59 @@ actual class ObjectDetector actual constructor() : KoinComponent {
         }
 
         val raw = if (spec.letterbox) {
-            bridge.runDetectionStageTimedWithImageData(imageData)
+            bridge.runDetectionStageTimedBufferWithImageData(imageData)
         } else {
-            bridge.runDetectionStretchedStageTimedWithImageData(imageData, inputSize = spec.inputSize.toLong())
+            bridge.runDetectionStretchedStageTimedBufferWithImageData(imageData, inputSize = spec.inputSize.toLong())
         }
-        val decodeMs = (raw[0] as NSNumber).doubleValue
-        val orientationMs = (raw[1] as NSNumber).doubleValue
-        val preprocessMs = (raw[2] as NSNumber).doubleValue
-        val inferenceMs = (raw[3] as NSNumber).doubleValue
-        val available = (raw[4] as NSNumber).doubleValue > 0.5
+
+        val decodeMs = raw.double("imageDecodeMs")
+        val orientationMs = raw.double("orientationMs")
+        val preprocessMs = raw.double("preprocessMs")
+        val forwardMs = raw.double("inferenceMs")
+        val bridgeTransferMs = raw.double("outputTransferMs")
+        val available = raw.double("available") > 0.5
+
+        // The NSData -> FloatArray conversion is a mandatory part of getting a
+        // usable output, so it is timed and folded into the detector total the
+        // same way Android folds getDataAsFloatArray() into its own. It is also
+        // reported on its own as outputTransferMs.
+        val tConv0 = bridge.monotonicNowMs()
+        val floats = if (available) {
+            (raw["output"] as? NSData)?.toFloatArrayOrNull(expectedCount = raw.int("count"))
+        } else {
+            null
+        }
+        val tConv1 = bridge.monotonicNowMs()
+        val outputTransferMs = bridgeTransferMs + (tConv1 - tConv0)
+
+        if (floats == null) {
+            if (available) {
+                // available == true but the buffer did not validate: truncated,
+                // mis-sized, or not a whole number of Float32s. Fail loudly rather
+                // than decode garbage into detections.
+                println(
+                    "[iOS-ObjectDetector] Detector output buffer failed validation " +
+                        "(count=${raw.int("count")}, bytes=${(raw["output"] as? NSData)?.length}); " +
+                        "treating this run as producing no detections."
+                )
+            }
+            val tEnd = bridge.monotonicNowMs()
+            return emptyList<DetectionResult>() to StageLatencyMs(
+                imageDecodeMs = decodeMs,
+                orientationCorrectionMs = orientationMs,
+                preprocessMs = preprocessMs,
+                classifierInferenceMs = 0.0,
+                routingMs = 0.0,
+                detectorInferenceMs = forwardMs + outputTransferMs,
+                postprocessNmsMs = 0.0,
+                totalMs = tEnd - tStart,
+                detectorExecuted = true,
+                outputTransferMs = outputTransferMs,
+            )
+        }
 
         val tPost0 = bridge.monotonicNowMs()
-        val detections = if (available && raw.size > 5) {
-            decodeAndFilterDetections(raw.subList(5, raw.size), spec)
-        } else {
-            emptyList()
-        }
+        val detections = decodeAndFilterDetections(floats, spec)
         val tPost1 = bridge.monotonicNowMs()
         val tEnd = bridge.monotonicNowMs()
 
@@ -864,16 +987,131 @@ actual class ObjectDetector actual constructor() : KoinComponent {
             preprocessMs = preprocessMs,
             classifierInferenceMs = 0.0,
             routingMs = 0.0,
-            detectorInferenceMs = inferenceMs,
+            // Comparable with Android: model forward PLUS the mandatory
+            // materialization of a usable primitive buffer.
+            detectorInferenceMs = forwardMs + outputTransferMs,
             postprocessNmsMs = tPost1 - tPost0,
             totalMs = tEnd - tStart,
             detectorExecuted = true,
+            outputTransferMs = outputTransferMs,
         )
+    }
+
+    // -------------------------------------------------------------------------------
+    // Diagnostics for the raw-output transport change (schema v4). Not used by
+    // the app or by the benchmark; driven by DEBUG-only launch arguments.
+    // -------------------------------------------------------------------------------
+
+    /**
+     * Proves the `[NSNumber]` -> `NSData` transport change is lossless.
+     *
+     * Both representations come from ONE forward pass, so a mismatch can only be
+     * the transport, never model nondeterminism. Compares raw floats bit-for-bit
+     * (via `toRawBits`, so NaN and -0.0 are compared exactly, not by `==`), then
+     * decodes BOTH through the same `decodeAndFilterDetections` and compares the
+     * resulting detections — count, class ids, scores and boxes.
+     */
+    fun runRawOutputEquivalenceCheck(imageBytes: ByteArray): String {
+        val spec = _loadedSpec ?: return "EQUIVALENCE: FAIL — no detector loaded"
+        val nsData = imageBytes.toNSData() ?: return "EQUIVALENCE: FAIL — could not wrap image bytes"
+
+        val probe = bridge.runDetectionEquivalenceProbeWithImageData(
+            nsData, isLetterbox = spec.letterbox, inputSize = spec.inputSize.toLong()
+        )
+        if (probe.double("available") <= 0.5) return "EQUIVALENCE: FAIL — probe unavailable"
+
+        val declaredCount = probe.int("count")
+        val boxed = probe["boxed"] as? List<*> ?: return "EQUIVALENCE: FAIL — no boxed output"
+        val buffer = probe["buffer"] as? NSData ?: return "EQUIVALENCE: FAIL — no buffer output"
+        val fromBuffer = buffer.toFloatArrayOrNull(expectedCount = declaredCount)
+            ?: return "EQUIVALENCE: FAIL — buffer failed validation (count=$declaredCount, bytes=${buffer.length})"
+
+        if (boxed.size != declaredCount || fromBuffer.size != declaredCount) {
+            return "EQUIVALENCE: FAIL — element count mismatch " +
+                "(declared=$declaredCount boxed=${boxed.size} buffer=${fromBuffer.size})"
+        }
+
+        var mismatches = 0
+        var maxAbsDiff = 0.0f
+        var firstMismatch = -1
+        for (i in 0 until declaredCount) {
+            val a = (boxed[i] as NSNumber).floatValue
+            val b = fromBuffer[i]
+            if (a.toRawBits() != b.toRawBits()) {
+                mismatches++
+                if (firstMismatch < 0) firstMismatch = i
+                val d = kotlin.math.abs(a - b)
+                if (d > maxAbsDiff) maxAbsDiff = d
+            }
+        }
+
+        val boxedFloats = FloatArray(declaredCount) { (boxed[it] as NSNumber).floatValue }
+        val viaBoxed = decodeAndFilterDetections(boxedFloats, spec)
+        val viaBuffer = decodeAndFilterDetections(fromBuffer, spec)
+
+        val detectionsMatch = viaBoxed.size == viaBuffer.size &&
+            viaBoxed.indices.all { i ->
+                val x = viaBoxed[i]; val y = viaBuffer[i]
+                x.classIndex == y.classIndex &&
+                    x.score.toRawBits() == y.score.toRawBits() &&
+                    x.box.indices.all { k -> x.box[k].toRawBits() == y.box[k].toRawBits() }
+            }
+
+        val verdict = if (mismatches == 0 && detectionsMatch) "PASS" else "FAIL"
+        return "EQUIVALENCE: $verdict — elements=$declaredCount " +
+            "bitExactFloats=${declaredCount - mismatches}/$declaredCount " +
+            "maxAbsDiff=$maxAbsDiff firstMismatchIndex=$firstMismatch " +
+            "detections boxed=${viaBoxed.size} buffer=${viaBuffer.size} identical=$detectionsMatch " +
+            "classIds=${viaBuffer.map { it.classIndex }}"
+    }
+
+    /**
+     * Memory soak: [calls] detector invocations after a warm-up, reporting
+     * resident memory at intervals. Resident memory must plateau; linear growth
+     * is the regression this guards against (the boxed transport grew ~11.7 MB
+     * per call and reached ~1.6 GB before jetsam killed the process).
+     */
+    fun runDetectorMemorySoak(imageBytes: ByteArray, calls: Int, warmup: Int): String {
+        val lines = mutableListOf<String>()
+        fun residentMb(): Double = bridge.residentMemoryBytes().toDouble() / (1024.0 * 1024.0)
+
+        lines.add("SOAK start residentMB=${residentMb().formatDecimals(1)}")
+        repeat(warmup) { detectStageTimed(imageBytes) }
+        val afterWarmup = residentMb()
+        lines.add("SOAK post-warmup(${warmup}) residentMB=${afterWarmup.formatDecimals(1)}")
+
+        var peak = afterWarmup
+        for (i in 1..calls) {
+            detectStageTimed(imageBytes)
+            val mb = residentMb()
+            if (mb > peak) peak = mb
+            if (i % 50 == 0) lines.add("SOAK call=$i residentMB=${mb.formatDecimals(1)}")
+        }
+        val finalMb = residentMb()
+        lines.add("SOAK peak residentMB=${peak.formatDecimals(1)}")
+        lines.add("SOAK final residentMB=${finalMb.formatDecimals(1)}")
+        lines.add(
+            "SOAK growthAfterWarmupMB=${(finalMb - afterWarmup).formatDecimals(1)} " +
+                "perCallKB=${((finalMb - afterWarmup) * 1024.0 / calls).formatDecimals(1)}"
+        )
+        return lines.joinToString("\n")
     }
 
     // -------------------------------------------------------------------------------
     // Resource + provenance collection helpers for the extended benchmark.
     // -------------------------------------------------------------------------------
+
+    /**
+     * Coarse progress + resident-memory trace at phase boundaries only (never
+     * per inference call, and never inside a timed span). Added after the
+     * extended benchmark was killed by jetsam on a physical device with no
+     * jetsam report available to say where the memory went.
+     */
+
+    private fun tracePhase(label: String) {
+        val mb = bridge.residentMemoryBytes().toDouble() / (1024.0 * 1024.0)
+        println("[iOS-Bench] phase=$label residentMB=${mb.formatDecimals(1)}")
+    }
 
     private fun sampleMemory(label: String): MemorySample {
         return try {
@@ -994,8 +1232,16 @@ actual class ObjectDetector actual constructor() : KoinComponent {
         // the other, and any previously captured evidence is left untouched.
         val jsonPath = "$docsDir/extended_benchmark_$timestamp.json"
         val csvPath = "$docsDir/extended_benchmark_$timestamp.csv"
-        (formatBenchmarkExportJson(export) as NSString).writeToFile(jsonPath, atomically = true, encoding = NSUTF8StringEncoding, error = null)
-        (formatBenchmarkExportCsv(export) as NSString).writeToFile(csvPath, atomically = true, encoding = NSUTF8StringEncoding, error = null)
+        val jsonWritten = (formatBenchmarkExportJson(export) as NSString)
+            .writeToFile(jsonPath, atomically = true, encoding = NSUTF8StringEncoding, error = null)
+        val csvWritten = (formatBenchmarkExportCsv(export) as NSString)
+            .writeToFile(csvPath, atomically = true, encoding = NSUTF8StringEncoding, error = null)
+        // Only report paths that actually exist, so the share sheet can never
+        // offer a file that was never written.
+        _lastExtendedBenchmarkFiles = buildList {
+            if (jsonWritten) add(jsonPath)
+            if (csvWritten) add(csvPath)
+        }
         println(
             "[iOS-ObjectDetector] Extended benchmark complete - wrote $jsonPath and $csvPath " +
                 "(device=${export.deviceEnvironment.manufacturer} ${export.deviceEnvironment.model}, " +
@@ -1030,6 +1276,37 @@ private val BENCHMARK_IMAGE_SIZES = listOf(1920 to 1080, 1280 to 960, 640 to 480
 private const val CLASSIFIER_RESOURCE = "crop_classifier_ood"
 private val CROP_CLASSES = arrayOf("Corn", "Pepper", "Tomato", "Other")
 private const val OTHER_INDEX = 3
+
+/** Reads a Double out of the bridge's result dictionary, 0.0 when absent. */
+private fun Map<Any?, *>.double(key: String): Double = (this[key] as? NSNumber)?.doubleValue ?: 0.0
+
+/** Reads an Int out of the bridge's result dictionary, -1 when absent. */
+private fun Map<Any?, *>.int(key: String): Int = (this[key] as? NSNumber)?.intValue ?: -1
+
+/**
+ * Decodes a contiguous native-byte-order Float32 buffer into a [FloatArray].
+ *
+ * Returns null — never a partially-filled or reinterpreted array — when the
+ * buffer is malformed: a byte length that is not a multiple of 4, a length that
+ * disagrees with the element count the bridge declared, or a null data pointer.
+ * The copy target is a Kotlin FloatArray, which is naturally aligned, and
+ * `memcpy` imposes no alignment requirement on the source, so no alignment
+ * assumption is made about the incoming buffer. Nothing here retains the NSData
+ * beyond the copy.
+ */
+private fun NSData.toFloatArrayOrNull(expectedCount: Int): FloatArray? {
+    val byteCount = this.length.toLong()
+    if (byteCount < 0L || byteCount % 4L != 0L) return null
+    val count = (byteCount / 4L).toInt()
+    if (expectedCount >= 0 && expectedCount != count) return null
+    if (count == 0) return FloatArray(0)
+    val source = this.bytes ?: return null
+    val out = FloatArray(count)
+    out.usePinned { pinned ->
+        memcpy(pinned.addressOf(0), source, byteCount.convert())
+    }
+    return out
+}
 
 private fun ByteArray.toNSData(): NSData? = this.usePinned { pinned ->
     NSData.create(bytes = pinned.addressOf(0), length = this.size.toULong())

@@ -21,6 +21,7 @@ import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AuthViewMod
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.DetectionViewModel
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.ProfileViewModel
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.HistoryViewModel
+import com.nkwabyte.cropdiseasedetection.common.helpers.ObjectDetector
 import com.nkwabyte.cropdiseasedetection.common.utils.SettingsManager
 import com.nkwabyte.cropdiseasedetection.data.repository.SyncRepository
 
@@ -56,10 +57,23 @@ object KoinDependencies : KoinComponent {
     val settingsManager: SettingsManager by inject()
     val historyViewModel: HistoryViewModel by inject()
 
+    /**
+     * The same singleton [ObjectDetector] the DetectionViewModel drives.
+     *
+     * Exposed so the native SwiftUI Settings screen can run the benchmarks
+     * against the loaded models rather than constructing a second detector —
+     * see iosApp/iosApp/Views/Settings/BenchmarkSection.swift. The iOS app
+     * renders SwiftUI, not the shared Compose UI, so the Compose Settings
+     * screen's benchmark controls are unreachable there; this is what the
+     * native equivalent binds to.
+     */
+    val objectDetector: ObjectDetector by inject()
+
     fun getAppViewModel(): AppViewModel = appViewModel
     fun getAuthViewModel(): AuthViewModel = authViewModel
     fun getDetectionViewModel(): DetectionViewModel = detectionViewModel
     fun getProfileViewModel(): ProfileViewModel = profileViewModel
     fun getSettingsManager(): SettingsManager = settingsManager
     fun getHistoryViewModel(): HistoryViewModel = historyViewModel
+    fun getObjectDetector(): ObjectDetector = objectDetector
 }

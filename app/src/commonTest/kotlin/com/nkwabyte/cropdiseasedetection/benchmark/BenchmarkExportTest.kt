@@ -43,6 +43,8 @@ private fun stage(detectorExecuted: Boolean, routingMs: Double = 0.04) = StageLa
     postprocessNmsMs = if (detectorExecuted) 2.0 else 0.0,
     totalMs = if (detectorExecuted) 172.0 else 30.0,
     detectorExecuted = detectorExecuted,
+    // A sub-component of detectorInferenceMs, never an addition to it.
+    outputTransferMs = if (detectorExecuted) 6.0 else 0.0,
 )
 
 private fun endToEnd(path: String, detectorExecuted: Boolean, runs: Int = 100) = EndToEndBenchmark(
@@ -158,6 +160,25 @@ class BenchmarkStatsTest {
     }
 
     @Test
+    fun outputTransferIsReportedAndStaysInsideDetectorInference() {
+        val runs = List(100) { stage(true) }
+        val bench = computeStageBenchmark("detector", 10, runs)
+        assertEquals(100, bench.outputTransfer.n)
+        assertTrue(bench.outputTransfer.meanMs > 0.0, "output transfer was never measured")
+        // It is a SUB-COMPONENT: it must never exceed the detector total it is
+        // part of, or the two are being double-counted somewhere.
+        assertTrue(
+            bench.outputTransfer.meanMs <= bench.detectorInference.meanMs,
+            "outputTransfer (${bench.outputTransfer.meanMs}) exceeded " +
+                "detectorInference (${bench.detectorInference.meanMs})",
+        )
+
+        // A skipped detector transfers nothing.
+        val skipped = computeStageBenchmark("skipped", 10, List(10) { stage(false) })
+        assertEquals(0.0, skipped.outputTransfer.maxMs)
+    }
+
+    @Test
     fun mergingClassifierAndDetectorTimingsKeepsBothStages() {
         val merged = stage(false).mergeWithDetector(stage(true))
         assertTrue(merged.detectorExecuted)
@@ -166,6 +187,8 @@ class BenchmarkStatsTest {
         // Decode/orientation/preprocess are paid by both models, and reported as such.
         assertEquals(6.0, merged.imageDecodeMs)
         assertEquals(1.6, merged.orientationCorrectionMs)
+        // The detector's transfer cost survives the merge; the classifier has none.
+        assertEquals(6.0, merged.outputTransferMs)
     }
 
     @Test
@@ -180,9 +203,9 @@ class BenchmarkStatsTest {
 class BenchmarkExportSchemaTest {
 
     @Test
-    fun schemaVersionIsThree() {
-        assertEquals(3, BENCHMARK_EXPORT_SCHEMA_VERSION)
-        assertEquals(3, sampleExport().schemaVersion)
+    fun schemaVersionIsFour() {
+        assertEquals(4, BENCHMARK_EXPORT_SCHEMA_VERSION)
+        assertEquals(4, sampleExport().schemaVersion)
     }
 
     @Test
@@ -256,6 +279,7 @@ class BenchmarkExportSchemaTest {
             assertTrue(csv.contains("detector_executed,"), "CSV omits the detector-executed counter")
         }
         assertTrue(csv.contains("orientation_correction"), "CSV omits the orientation stage")
+        assertTrue(csv.contains("output_transfer"), "CSV omits the output-transfer stage")
         assertFalse(csv.contains("NaN") || csv.contains("Infinity"))
 
         // Every row that claims to be a stats row must have the full column count.

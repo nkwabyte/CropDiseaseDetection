@@ -94,5 +94,23 @@ expect class ObjectDetector() {
         measuredRuns: Int = BENCHMARK_EXTENDED_MEASURED_RUNS,
     ): BenchmarkExport
 
+    /**
+     * Absolute paths of the files the most recent [runExtendedBenchmark] call
+     * wrote — the JSON export first, then the CSV. Empty before the first run,
+     * and empty if writing failed.
+     *
+     * Exposed because the caller is the only part of the system that can
+     * actually do something with the files: on iOS the Settings screen offers
+     * them through a share sheet, and on Android the runbook's `adb pull`
+     * instructions need the exact filenames. Reporting them from here keeps one
+     * writer of those files rather than having the UI re-serialize the export
+     * and produce a second, near-identical artifact.
+     */
+    val lastExtendedBenchmarkFiles: List<String>
+
+    /** Absolute path of the CSV the most recent [runLatencyBenchmark] wrote,
+     *  or null before the first run or if writing failed. */
+    val lastLatencyBenchmarkFile: String?
+
     fun release()
 }

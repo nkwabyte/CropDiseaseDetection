@@ -70,41 +70,7 @@ public class ExecuTorchBridge: NSObject {
     // *StageTimed methods further down can time each step individually without
     // touching what gets computed. Same inputs in, same outputs out.
 
-    /// YOLO26: input 640×640, letterboxed with gray (114, 114, 114) background, pixel/255 normalization (mean=0, std=1).
-    /// Output: raw float array flattened from [1, 27, N] with bounding boxes un-letterboxed to original aspect ratio.
-    @objc public func runDetection(withImageData imageData: Data) -> [NSNumber] {
-        guard let module = detectionModule,
-              let prep = preprocessCHW(imageData, width: 640, height: 640,
-                                        mean: (0.0, 0.0, 0.0),
-                                        std: (1.0, 1.0, 1.0),
-                                        isLetterbox: true) else { return [] }
 
-        let rawOutput = runForward(module: module, data: prep.data,
-                                    shape: [1, 3, 640, 640],
-                                    tag: "detection")
-        if rawOutput.isEmpty { return [] }
-
-        return unletterboxBoxes(rawOutput, numClasses: 23,
-                                 scale: prep.scale, padLeft: prep.padLeft, padTop: prep.padTop,
-                                 origWidth: prep.origWidth, origHeight: prep.origHeight)
-    }
-
-    /// RT-DETR: input `size`×`size`, stretched to fill (Ultralytics runs it with
-    /// `LetterBox(auto: false, scaleFill: true)`), pixel/255 normalization.
-    /// Returns the raw output flattened from [1, numQueries, 4 + numClasses] with no
-    /// box rewriting — the boxes come back normalized to 0…1 and the caller scales
-    /// them, so the un-letterboxing `runDetection` applies would be wrong here.
-    @objc public func runDetectionStretched(withImageData imageData: Data, inputSize: Int) -> [NSNumber] {
-        guard let module = detectionModule,
-              let prep = preprocessCHW(imageData, width: inputSize, height: inputSize,
-                                        mean: (0.0, 0.0, 0.0),
-                                        std: (1.0, 1.0, 1.0),
-                                        isLetterbox: false) else { return [] }
-
-        return runForward(module: module, data: prep.data,
-                          shape: [1, 3, inputSize, inputSize],
-                          tag: "detection-stretched")
-    }
 
     /// EfficientNet-B2: input 260×260, ImageNet normalization.
     /// Output: logits for [Corn, Pepper, Tomato, Other] — the caller rejects on
@@ -227,15 +193,29 @@ public class ExecuTorchBridge: NSObject {
         return result
     }
 
-    @objc public func runDetectionStageTimed(withImageData imageData: Data) -> [NSNumber] {
-        let header0: [NSNumber] = [0, 0, 0, 0, 0]
-        guard let module = detectionModule else { return header0 }
+    /// Detector (letterboxed, YOLO26) with per-stage timing and its raw output
+    /// returned as a contiguous `Float32` buffer.
+    ///
+    /// Dictionary keys — all present whenever `available` is 1:
+    ///   available        NSNumber(Bool)   0 when no output was produced
+    ///   imageDecodeMs    NSNumber(Double)
+    ///   orientationMs    NSNumber(Double)
+    ///   preprocessMs     NSNumber(Double)
+    ///   inferenceMs      NSNumber(Double) model forward only
+    ///   outputTransferMs NSNumber(Double) tensor -> [Float] -> NSData copies
+    ///   count            NSNumber(Int)    Float32 element count in `output`
+    ///   output           NSData           count * 4 bytes, native byte order
+    ///
+    /// `output` is a copy; the caller owns it and it does not alias ExecuTorch
+    /// memory. `count` is what the caller validates the byte length against.
+    @objc public func runDetectionStageTimedBuffer(withImageData imageData: Data) -> [String: Any] {
+        guard let module = detectionModule else { return Self.unavailableBuffer() }
 
         let tDecode0 = monotonicNowNanos()
         let rawImage = decodeImageOrNil(imageData)
         let tDecode1 = monotonicNowNanos()
         guard let rawImage = rawImage else {
-            return [msBetween(tDecode0, tDecode1), 0, 0, 0, 0]
+            return Self.unavailableBuffer(imageDecodeMs: msDouble(tDecode0, tDecode1))
         }
 
         let tOrient0 = monotonicNowNanos()
@@ -248,40 +228,49 @@ public class ExecuTorchBridge: NSObject {
                                        isLetterbox: true)
         let tPre1 = monotonicNowNanos()
         guard let prep = prep else {
-            return [msBetween(tDecode0, tDecode1), msBetween(tOrient0, tOrient1), msBetween(tPre0, tPre1), 0, 0]
+            return Self.unavailableBuffer(imageDecodeMs: msDouble(tDecode0, tDecode1),
+                                          orientationMs: msDouble(tOrient0, tOrient1),
+                                          preprocessMs: msDouble(tPre0, tPre1))
         }
 
-        let tInfer0 = monotonicNowNanos()
-        let rawOutput = runForward(module: module, data: prep.data, shape: [1, 3, 640, 640], tag: "detection-stage-timed")
-        let tInfer1 = monotonicNowNanos()
-
-        if rawOutput.isEmpty {
-            return [msBetween(tDecode0, tDecode1), msBetween(tOrient0, tOrient1), msBetween(tPre0, tPre1), msBetween(tInfer0, tInfer1), 0]
+        guard var raw = runForwardRaw(module: module, data: prep.data,
+                                      shape: [1, 3, 640, 640], tag: "detection-stage-timed") else {
+            return Self.unavailableBuffer(imageDecodeMs: msDouble(tDecode0, tDecode1),
+                                          orientationMs: msDouble(tOrient0, tOrient1),
+                                          preprocessMs: msDouble(tPre0, tPre1))
         }
 
-        let unletterboxed = unletterboxBoxes(rawOutput, numClasses: 23,
-                                              scale: prep.scale, padLeft: prep.padLeft, padTop: prep.padTop,
-                                              origWidth: prep.origWidth, origHeight: prep.origHeight)
-        var result: [NSNumber] = [
-            msBetween(tDecode0, tDecode1),
-            msBetween(tOrient0, tOrient1),
-            msBetween(tPre0, tPre1),
-            msBetween(tInfer0, tInfer1),
-            1,
+        let tBox0 = monotonicNowNanos()
+        unletterboxBoxes(&raw.floats, numClasses: 23,
+                         scale: prep.scale, padLeft: prep.padLeft, padTop: prep.padTop,
+                         origWidth: prep.origWidth, origHeight: prep.origHeight)
+        let data = raw.floats.withUnsafeBufferPointer { Data(buffer: $0) }
+        let tBox1 = monotonicNowNanos()
+
+        return [
+            "available": NSNumber(value: true),
+            "imageDecodeMs": NSNumber(value: msDouble(tDecode0, tDecode1)),
+            "orientationMs": NSNumber(value: msDouble(tOrient0, tOrient1)),
+            "preprocessMs": NSNumber(value: msDouble(tPre0, tPre1)),
+            "inferenceMs": NSNumber(value: raw.forwardMs),
+            "outputTransferMs": NSNumber(value: raw.materializeMs + msDouble(tBox0, tBox1)),
+            "count": NSNumber(value: raw.floats.count),
+            "output": data,
         ]
-        result.append(contentsOf: unletterboxed)
-        return result
     }
 
-    @objc public func runDetectionStretchedStageTimed(withImageData imageData: Data, inputSize: Int) -> [NSNumber] {
-        let header0: [NSNumber] = [0, 0, 0, 0, 0]
-        guard let module = detectionModule else { return header0 }
+    /// Stretch-preprocessed detector (RT-DETR) counterpart of
+    /// `runDetectionStageTimedBuffer`. Boxes are left normalized to 0…1 and no
+    /// box rewriting is applied, exactly as before.
+    @objc public func runDetectionStretchedStageTimedBuffer(withImageData imageData: Data,
+                                                            inputSize: Int) -> [String: Any] {
+        guard let module = detectionModule else { return Self.unavailableBuffer() }
 
         let tDecode0 = monotonicNowNanos()
         let rawImage = decodeImageOrNil(imageData)
         let tDecode1 = monotonicNowNanos()
         guard let rawImage = rawImage else {
-            return [msBetween(tDecode0, tDecode1), 0, 0, 0, 0]
+            return Self.unavailableBuffer(imageDecodeMs: msDouble(tDecode0, tDecode1))
         }
 
         let tOrient0 = monotonicNowNanos()
@@ -294,22 +283,85 @@ public class ExecuTorchBridge: NSObject {
                                        isLetterbox: false)
         let tPre1 = monotonicNowNanos()
         guard let prep = prep else {
-            return [msBetween(tDecode0, tDecode1), msBetween(tOrient0, tOrient1), msBetween(tPre0, tPre1), 0, 0]
+            return Self.unavailableBuffer(imageDecodeMs: msDouble(tDecode0, tDecode1),
+                                          orientationMs: msDouble(tOrient0, tOrient1),
+                                          preprocessMs: msDouble(tPre0, tPre1))
         }
 
-        let tInfer0 = monotonicNowNanos()
-        let rawOutput = runForward(module: module, data: prep.data, shape: [1, 3, inputSize, inputSize], tag: "detection-stretched-stage-timed")
-        let tInfer1 = monotonicNowNanos()
+        guard let raw = runForwardRaw(module: module, data: prep.data,
+                                      shape: [1, 3, inputSize, inputSize],
+                                      tag: "detection-stretched-stage-timed") else {
+            return Self.unavailableBuffer(imageDecodeMs: msDouble(tDecode0, tDecode1),
+                                          orientationMs: msDouble(tOrient0, tOrient1),
+                                          preprocessMs: msDouble(tPre0, tPre1))
+        }
 
-        var result: [NSNumber] = [
-            msBetween(tDecode0, tDecode1),
-            msBetween(tOrient0, tOrient1),
-            msBetween(tPre0, tPre1),
-            msBetween(tInfer0, tInfer1),
-            rawOutput.isEmpty ? 0 : 1,
+        let tCopy0 = monotonicNowNanos()
+        let data = raw.floats.withUnsafeBufferPointer { Data(buffer: $0) }
+        let tCopy1 = monotonicNowNanos()
+
+        return [
+            "available": NSNumber(value: true),
+            "imageDecodeMs": NSNumber(value: msDouble(tDecode0, tDecode1)),
+            "orientationMs": NSNumber(value: msDouble(tOrient0, tOrient1)),
+            "preprocessMs": NSNumber(value: msDouble(tPre0, tPre1)),
+            "inferenceMs": NSNumber(value: raw.forwardMs),
+            "outputTransferMs": NSNumber(value: raw.materializeMs + msDouble(tCopy0, tCopy1)),
+            "count": NSNumber(value: raw.floats.count),
+            "output": data,
         ]
-        result.append(contentsOf: rawOutput)
-        return result
+    }
+
+    /// Diagnostic A/B of the two raw-output transports, from ONE forward pass.
+    ///
+    /// Returns the SAME post-unletterbox float data both ways — `boxed` as the
+    /// `[NSNumber]` array the bridge used to return, and `buffer` as the
+    /// contiguous `Float32` NSData it returns now — so a caller can prove the
+    /// transport change is lossless without model nondeterminism confounding the
+    /// comparison. Used only by the equivalence check; production never calls it.
+    @objc public func runDetectionEquivalenceProbe(withImageData imageData: Data,
+                                                   isLetterbox: Bool,
+                                                   inputSize: Int) -> [String: Any] {
+        guard let module = detectionModule,
+              let prep = preprocessCHW(imageData,
+                                       width: isLetterbox ? 640 : inputSize,
+                                       height: isLetterbox ? 640 : inputSize,
+                                       mean: (0.0, 0.0, 0.0), std: (1.0, 1.0, 1.0),
+                                       isLetterbox: isLetterbox),
+              var raw = runForwardRaw(module: module, data: prep.data,
+                                      shape: [1, 3, isLetterbox ? 640 : inputSize, isLetterbox ? 640 : inputSize],
+                                      tag: "equivalence-probe")
+        else { return ["available": NSNumber(value: false)] }
+
+        if isLetterbox {
+            unletterboxBoxes(&raw.floats, numClasses: 23,
+                             scale: prep.scale, padLeft: prep.padLeft, padTop: prep.padTop,
+                             origWidth: prep.origWidth, origHeight: prep.origHeight)
+        }
+
+        return [
+            "available": NSNumber(value: true),
+            "count": NSNumber(value: raw.floats.count),
+            "boxed": raw.floats.map { NSNumber(value: $0) },
+            "buffer": raw.floats.withUnsafeBufferPointer { Data(buffer: $0) },
+        ]
+    }
+
+    /// A well-formed "nothing was produced" reply, so the caller never has to
+    /// distinguish a missing key from a zero.
+    private static func unavailableBuffer(imageDecodeMs: Double = 0,
+                                          orientationMs: Double = 0,
+                                          preprocessMs: Double = 0) -> [String: Any] {
+        return [
+            "available": NSNumber(value: false),
+            "imageDecodeMs": NSNumber(value: imageDecodeMs),
+            "orientationMs": NSNumber(value: orientationMs),
+            "preprocessMs": NSNumber(value: preprocessMs),
+            "inferenceMs": NSNumber(value: 0.0),
+            "outputTransferMs": NSNumber(value: 0.0),
+            "count": NSNumber(value: 0),
+            "output": Data(),
+        ]
     }
 
     // MARK: - Latency benchmarking (quick developer-button protocol, unchanged)
@@ -362,9 +414,9 @@ public class ExecuTorchBridge: NSObject {
 
         func runOnce() {
             if isLetterbox {
-                _ = runDetection(withImageData: imageData)
+                _ = runDetectionStageTimedBuffer(withImageData: imageData)
             } else {
-                _ = runDetectionStretched(withImageData: imageData, inputSize: inputSize)
+                _ = runDetectionStretchedStageTimedBuffer(withImageData: imageData, inputSize: inputSize)
             }
         }
 
@@ -381,6 +433,25 @@ public class ExecuTorchBridge: NSObject {
             latenciesMs.append(NSNumber(value: (t1 - t0) * 1000.0))
         }
         return latenciesMs
+    }
+
+    /// ObjC-visible wrapper over the deterministic synthetic-image generator, so
+    /// the Kotlin extended benchmark can request the SAME images the quick
+    /// benchmark builds internally instead of carrying its own generator.
+    ///
+    /// This method is declared in ExecuTorchBridge.h and was called by
+    /// `iosMain/ObjectDetector.kt`, but no `@objc` implementation existed — the
+    /// generator below is `private static`, which is invisible to the
+    /// Objective-C runtime. cinterop binds against the header and cannot detect
+    /// that, so the call compiled and linked cleanly and then died at runtime
+    /// with `unrecognized selector sent to instance` the first time the extended
+    /// benchmark ran on a device. Verify header/implementation agreement against
+    /// Xcode's generated `iosApp-Swift.h`, never against the selector strings in
+    /// the linked binary: a selector merely *referenced* by a call site appears
+    /// there too, so that check cannot tell a missing implementation from a
+    /// present one.
+    @objc public func syntheticJpegData(withWidth width: Int, height: Int) -> Data? {
+        return Self.syntheticJpegData(width: width, height: height)
     }
 
     /// Builds a deterministic synthetic JPEG (a striped pattern, not a photo of
@@ -514,6 +585,11 @@ public class ExecuTorchBridge: NSObject {
         return DispatchTime.now().uptimeNanoseconds
     }
 
+    /// Elapsed milliseconds between two monotonic timestamps, unboxed.
+    private func msDouble(_ start: UInt64, _ end: UInt64) -> Double {
+        return Double(end - start) / 1_000_000.0
+    }
+
     /// Elapsed milliseconds between two monotonic timestamps, boxed as NSNumber.
     ///
     /// Every caller puts the value straight into an `[NSNumber]` result array for
@@ -521,6 +597,50 @@ public class ExecuTorchBridge: NSObject {
     /// boxing happens here rather than at eighteen call sites.
     private func msBetween(_ start: UInt64, _ end: UInt64) -> NSNumber {
         return NSNumber(value: Double(end - start) / 1_000_000.0)
+    }
+
+    /// One detector forward pass, with its output materialized into a contiguous
+    /// `Float32` buffer instead of ~226,800 boxed `NSNumber` objects.
+    ///
+    /// The copy out of the tensor is deliberate and is NOT optional: ExecuTorch
+    /// owns that memory and does not guarantee it outlives this scope, so a
+    /// no-copy `Data(bytesNoCopy:)` wrapper would hand Kotlin a buffer that can
+    /// dangle. One ~907 KB copy is the correct trade.
+    ///
+    /// `forwardMs` and `materializeMs` are returned separately so the caller can
+    /// report the output transfer on its own while still including it in the
+    /// comparable detector total — the boxing this replaces was previously inside
+    /// the measured span, so dropping it silently would have made iOS look faster
+    /// for free.
+    private struct RawTensorOutput {
+        var floats: [Float]
+        let forwardMs: Double
+        let materializeMs: Double
+    }
+
+    private func runForwardRaw(module: Module, data: Data,
+                               shape: [Int], tag: String) -> RawTensorOutput? {
+        do {
+            let inputTensor = Tensor<Float>(data: data, shape: shape)
+            let t0 = monotonicNowNanos()
+            let outputs = try module.forward(inputTensor)
+            let t1 = monotonicNowNanos()
+            guard let outTensor: Tensor<Float> = outputs.first?.tensor() else {
+                print("[ExecuTorchBridge] \(tag) produced no float tensor output")
+                return nil
+            }
+            // Array(buffer) copies element-wise out of ExecuTorch-owned memory.
+            let floats: [Float] = outTensor.withUnsafeBytes { buffer in Array(buffer) }
+            let t2 = monotonicNowNanos()
+            return RawTensorOutput(
+                floats: floats,
+                forwardMs: msDouble(t0, t1),
+                materializeMs: msDouble(t1, t2)
+            )
+        } catch {
+            print("[ExecuTorchBridge] \(tag) inference failed: \(error)")
+            return nil
+        }
     }
 
     private func runForward(module: Module, data: Data,
@@ -545,19 +665,20 @@ public class ExecuTorchBridge: NSObject {
     /// original-aspect-ratio 640×640 canvas space, in place, and returns it — the
     /// exact box-rewrite loop `runDetection` used to inline, extracted so
     /// `runDetectionStageTimed` can call the identical logic.
-    private func unletterboxBoxes(_ rawOutput: [NSNumber], numClasses: Int,
+    /// Same box-rewrite loop as before, operating on the contiguous buffer in
+    /// place. The arithmetic is unchanged — only the container is.
+    private func unletterboxBoxes(_ output: inout [Float], numClasses: Int,
                                    scale: Float, padLeft: Float, padTop: Float,
-                                   origWidth: Float, origHeight: Float) -> [NSNumber] {
-        var output = rawOutput
+                                   origWidth: Float, origHeight: Float) {
         let rowStride = numClasses + 4
         let n = output.count / rowStride
-        if n <= 0 { return output }
+        if n <= 0 { return }
 
         for i in 0..<n {
-            let cx = output[0 * n + i].floatValue
-            let cy = output[1 * n + i].floatValue
-            let w  = output[2 * n + i].floatValue
-            let h  = output[3 * n + i].floatValue
+            let cx = output[0 * n + i]
+            let cy = output[1 * n + i]
+            let w  = output[2 * n + i]
+            let h  = output[3 * n + i]
 
             let x1Lb = cx - w / 2.0
             let y1Lb = cy - h / 2.0
@@ -574,13 +695,11 @@ public class ExecuTorchBridge: NSObject {
             let newW  = max(0.0, x2 - x1)
             let newH  = max(0.0, y2 - y1)
 
-            output[0 * n + i] = NSNumber(value: newCx)
-            output[1 * n + i] = NSNumber(value: newCy)
-            output[2 * n + i] = NSNumber(value: newW)
-            output[3 * n + i] = NSNumber(value: newH)
+            output[0 * n + i] = newCx
+            output[1 * n + i] = newCy
+            output[2 * n + i] = newW
+            output[3 * n + i] = newH
         }
-
-        return output
     }
 
     private func decodeImageOrNil(_ data: Data) -> UIImage? {
