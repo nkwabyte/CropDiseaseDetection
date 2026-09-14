@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.nkwabyte.cropdiseasedetection.common.helpers.ObjectDetector
 import com.nkwabyte.cropdiseasedetection.common.model.BENCHMARK_EXPORT_SCHEMA_VERSION
+import com.nkwabyte.cropdiseasedetection.common.model.BenchmarkImageSet
 import com.nkwabyte.cropdiseasedetection.common.model.BenchmarkPath
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -81,6 +82,34 @@ class ExtendedBenchmarkHarnessTest {
             "orientationCorrectionMs is still a constant zero on Android",
             classifierStage!!.orientationCorrection.maxMs > 0.0,
         )
+
+        // The five routing paths must all be present and behave per the design.
+        for (acceptedPath in BenchmarkPath.acceptedCropPaths) {
+            val e2e = export.endToEndByPath[acceptedPath]
+            assertTrue("missing accepted path $acceptedPath", e2e != null)
+            assertEquals(
+                "$acceptedPath must run the detector on every measured run",
+                e2e!!.measuredRuns, e2e.detectorExecutedCount,
+            )
+            assertEquals(0, e2e.detectorSkippedCount)
+        }
+        for (failClosedPath in listOf(BenchmarkPath.REJECTED, BenchmarkPath.MISMATCH)) {
+            val e2e = export.endToEndByPath[failClosedPath]
+            assertTrue("missing fail-closed path $failClosedPath", e2e != null)
+            assertEquals(
+                "$failClosedPath must never invoke the detector",
+                0, e2e!!.detectorExecutedCount,
+            )
+            assertEquals(e2e.measuredRuns, e2e.detectorSkippedCount)
+        }
+
+        // Every locked fixture must appear in the manifest with its pinned hash,
+        // proving the run used the intended bytes.
+        for (image in BenchmarkImageSet.all) {
+            val entry = export.imageManifest.firstOrNull { it.id == image.id }
+            assertTrue("fixture ${image.id} missing from the image manifest", entry != null)
+            assertEquals("fixture ${image.id} checksum mismatch", image.sha256, entry!!.sha256)
+        }
 
         assertTrue(export.modelArtifacts.all { it.sha256.length == 64 })
         assertTrue(export.imageManifest.all { it.sha256.length == 64 })

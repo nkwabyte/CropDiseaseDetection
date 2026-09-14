@@ -25,6 +25,10 @@
 		BA527D85B8009FFE4B66B9C3 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1103AAB8738339FDE947C16E /* HomeView.swift */; };
 		BC1E7F392FD70559009B6C63 /* crop_classifier.pte in Resources */ = {isa = PBXBuildFile; fileRef = BC1E7F382FD70559009B6C63 /* crop_classifier.pte */; };
 		BC1E7F3B2FD70566009B6C63 /* crop_disease_yolo26.pte in Resources */ = {isa = PBXBuildFile; fileRef = BC1E7F3A2FD70566009B6C63 /* crop_disease_yolo26.pte */; };
+		BCBE00012FD70000009B6C63 /* corn.jpg in Resources */ = {isa = PBXBuildFile; fileRef = BCBE00512FD70000009B6C63 /* corn.jpg */; };
+		BCBE00022FD70000009B6C63 /* pepper.jpg in Resources */ = {isa = PBXBuildFile; fileRef = BCBE00522FD70000009B6C63 /* pepper.jpg */; };
+		BCBE00032FD70000009B6C63 /* tomato.jpg in Resources */ = {isa = PBXBuildFile; fileRef = BCBE00532FD70000009B6C63 /* tomato.jpg */; };
+		BCBE00042FD70000009B6C63 /* ood_cassava.jpg in Resources */ = {isa = PBXBuildFile; fileRef = BCBE00542FD70000009B6C63 /* ood_cassava.jpg */; };
 		BC1E7F3D2FD70573009B6C63 /* crop_classifier_ood.pte in Resources */ = {isa = PBXBuildFile; fileRef = BC1E7F3C2FD70573009B6C63 /* crop_classifier_ood.pte */; };
 		BC1E7F3F2FD70580009B6C63 /* crop_disease_rtdetr.pte in Resources */ = {isa = PBXBuildFile; fileRef = BC1E7F3E2FD70580009B6C63 /* crop_disease_rtdetr.pte */; };
 		BC98B09C2FD74C170039C9F4 /* executorch in Frameworks */ = {isa = PBXBuildFile; productRef = BC98B09C2FD74C170039C9F2 /* executorch */; };
@@ -59,6 +63,10 @@
 		9FD2359243684D780B4CFDF9 /* EncyclopediaView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EncyclopediaView.swift; sourceTree = "<group>"; };
 		BC1E7F382FD70559009B6C63 /* crop_classifier.pte */ = {isa = PBXFileReference; lastKnownFileType = file; path = crop_classifier.pte; sourceTree = "<group>"; };
 		BC1E7F3A2FD70566009B6C63 /* crop_disease_yolo26.pte */ = {isa = PBXFileReference; lastKnownFileType = file; path = crop_disease_yolo26.pte; sourceTree = "<group>"; };
+		BCBE00512FD70000009B6C63 /* corn.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = corn.jpg; sourceTree = "<group>"; };
+		BCBE00522FD70000009B6C63 /* pepper.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = pepper.jpg; sourceTree = "<group>"; };
+		BCBE00532FD70000009B6C63 /* tomato.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = tomato.jpg; sourceTree = "<group>"; };
+		BCBE00542FD70000009B6C63 /* ood_cassava.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = ood_cassava.jpg; sourceTree = "<group>"; };
 		BC1E7F3C2FD70573009B6C63 /* crop_classifier_ood.pte */ = {isa = PBXFileReference; lastKnownFileType = file; path = crop_classifier_ood.pte; sourceTree = "<group>"; };
 		BC1E7F3E2FD70580009B6C63 /* crop_disease_rtdetr.pte */ = {isa = PBXFileReference; lastKnownFileType = file; path = crop_disease_rtdetr.pte; sourceTree = "<group>"; };
 		BCAA110000000000000001AA /* ExecuTorchBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecuTorchBridge.swift; sourceTree = "<group>"; };
@@ -133,6 +141,10 @@
 				09E825AEFB0318C83176FA6B /* Assets.xcassets */,
 				BC1E7F382FD70559009B6C63 /* crop_classifier.pte */,
 				BC1E7F3A2FD70566009B6C63 /* crop_disease_yolo26.pte */,
+				BCBE00512FD70000009B6C63 /* corn.jpg */,
+				BCBE00522FD70000009B6C63 /* pepper.jpg */,
+				BCBE00532FD70000009B6C63 /* tomato.jpg */,
+				BCBE00542FD70000009B6C63 /* ood_cassava.jpg */,
 				BC1E7F3C2FD70573009B6C63 /* crop_classifier_ood.pte */,
 				BC1E7F3E2FD70580009B6C63 /* crop_disease_rtdetr.pte */,
 				BCAA110000000000000001AA /* ExecuTorchBridge.swift */,
@@ -294,6 +306,10 @@
 			files = (
 				BC1E7F392FD70559009B6C63 /* crop_classifier.pte in Resources */,
 				BC1E7F3B2FD70566009B6C63 /* crop_disease_yolo26.pte in Resources */,
+				BCBE00012FD70000009B6C63 /* corn.jpg in Resources */,
+				BCBE00022FD70000009B6C63 /* pepper.jpg in Resources */,
+				BCBE00032FD70000009B6C63 /* tomato.jpg in Resources */,
+				BCBE00042FD70000009B6C63 /* ood_cassava.jpg in Resources */,
 				BC1E7F3D2FD70573009B6C63 /* crop_classifier_ood.pte in Resources */,
 				BC1E7F3F2FD70580009B6C63 /* crop_disease_rtdetr.pte in Resources */,
 				419B5E5E2A1D000000000008 /* GoogleService-Info.plist in Resources */,

@@ -22,7 +22,9 @@ import com.nkwabyte.cropdiseasedetection.common.model.BENCHMARK_EXTENDED_WARMUP_
 import com.nkwabyte.cropdiseasedetection.common.model.BENCHMARK_MEASURED_RUNS
 import com.nkwabyte.cropdiseasedetection.common.model.BENCHMARK_WARMUP_RUNS
 import com.nkwabyte.cropdiseasedetection.common.model.BenchmarkExport
+import com.nkwabyte.cropdiseasedetection.common.model.BenchmarkImage
 import com.nkwabyte.cropdiseasedetection.common.model.BenchmarkImageManifestEntry
+import com.nkwabyte.cropdiseasedetection.common.model.BenchmarkImageSet
 import com.nkwabyte.cropdiseasedetection.common.model.BenchmarkResult
 import com.nkwabyte.cropdiseasedetection.common.model.ClassificationResult
 import com.nkwabyte.cropdiseasedetection.common.model.ColdLoadBenchmark
@@ -582,9 +584,11 @@ actual class ObjectDetector actual constructor() : KoinComponent {
 
         suspend fun measurePath(
             pathId: String,
+            imageBytes: ByteArray,
+            imageId: String,
             selectedCropId: String?,
         ): EndToEndBenchmark {
-            repeat(warmupRuns) { pipeline.run(e2eImageBytes, selectedCropId) }
+            repeat(warmupRuns) { pipeline.run(imageBytes, selectedCropId) }
             val latencies = mutableListOf<Double>()
             var successCount = 0
             var failureCount = 0
@@ -597,7 +601,7 @@ actual class ObjectDetector actual constructor() : KoinComponent {
             repeat(measuredRuns) {
                 try {
                     val t0 = System.nanoTime()
-                    val result = pipeline.run(e2eImageBytes, selectedCropId, instrumented = true)
+                    val result = pipeline.run(imageBytes, selectedCropId, instrumented = true)
                     val t1 = System.nanoTime()
                     latencies.add((t1 - t0) / 1_000_000.0)
                     if (result.detectorExecuted) detectorExecuted++ else detectorSkipped++
@@ -621,7 +625,7 @@ actual class ObjectDetector actual constructor() : KoinComponent {
             }
             return EndToEndBenchmark(
                 observedStageOrder = correctedStageOrder,
-                representativeImageId = e2eImageId,
+                representativeImageId = imageId,
                 stats = computeLatencyStats(latencies.ifEmpty { listOf(0.0) }),
                 offlineSuccessCount = successCount,
                 offlineFailureCount = failureCount,
@@ -639,56 +643,97 @@ actual class ObjectDetector actual constructor() : KoinComponent {
             )
         }
 
-        // Which routing paths this image can actually drive is a property of the
-        // classifier's verdict on it, which the benchmark must not fake. Probe
-        // once, then measure only the paths that genuinely occur and say so in
-        // the notes for the ones that do not.
-        val probe = pipeline.run(e2eImageBytes, null)
+        // ---- The five routing paths, each against its own locked fixture --------
+        // Synthetic striped images are rejected by the classifier, so they can only
+        // ever exercise the out-of-distribution path. Accepted Corn/Pepper/Tomato
+        // and a deliberate crop mismatch need real photographs, which ship as app
+        // assets with their SHA-256 pinned in BenchmarkImageSet. Each fixture is
+        // checksum-verified here before it is measured, so a swapped or truncated
+        // asset fails loudly instead of silently changing what was measured.
         val endToEndByPath = mutableMapOf<String, EndToEndBenchmark>()
-
-        when (val decision = probe.decision) {
-            is RoutingDecision.Accepted -> {
-                endToEndByPath[BenchmarkPath.ACCEPTED] =
-                    measurePath(BenchmarkPath.ACCEPTED, decision.crop.canonicalLabel)
-                val otherCrop = SupportedCrop.entries.first { it != decision.crop }
-                endToEndByPath[BenchmarkPath.MISMATCH] =
-                    measurePath(BenchmarkPath.MISMATCH, otherCrop.canonicalLabel)
-                notes.add(
-                    "The benchmark image classifies as ${decision.crop.canonicalLabel}, so the " +
-                        "accepted path and the selected-crop-mismatch path (selecting " +
-                        "${otherCrop.canonicalLabel} against a ${decision.crop.canonicalLabel} " +
-                        "prediction) are both measured. The out-of-distribution rejection path " +
-                        "is NOT measured in this export: forcing it would require either a real " +
-                        "non-crop photograph or changing the classifier threshold, and this " +
-                        "benchmark does neither. Its absence is not a zero."
-                )
+        val fixtures = mutableMapOf<String, ByteArray>()
+        for (image in BenchmarkImageSet.all) {
+            val bytes = loadBenchmarkImage(image)
+            if (bytes == null) {
+                notes.add("Benchmark fixture '${image.assetName}' is missing; every path that uses it is omitted, not zero-filled.")
+                continue
             }
-
-            is RoutingDecision.Rejected -> {
-                endToEndByPath[BenchmarkPath.REJECTED] = measurePath(BenchmarkPath.REJECTED, null)
+            val actual = sha256Of(bytes)
+            if (actual != image.sha256) {
                 notes.add(
-                    "The synthetic benchmark image is rejected by the classifier " +
-                        "(label=\"${decision.label}\", confidence=${decision.confidence}), so only " +
-                        "the out-of-distribution path is measured here — and it correctly never " +
-                        "invokes the detector. The accepted and selected-crop-mismatch paths " +
-                        "require an image the classifier accepts and are NOT measured in this " +
-                        "export; their absence is not a zero. Per-stage detector latency is " +
-                        "still measured separately in detectorStageBySize."
+                    "Benchmark fixture '${image.assetName}' FAILED its checksum (expected ${image.sha256}, " +
+                        "got $actual); it was NOT used and every path that depends on it is omitted."
                 )
+                continue
             }
-
-            else -> {
-                notes.add(
-                    "Routing probe returned ${probe.outcome} (${probe.errorMessage ?: "no detail"}); " +
-                        "no end-to-end routing path could be measured for this run."
+            fixtures[image.id] = bytes
+            imageManifest.add(
+                BenchmarkImageManifestEntry(
+                    id = image.id,
+                    widthPx = orientedImageSize(bytes)?.widthPx ?: -1,
+                    heightPx = orientedImageSize(bytes)?.heightPx ?: -1,
+                    sizeBytes = bytes.size.toLong(),
+                    sha256 = actual,
+                    source = "locked_real_photograph: ${image.groundTruthNote}",
                 )
-            }
+            )
         }
+
+        // Accepted paths: one per crop, each with its own image and its own
+        // canonical crop id. Reported separately — different images through
+        // different detector class ranges must never be pooled.
+        for ((image, pathId) in listOf(
+            BenchmarkImageSet.CORN to BenchmarkPath.ACCEPTED_CORN,
+            BenchmarkImageSet.PEPPER to BenchmarkPath.ACCEPTED_PEPPER,
+            BenchmarkImageSet.TOMATO to BenchmarkPath.ACCEPTED_TOMATO,
+        )) {
+            val bytes = fixtures[image.id] ?: continue
+            endToEndByPath[pathId] = measurePath(
+                pathId = pathId,
+                imageBytes = bytes,
+                imageId = image.id,
+                selectedCropId = image.expectedCrop?.canonicalLabel,
+            )
+        }
+
+        // Out-of-distribution: a cassava leaf, the near-miss case the two-stage
+        // design exists to reject. The detector must never run here.
+        fixtures[BenchmarkImageSet.OUT_OF_DISTRIBUTION.id]?.let { bytes ->
+            endToEndByPath[BenchmarkPath.REJECTED] = measurePath(
+                pathId = BenchmarkPath.REJECTED,
+                imageBytes = bytes,
+                imageId = BenchmarkImageSet.OUT_OF_DISTRIBUTION.id,
+                selectedCropId = null,
+            )
+        }
+
+        // Deliberate selected-crop mismatch: a Corn photograph with Tomato
+        // selected. The detector must never run here either.
+        fixtures[BenchmarkImageSet.CORN.id]?.let { bytes ->
+            endToEndByPath[BenchmarkPath.MISMATCH] = measurePath(
+                pathId = BenchmarkPath.MISMATCH,
+                imageBytes = bytes,
+                imageId = "${BenchmarkImageSet.CORN.id}_selected_tomato",
+                selectedCropId = SupportedCrop.TOMATO.canonicalLabel,
+            )
+        }
+
+        notes.add(
+            "End-to-end paths are measured against FIXED, checksum-locked real " +
+                "photographs (see imageManifest entries whose source begins " +
+                "'locked_real_photograph'), not synthetic patterns: accepted Corn, " +
+                "accepted Pepper and accepted Tomato each use their own image and " +
+                "their own canonical crop id; the out-of-distribution path uses a " +
+                "cassava leaf; the mismatch path uses the Corn image with Tomato " +
+                "selected. A fixture failing its checksum is skipped and its paths " +
+                "omitted rather than measured against unknown bytes."
+        )
 
         // The v2 `endToEnd` field is retained for existing readers. It carries
         // whichever path this run could measure, and `path` says which one — it is
         // never a blend of paths with and without detector inference.
-        val endToEnd = endToEndByPath[BenchmarkPath.ACCEPTED]
+        val endToEnd = endToEndByPath[BenchmarkPath.ACCEPTED_CORN]
+            ?: endToEndByPath[BenchmarkPath.ACCEPTED]
             ?: endToEndByPath[BenchmarkPath.REJECTED]
             ?: endToEndByPath.values.firstOrNull()
             ?: EndToEndBenchmark(
@@ -739,7 +784,7 @@ actual class ObjectDetector actual constructor() : KoinComponent {
             val wallT0 = System.nanoTime()
             // Same corrected pipeline as the end-to-end loop, so the CPU proxy
             // describes the work the app actually does.
-            repeat(measuredRuns) { pipeline.run(e2eImageBytes, null) }
+            repeat(measuredRuns) { pipeline.run(fixtures[BenchmarkImageSet.CORN.id] ?: e2eImageBytes, null) }
             val threadT1 = Debug.threadCpuTimeNanos()
             val wallT1 = System.nanoTime()
             if (threadT0 < 0 || threadT1 < 0) {
@@ -1327,6 +1372,13 @@ actual class ObjectDetector actual constructor() : KoinComponent {
             }
         }
         return file.absolutePath
+    }
+
+    actual fun loadBenchmarkImage(image: BenchmarkImage): ByteArray? = try {
+        context.assets.open("${BenchmarkImageSet.ASSET_DIR}/${image.assetName}").use { it.readBytes() }
+    } catch (e: Exception) {
+        Log.w("ObjectDetector", "Benchmark fixture '${image.assetName}' could not be read", e)
+        null
     }
 
     actual fun release() {

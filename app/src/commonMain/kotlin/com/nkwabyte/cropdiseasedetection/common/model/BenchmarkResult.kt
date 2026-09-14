@@ -386,6 +386,16 @@ object BenchmarkPath {
 
     /** Classifier accepts a crop the user did not select -> detector skipped. */
     const val MISMATCH = "selected_crop_mismatch"
+
+    /** Accepted paths, one per crop, measured against the locked real-image
+     *  fixtures. Reported separately: they are different images through
+     *  different detector class ranges and must never be pooled. */
+    const val ACCEPTED_CORN = "accepted_corn"
+    const val ACCEPTED_PEPPER = "accepted_pepper"
+    const val ACCEPTED_TOMATO = "accepted_tomato"
+
+    /** The per-crop accepted paths, for consumers that need to iterate them. */
+    val acceptedCropPaths = listOf(ACCEPTED_CORN, ACCEPTED_PEPPER, ACCEPTED_TOMATO)
 }
 
 /**

@@ -3318,3 +3318,15 @@ CLAUDE.md
 .github/hooks/
 .github/agents/
 .github/agent/
+
+# --- Benchmark fixtures must be version-controlled -------------------------
+# The generic `assets/` rule above (a Flutter-era leftover) was hiding the
+# checksum-locked benchmark photographs. Those are part of the MEASURED INPUT:
+# the extended benchmark verifies each one against the SHA-256 pinned in
+# BenchmarkImageSet and writes it into the export's image manifest, so a run is
+# only reproducible from a commit if they are in that commit. Each directory
+# level must be re-included explicitly — git will not descend into an excluded
+# directory to honour a deeper negation.
+!app/src/commonMain/assets/
+!app/src/commonMain/assets/benchmark/
+!app/src/commonMain/assets/benchmark/*.jpg

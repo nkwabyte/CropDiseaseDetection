@@ -3,6 +3,7 @@ package com.nkwabyte.cropdiseasedetection.common.helpers
 import com.nkwabyte.cropdiseasedetection.common.model.BENCHMARK_EXTENDED_MEASURED_RUNS
 import com.nkwabyte.cropdiseasedetection.common.model.BENCHMARK_EXTENDED_WARMUP_RUNS
 import com.nkwabyte.cropdiseasedetection.common.model.BenchmarkExport
+import com.nkwabyte.cropdiseasedetection.common.model.BenchmarkImage
 import com.nkwabyte.cropdiseasedetection.common.model.BenchmarkResult
 import com.nkwabyte.cropdiseasedetection.common.model.ClassificationResult
 import com.nkwabyte.cropdiseasedetection.common.model.DetectionResult
@@ -111,6 +112,15 @@ expect class ObjectDetector() {
     /** Absolute path of the CSV the most recent [runLatencyBenchmark] wrote,
      *  or null before the first run or if writing failed. */
     val lastLatencyBenchmarkFile: String?
+
+    /**
+     * Loads one of the locked benchmark fixtures from platform asset storage,
+     * or null when it is missing or unreadable. The benchmark verifies the
+     * returned bytes against [BenchmarkImage.sha256] before using them, so a
+     * swapped or truncated asset fails loudly instead of quietly changing what
+     * was measured.
+     */
+    fun loadBenchmarkImage(image: BenchmarkImage): ByteArray?
 
     fun release()
 }
