@@ -1,0 +1,120 @@
+section,key,value
+meta,schemaVersion,3
+meta,generatedAtEpochMs,1789390989577
+device,platform,android
+device,manufacturer,Google
+device,model,sdk_gphone16k_arm64
+device,osVersion,17
+device,apiLevelOrOsBuild,SDK 37
+device,abis,arm64-v8a
+device,isEmulator,true
+device,totalRamBytes,4159930368
+device,batteryLevelPercent,100
+device,isCharging,false
+device,thermalStatus,none
+device,thermalStatusNote,"thermalStatus is reported by PowerManager, but this run is on an emulator: there is no real thermal sensor behind it — treat it as not meaningful."
+device,buildIdentifier,46380a24d046
+device,appVersionName,1.0.0
+device,appVersionCode,1
+device,installedAppSizeBytes,388292141
+device,installedAppSizeNote,"installedAppSizeBytes is the base APK file size (ApplicationInfo.sourceDir), not true on-disk installed size: it excludes unpacked odex/vdex/oat, any split APKs, and app-private data. A StorageStatsManager-based figure (API 26+, requires PACKAGE_USAGE_STATS or being the installer of record) would be more complete but is not used here."
+
+model_artifacts
+name,assetFileName,sizeBytes,sha256
+classifier,crop_classifier_ood.pte,30820096,39e1b63dac8ddea9d88e7549dbbb34a9d7363987de89ed1d7ffbdcc4a86b1aad
+detector (YOLO26n),crop_disease_yolo26.pte,9768796,baa36404dbb6c8244121ae2f5e220ae432dbf3718d9fa4eef91498dac3292fe1
+
+image_manifest
+id,widthPx,heightPx,sizeBytes,sha256,source
+classifier_260x260,260,260,3683,aae22f8915a14c4286eb9990279ce5c2e9e3f2ea5f50d11d8e9dbbf5e99c93d0,synthetic_striped_pattern
+detector_1920x1080,1920,1080,47304,518c2654e829c55bdb9ce8280e83c48df8192e04418989a599dc792a7aae6ca6,synthetic_striped_pattern
+detector_1280x960,1280,960,22125,5f3fa6219c930cd650b0952beafab261f2e8be250fbfaeeff32589ab618bb8eb,synthetic_striped_pattern
+detector_640x480,640,480,16435,c1fedf1e8243b938be8b47d9ed850f8585e841d42b12876220d0ef652c69ccdf,synthetic_striped_pattern
+
+cold_load
+repetitions,note
+5,"Each repetition calls release() first, so this is a genuine cold load (module and spec state cleared), not the idempotent no-op loadModel()/loadClassifierModel() take when the requested model is already resident. release() is only invoked this way from the benchmark path — normal app usage never forces a mid-session cold reload."
+
+stage,n,meanMs,medianMs,stdDevMs,minMs,maxMs,p50Ms,p90Ms,p95Ms,p99Ms
+cold_load_classifier,5,0.3224666,0.311625,0.11244841910760683,0.178792,0.491708,0.311625,0.491708,0.491708,0.491708
+cold_load_detector,5,0.2197418,0.209458,0.1481890423772959,0.095917,0.46525,0.209458,0.46525,0.46525,0.46525
+
+classifier_stage_benchmark (warmup=10, measured=100)
+stage,n,meanMs,medianMs,stdDevMs,minMs,maxMs,p50Ms,p90Ms,p95Ms,p99Ms
+image_decode,100,0.21051789000000007,0.1725415,0.29060397233591284,0.089667,2.687709,0.173583,0.217583,0.429209,1.144625
+orientation_correction,100,0.054755019999999995,0.052417,0.013111661527807907,0.037583,0.124666,0.0525,0.064291,0.070792,0.116125
+preprocess,100,0.44883667999999993,0.3480835,0.6113809457088734,0.134584,3.4225,0.349625,0.485041,2.156458,3.151875
+classifier_inference,100,17.04045253,16.364708,3.512343723168008,15.978583,48.549292,16.367333,17.641875,18.884084,29.311459
+routing,100,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+end_to_end_classifier_only,100,17.77058461,16.902375,3.8189366403080647,16.318833,49.64375,16.90475,19.693875,21.609917,33.210375
+
+detector_stage_benchmark_1920x1080 (warmup=10, measured=100)
+stage,n,meanMs,medianMs,stdDevMs,minMs,maxMs,p50Ms,p90Ms,p95Ms,p99Ms
+image_decode,100,1.6153761699999996,1.595354,0.07122888045795778,1.4627510000000001,2.008333,1.59575,1.683417,1.721916,1.817375
+orientation_correction,100,0.05832546999999999,0.0560005,0.010016294055949662,0.048333,0.127042,0.056042,0.063375,0.06675,0.099834
+preprocess,100,2.293002440000001,2.3535835,0.27020123941925855,1.744542,2.914083,2.354959,2.582917,2.675125,2.802916
+detector_inference,100,38.198584999999994,38.0781875,0.605860385316784,37.395459,40.423792,38.078667,38.991083,39.541875,39.817792
+postprocess_nms,100,0.16582997999999993,0.16379149999999998,0.022847079263846503,0.143292,0.365291,0.163792,0.173959,0.1815,0.211542
+end_to_end_detector_only,100,42.341206269999994,42.120771000000005,0.6682612990407668,41.480042,45.020708,42.12275,43.375,43.704125,44.089084
+
+detector_stage_benchmark_1280x960 (warmup=10, measured=100)
+stage,n,meanMs,medianMs,stdDevMs,minMs,maxMs,p50Ms,p90Ms,p95Ms,p99Ms
+image_decode,100,0.9908504600000001,0.973562,0.09690847470747692,0.849667,1.386459,0.9738320000000001,1.068917,1.1492930000000001,1.3688339999999999
+orientation_correction,100,0.05932499,0.0557705,0.013760634525902305,0.045458,0.150584,0.055791,0.071708,0.082875,0.112959
+preprocess,100,2.46600669,2.518604,0.2350594571806343,1.9175,3.100167,2.519,2.674958,2.764292,2.869916
+detector_inference,100,38.27402752,38.099166499999995,0.6632978233015199,37.281916,41.080875,38.104042,39.006292,39.696875,40.316125
+postprocess_nms,100,0.15351249999999997,0.14687499999999998,0.023895005506835886,0.12625,0.254458,0.147,0.171208,0.22025,0.248834
+end_to_end_detector_only,100,41.954337869999996,41.792479,0.6611907318124781,40.846166,44.709041,41.803875,42.633834,43.450125,44.346
+
+detector_stage_benchmark_640x480 (warmup=10, measured=100)
+stage,n,meanMs,medianMs,stdDevMs,minMs,maxMs,p50Ms,p90Ms,p95Ms,p99Ms
+image_decode,100,0.40059196999999985,0.36941650000000004,0.11270638625354122,0.29937400000000003,1.265708,0.37149899999999997,0.502958,0.5545410000000001,0.628916
+orientation_correction,100,0.05634964000000002,0.0543125,0.008626621560371046,0.045417,0.114917,0.054333,0.062125,0.067208,0.0875
+preprocess,100,2.10601418,2.004104,0.5482209590467967,1.4495,5.247459,2.005916,2.61725,2.8705,4.218167
+detector_inference,100,39.30009334000002,38.643229500000004,2.5201581959364656,37.691458,56.455042,38.649,40.868875,41.76775,50.684125
+postprocess_nms,100,0.16336918000000003,0.15337499999999998,0.026755436111994706,0.1325,0.343166,0.15375,0.184875,0.195083,0.244708
+end_to_end_detector_only,100,42.04098377999999,41.179208,2.7221988616695514,40.289583,59.842,41.194625,44.2105,45.314792,53.070333
+
+end_to_end_rejected_out_of_distribution (warmup=10, measured=100, image=detector_1920x1080, order="ensureClassifierLoaded(idempotent)->decode+exifOrientation->classifierPreprocess+inference+postprocess->routingDecision->ensureDetectorLoaded(idempotent, routed only)->detectorPreprocess+inference+postprocess(routed only)->classIdFiltering(routed only)")
+stage,n,meanMs,medianMs,stdDevMs,minMs,maxMs,p50Ms,p90Ms,p95Ms,p99Ms
+end_to_end_rejected_out_of_distribution,100,18.93291298999999,18.708125,1.8628586208683482,18.175542,37.103333,18.711792,19.043625,19.13,20.870792
+
+end_to_end_rejected_out_of_distribution_stages
+stage,n,meanMs,medianMs,stdDevMs,minMs,maxMs,p50Ms,p90Ms,p95Ms,p99Ms
+image_decode,100,1.6312586900000001,1.6279585,0.07315064305284229,1.482875,1.845917,1.629084,1.719791,1.762334,1.808625
+orientation_correction,100,0.02722291999999999,0.024729,0.01148851886320874,0.018542,0.095334,0.02475,0.0345,0.043333,0.080125
+preprocess,100,0.36272172,0.354437,0.05254778780744401,0.317083,0.819333,0.354541,0.393,0.409666,0.457167
+classifier_inference,100,16.651589190000003,16.4356875,1.8249301975532966,16.066125,34.511625,16.435709,16.66475,16.815,18.515459
+routing,100,0.003039159999999998,0.002125,0.006316621534531338,0.001708,0.053166,0.002125,0.002417,0.002625,0.03975
+detector_inference,100,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+postprocess_nms,100,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+pipeline_total,100,18.92487911000001,18.7001665,1.8625033263251698,18.167791,37.091875,18.703625,19.035667,19.120875,20.862458
+
+end_to_end_rejected_out_of_distribution_counts
+outcome,count
+success,100
+failure,0
+detector_executed,0
+detector_skipped,100
+
+cpu_utilization
+threadCpuTimeMs,wallClockMs,utilizationRatio,measuredOnThread,available,note
+1850.351987,1889.263084,0.9794040875886824,Instr: androidx.test.runner.AndroidJUnitRunner,true,"Single-thread (the calling thread) CPU-time proxy via Debug.threadCpuTimeNanos(), not a whole-process CPU% — the ratio can exceed 1.0 under multi-threaded XNNPACK kernels, which is expected, not an error."
+
+memory_samples
+label,totalPssKb,nativeHeapAllocatedKb,javaHeapAllocatedKb,timestampEpochMs,available,note
+before_measured_loop,289554,102446,4660,1789390989567,true,
+after_measured_loop,289682,102442,4660,1789390989573,true,
+
+notes
+1,Timing uses monotonic clocks (System.nanoTime()) around the same classify()/detect() code paths used in production; no external tool or automation-layer round-trip time is included in any figure in this export.
+2,"All benchmark images are deterministic synthetic striped patterns (syntheticJpegBytes), not photographs. Legitimate for latency-only timing since ExecuTorch's compute cost is driven by tensor shape, not pixel content — but NOT used for any accuracy or output-agreement claim here. The cross-platform output-agreement procedure uses real checksum-locked images instead."
+3,"The synthetic benchmark image is rejected by the classifier (label=""unknown"", confidence=0.709693), so only the out-of-distribution path is measured here — and it correctly never invokes the detector. The accepted and selected-crop-mismatch paths require an image the classifier accepts and are NOT measured in this export; their absence is not a zero. Per-stage detector latency is still measured separately in detectorStageBySize."
+4,"endToEnd/endToEndByPath measure DetectionPipeline.run(), the same entry point DetectionViewModel.detect() calls in the app. The classifier runs first and gates the detector; a rejected or crop-mismatched image never reaches detector inference, which is verifiable in this export as detectorExecutedCount == 0 for those paths."
+5,"Latency is NOT comparable across entries of endToEndByPath: only the accepted path includes detector inference. Do not average them together or quote one as ""the"" end-to-end figure without its path."
+6,"endToEnd.stats and the classifierStage/detectorStageBySize per-stage breakdowns come from separate measured loops (both calling the identical stage-timed functions classify()/detect() delegate to in production), so their absolute numbers can differ by normal run-to-run jitter — do not expect the per-stage means to sum exactly to the end-to-end mean."
+7,"""Offline"" here means no network call occurs anywhere in classify()/detect()/routing — all run entirely against on-device ExecuTorch modules. offlineFailureCount counts classifier/detector error outcomes and thrown exceptions during the timed call, not prediction accuracy or correctness."
+8,"Memory samples are PSS snapshots taken immediately before and after the measured loop, never inside a timed call, so sampling itself never perturbs the reported latency numbers — but for the same reason they cannot capture a transient peak during a single inference call."
+9,"thermalStatus is reported by PowerManager, but this run is on an emulator: there is no real thermal sensor behind it — treat it as not meaningful."
+10,"installedAppSizeBytes is the base APK file size (ApplicationInfo.sourceDir), not true on-disk installed size: it excludes unpacked odex/vdex/oat, any split APKs, and app-private data. A StorageStatsManager-based figure (API 26+, requires PACKAGE_USAGE_STATS or being the installer of record) would be more complete but is not used here."
+11,"This export was produced on an ANDROID EMULATOR (Google sdk_gphone16k_arm64), NOT a Samsung Galaxy A10 or any physical device. Do not cite any figure in this export as physical-device performance."

@@ -1,0 +1,54 @@
+Xiaomi Redmi Note 14 Pro+ 5G — device metadata
+Collected 2026-09-14 via adb from 192.168.1.249:5555 (wireless)
+
+=== getprop ===
+ro.product.manufacturer            Xiaomi
+ro.product.brand                   Redmi
+ro.product.marketname              Redmi Note 14 Pro+ 5G
+ro.product.model                   24115RA8EG
+ro.product.device                  amethyst
+ro.product.name                    amethyst_global
+ro.product.board                   amethyst
+ro.build.version.release           16
+ro.build.version.sdk               36
+ro.build.version.security_patch    2026-08-01
+ro.build.id                        BP2A.250605.031.A3
+ro.build.display.id                BP2A.250605.031.A3
+ro.build.version.incremental       OS3.0.306.0.WOPMIXM
+ro.build.type                      user
+ro.build.tags                      release-keys
+ro.build.fingerprint               Redmi/amethyst_global/amethyst:16/BP2A.250605.031.A3/OS3.0.306.0.WOPMIXM:user/release-keys
+ro.miui.ui.version.name            V816
+ro.miui.ui.version.code            816
+ro.mi.os.version.name              OS3.0
+ro.mi.os.version.incremental       OS3.0.306.0.WOPMIXM
+ro.mi.os.version.code              3
+ro.miui.region                     GH
+ro.soc.manufacturer                QTI
+ro.soc.model                       SM7635
+ro.board.platform                  volcano
+ro.product.cpu.abi                 arm64-v8a
+ro.product.cpu.abilist             arm64-v8a
+ro.hardware                        qcom
+
+=== CPU max freq per core (kHz) ===
+1804800 1804800 1804800 1804800 2400000 2400000 2400000 2496000 
+
+=== memory / storage ===
+MemTotal:       11630372 kB
+Filesystem       Size Used Avail Use% Mounted on
+/dev/block/dm-61 227G  91G  135G  41% /data/user/0
+
+=== display ===
+Physical size: 1220x2712
+Physical density: 480
+
+=== app install ===
+    flags=0x0
+    codePath=/data/app/~~OnRX8gKxfvKhEV0O97cUTw==/com.nkwabyte.cropdiseasedetection-_2oVg0AOvLV4_y2nkzrkdg==
+    versionCode=1 minSdk=24 targetSdk=35
+    versionName=1.0.0
+    flags=[ HAS_CODE ALLOW_CLEAR_USER_DATA ALLOW_BACKUP ]
+    lastUpdateTime=2026-09-14 18:19:54
+      firstInstallTime=2026-09-14 18:19:54
+        android.permission.READ_MEDIA_VISUAL_USER_SELECTED: granted=false, flags=[ USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED]
