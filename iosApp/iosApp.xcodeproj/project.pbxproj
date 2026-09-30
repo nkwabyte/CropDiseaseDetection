@@ -339,7 +339,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if [ \"YES\" = \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" ]; then\n  echo \"Skipping Gradle build task invocation due to OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED environment variable set to \\\"YES\\\"\"\n  exit 0\nfi\nexport JAVA_HOME=\"/Users/musahibrahimali/.sdkman/candidates/java/current\"\ncd \"$SRCROOT/..\"\n./gradlew :app:embedAndSignAppleFrameworkForXcode";
+			shellScript = "FRAMEWORK=\"$SRCROOT/../app/build/xcode-frameworks/$CONFIGURATION/$SDK_NAME/ComposeApp.framework\"\nif [ \"YES\" = \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" ] && [ -f \"$FRAMEWORK/Modules/module.modulemap\" ] && [ -f \"$FRAMEWORK/ComposeApp\" ]; then\n  echo \"Skipping Gradle build task invocation: OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED=YES and $FRAMEWORK is present.\"\n  exit 0\nfi\nif [ \"YES\" = \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" ]; then\n  echo \"OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED=YES but $FRAMEWORK has no module.modulemap/binary (the build system pre-creates an EMPTY .framework dir, so a plain -d test is not enough); building it here instead of failing the Swift compile.\"\nfi\nexport JAVA_HOME=\"/Users/musahibrahimali/.sdkman/candidates/java/current\"\ncd \"$SRCROOT/..\"\n./gradlew :app:embedAndSignAppleFrameworkForXcode";
 		};
 /* End PBXShellScriptBuildPhase section */
 
