@@ -31,4 +31,9 @@ public struct KoinHelper {
     public static var objectDetector: ObjectDetector {
         KoinDependencies.shared.getObjectDetector()
     }
+
+    /// Downloads detector weights that are too large to bundle with the app.
+    public static var modelDownloadManager: ModelDownloadManager {
+        KoinDependencies.shared.getModelDownloadManager()
+    }
 }

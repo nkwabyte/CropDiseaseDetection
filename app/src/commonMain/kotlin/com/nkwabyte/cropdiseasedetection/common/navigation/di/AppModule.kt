@@ -10,6 +10,8 @@ import com.nkwabyte.cropdiseasedetection.data.repository.SyncRepository
 import com.nkwabyte.cropdiseasedetection.data.storage.OfflineQueueStore
 import com.nkwabyte.cropdiseasedetection.common.utils.SettingsManager
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.HistoryViewModel
+import com.nkwabyte.cropdiseasedetection.common.models.ModelDownloadManager
+import com.nkwabyte.cropdiseasedetection.common.models.ModelFileStore
 import org.koin.dsl.module
 
 val appModule = module {
@@ -18,8 +20,10 @@ val appModule = module {
     single { OfflineQueueStore() }
     single { SyncRepository(get()) }
     single { SettingsManager() }
+    single { ModelFileStore() }
+    single { ModelDownloadManager(get()) }
 
-    single { AppViewModel(get(), get()) }
+    single { AppViewModel(get(), get(), get()) }
     single {
         DetectionViewModel(
             detector = get<ObjectDetector>(),

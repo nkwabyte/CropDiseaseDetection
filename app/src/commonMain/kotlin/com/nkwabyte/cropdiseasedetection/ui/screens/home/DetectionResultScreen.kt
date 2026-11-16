@@ -1,389 +1,260 @@
 package com.nkwabyte.cropdiseasedetection.ui.screens.home
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.Eco
+import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.nkwabyte.cropdiseasedetection.common.data.DiseaseDatabase
+import com.nkwabyte.cropdiseasedetection.common.model.DetectionResult
 import com.nkwabyte.cropdiseasedetection.common.navigation.appbar.AppBar
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AppViewModel
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.DetectionViewModel
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.FlagState
-import com.nkwabyte.cropdiseasedetection.common.model.DetectionResult
-import com.nkwabyte.cropdiseasedetection.common.model.UserRole
-import com.nkwabyte.cropdiseasedetection.common.data.DiseaseDatabase
-import com.nkwabyte.cropdiseasedetection.common.data.DiseaseInfo
-import com.nkwabyte.cropdiseasedetection.ui.screens.encyclopedia.DiseaseDetailDialog
-import kotlinx.coroutines.launch
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.sp
-import com.nkwabyte.cropdiseasedetection.ui.components.GradientSnackBar
-import com.nkwabyte.cropdiseasedetection.generated.resources.Res
-import com.nkwabyte.cropdiseasedetection.generated.resources.app_name
-import com.nkwabyte.cropdiseasedetection.generated.resources.detected_image_content_description
-import com.nkwabyte.cropdiseasedetection.generated.resources.detection_details_title
-import com.nkwabyte.cropdiseasedetection.generated.resources.selected_crop_label
-import com.nkwabyte.cropdiseasedetection.generated.resources.no_detection_message
-import com.nkwabyte.cropdiseasedetection.generated.resources.flag_button_text
-import com.nkwabyte.cropdiseasedetection.generated.resources.flag_dialog_title
-import com.nkwabyte.cropdiseasedetection.generated.resources.flag_dialog_message
-import com.nkwabyte.cropdiseasedetection.generated.resources.flag_notes_hint
-import com.nkwabyte.cropdiseasedetection.generated.resources.flag_submit_button
-import com.nkwabyte.cropdiseasedetection.generated.resources.flag_cancel_button
-import com.nkwabyte.cropdiseasedetection.generated.resources.flag_success_message
-import org.jetbrains.compose.resources.stringResource
 import com.nkwabyte.cropdiseasedetection.common.pipeline.BOX_COORDINATE_SPACE
 import com.nkwabyte.cropdiseasedetection.common.utils.BoundingBoxImage
+import com.nkwabyte.cropdiseasedetection.generated.resources.Res
+import com.nkwabyte.cropdiseasedetection.generated.resources.action_done
+import com.nkwabyte.cropdiseasedetection.generated.resources.detected_image_content_description
+import com.nkwabyte.cropdiseasedetection.generated.resources.flag_cancel_button
+import com.nkwabyte.cropdiseasedetection.generated.resources.flag_dialog_message
+import com.nkwabyte.cropdiseasedetection.generated.resources.flag_dialog_title
+import com.nkwabyte.cropdiseasedetection.generated.resources.flag_error_prefix
+import com.nkwabyte.cropdiseasedetection.generated.resources.flag_notes_hint
+import com.nkwabyte.cropdiseasedetection.generated.resources.flag_submit_button
+import com.nkwabyte.cropdiseasedetection.generated.resources.flag_success_message
+import com.nkwabyte.cropdiseasedetection.generated.resources.result_confidence
+import com.nkwabyte.cropdiseasedetection.generated.resources.result_found_count
+import com.nkwabyte.cropdiseasedetection.generated.resources.result_mismatch_message
+import com.nkwabyte.cropdiseasedetection.generated.resources.result_mismatch_title
+import com.nkwabyte.cropdiseasedetection.generated.resources.result_no_disease_message
+import com.nkwabyte.cropdiseasedetection.generated.resources.result_no_disease_title
+import com.nkwabyte.cropdiseasedetection.generated.resources.result_report_inaccurate
+import com.nkwabyte.cropdiseasedetection.generated.resources.result_summary_title
+import com.nkwabyte.cropdiseasedetection.generated.resources.result_unrecognized_message
+import com.nkwabyte.cropdiseasedetection.generated.resources.result_unrecognized_title
+import com.nkwabyte.cropdiseasedetection.generated.resources.result_view_treatment
+import com.nkwabyte.cropdiseasedetection.generated.resources.title_diagnostic_results
+import com.nkwabyte.cropdiseasedetection.generated.resources.unknown_label
+import com.nkwabyte.cropdiseasedetection.ui.components.BoxFilterControls
+import com.nkwabyte.cropdiseasedetection.ui.components.GradientSnackBar
+import com.nkwabyte.cropdiseasedetection.ui.components.GroupedCard
+import com.nkwabyte.cropdiseasedetection.ui.components.PrimaryActionButton
+import com.nkwabyte.cropdiseasedetection.ui.components.StatusBanner
+import com.nkwabyte.cropdiseasedetection.ui.components.WarningColor
+import org.jetbrains.compose.resources.stringResource
 
+/**
+ * The result of one scan — the counterpart of iOS `DetectionResultView`: the photo with
+ * its boxes, the box filter, one status banner for the outcome, the per-disease summary
+ * (each row opens the disease page), and the treatment / report actions.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetectionResultScreen(
-    modifier: Modifier = Modifier,
-    onDrawerButtonClick: () -> Unit = { },
-    onCloseDetection: () -> Unit,
-    onNavigateToRecommendations: () -> Unit = {},
     detectionViewModel: DetectionViewModel,
     appViewModel: AppViewModel,
+    onBack: () -> Unit,
+    onDone: () -> Unit,
+    onOpenDisease: (diseaseId: Int) -> Unit,
+    onViewTreatment: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val snackBarHostState = remember { SnackbarHostState() }
     val appState by appViewModel.appState.collectAsState()
-    val detectionState by detectionViewModel.detectionState.collectAsState()
+    val state by detectionViewModel.detectionState.collectAsState()
     val flagState by detectionViewModel.flagState.collectAsState()
-    var selectedDisease by remember { mutableStateOf<DiseaseInfo?>(null) }
     var showFlagDialog by remember { mutableStateOf(false) }
 
-    // detectionState.results is already routed: DetectionPipeline filtered it to
-    // the classifier-derived crop's exact class ids before it ever reached the UI.
-    // This screen used to re-filter with className.contains(selectedCrop), which
-    // was a second, weaker copy of the routing rule — and one that matched nothing
-    // at all whenever the app was running in a language other than English,
-    // because selectedCrop is a translated display string.
-    val detectionResults = detectionState.results
+    // Already routed: the pipeline filtered these to the classifier-derived crop's class
+    // ids, so this screen must not filter by crop again.
+    val results = state.results
+    val unknown = stringResource(Res.string.unknown_label)
+    fun nameOf(r: DetectionResult) = r.displayName.ifEmpty { unknown }
 
-    // Boxes are drawn for every detection that cleared the inference threshold, which on a
-    // leaf with many lesions buries the image. This filters what is drawn only — the
-    // detections themselves are untouched, so raising it never changes the diagnosis below.
-    // The floor is the inference threshold: nothing weaker than that exists to reveal, so
-    // starting there keeps every slider position meaningful.
+    // The box filters change what is DRAWN only. The floor is the inference threshold:
+    // nothing weaker was detected, so every slider position reveals or hides something.
     val boxFloor = appState.detectionThreshold.coerceIn(0f, 0.95f)
     var boxConfidence by remember(boxFloor) { mutableStateOf(boxFloor) }
-    var selectedDiseaseFilter by remember { mutableStateOf<String?>(null) }
+    var selectedName by remember { mutableStateOf<String?>(null) }
 
-    val distinctDiseaseNames by remember(detectionResults) {
-        derivedStateOf {
-            detectionResults.map { it.displayName.ifEmpty { "Unknown" } }.distinct()
-        }
+    val names = remember(results) { results.map(::nameOf).distinct() }
+    val visibleBoxes = results.filter { r ->
+        r.score >= boxConfidence && (selectedName == null || nameOf(r) == selectedName)
+    }
+    // One row per disease, carrying its strongest detection.
+    val summary = remember(results) {
+        results.groupBy { it.displayName.ifEmpty { it.classIndex.toString() } }
+            .map { (_, list) -> list.maxBy { it.score } }
+            .sortedByDescending { it.score }
     }
 
-    val visibleBoxes by remember(detectionResults, boxConfidence, selectedDiseaseFilter) {
-        derivedStateOf {
-            detectionResults.filter { result ->
-                val scorePass = result.score >= boxConfidence
-                val name = result.displayName.ifEmpty { "Unknown" }
-                val filterPass = selectedDiseaseFilter == null || name.equals(selectedDiseaseFilter, ignoreCase = true)
-                scorePass && filterPass
-            }
-        }
-    }
-
-    val distinctDetectionResults by remember(detectionResults) {
-        derivedStateOf {
-            detectionResults
-                .groupBy { it.displayName.ifEmpty { it.classIndex.toString() } }
-                .mapValues { (_, list) -> list.maxByOrNull { it.score }!! }
-                .values
-                .sortedByDescending { it.score }
-        }
-    }
-
-    val selectedImageBytes = appState.selectedImageByteArray
-
-    val sheetState = rememberStandardBottomSheetState(
-        initialValue = SheetValue.PartiallyExpanded,
-        skipHiddenState = false
-    )
-    val scope = rememberCoroutineScope()
-
-    val flagSuccessMessage = stringResource(Res.string.flag_success_message)
-
+    val flagSuccess = stringResource(Res.string.flag_success_message)
+    val flagErrorTemplate = stringResource(Res.string.flag_error_prefix, "%s")
     LaunchedEffect(flagState) {
-        when (val state = flagState) {
+        when (val s = flagState) {
             is FlagState.Success -> {
-                snackBarHostState.showSnackbar(flagSuccessMessage)
+                snackBarHostState.showSnackbar(flagSuccess)
                 detectionViewModel.resetFlagState()
             }
             is FlagState.Error -> {
-                snackBarHostState.showSnackbar("Flag failed: ${state.message}")
+                snackBarHostState.showSnackbar(flagErrorTemplate.replace("%s", s.message))
                 detectionViewModel.resetFlagState()
             }
-            else -> {}
+            else -> Unit
         }
     }
 
     Scaffold(
+        modifier = modifier,
         topBar = {
             AppBar(
-                title = { Text(stringResource(Res.string.app_name)) },
-                onDrawerButtonClick = onDrawerButtonClick,
-                isHomeScreen = false
+                title = stringResource(Res.string.title_diagnostic_results),
+                onBack = onBack,
+                actions = {
+                    TextButton(onClick = onDone) {
+                        Text(stringResource(Res.string.action_done), fontWeight = FontWeight.SemiBold)
+                    }
+                },
             )
         },
         snackbarHost = {
-            SnackbarHost(
-                hostState = snackBarHostState,
-                modifier = Modifier.padding(8.dp),
-                snackbar = {
-                    GradientSnackBar(
-                        message = it.visuals.message,
-                        actionLabel = it.visuals.actionLabel,
-                        onAction = { it.dismiss() }
-                    )
-                }
-            )
+            SnackbarHost(snackBarHostState, modifier = Modifier.padding(8.dp)) {
+                GradientSnackBar(message = it.visuals.message, actionLabel = it.visuals.actionLabel, onAction = { it.dismiss() })
+            }
         },
-    ) { contentPadding ->
-        Box(
-            modifier = modifier
+        containerColor = MaterialTheme.colorScheme.background,
+    ) { padding ->
+        Column(
+            modifier = Modifier
                 .fillMaxSize()
-                .padding(contentPadding)
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(0.5f)
-                    .align(Alignment.TopCenter)
-            ) {
-                if (selectedImageBytes != null) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 8.0.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        BoundingBoxImage(
-                            imageBytes = selectedImageBytes,
-                            results = visibleBoxes,
-                            // The square canvas detections are expressed in, defined
-                            // once in commonMain — not the image's own pixel size.
-                            // detectionState.imageWidth/Height carry the same value.
-                            modelWidth = BOX_COORDINATE_SPACE,
-                            modelHeight = BOX_COORDINATE_SPACE,
-                            contentDescription = stringResource(Res.string.detected_image_content_description),
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(MaterialTheme.shapes.medium)
-                        )
-                    }
-                } else {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
+            ScanImage(imageBytes = appState.selectedImageByteArray, boxes = visibleBoxes)
+
+            if (results.isNotEmpty()) {
+                BoxFilterControls(
+                    names = names,
+                    totalCount = results.size,
+                    visibleCount = visibleBoxes.size,
+                    countFor = { n -> results.count { nameOf(it) == n } },
+                    selectedName = selectedName,
+                    onSelectName = { selectedName = it },
+                    confidence = boxConfidence,
+                    onConfidenceChange = { boxConfidence = it },
+                    floor = boxFloor,
+                )
             }
 
-            ModalBottomSheet(
-                onDismissRequest = {
-                    scope.launch { sheetState.partialExpand() }
-                },
-                sheetState = sheetState,
-                modifier = Modifier
-                    .fillMaxHeight(0.8f)
-                    .align(Alignment.BottomCenter)
+            when {
+                state.isClassifierRejected -> StatusBanner(
+                    icon = Icons.Default.Warning,
+                    tint = WarningColor,
+                    title = stringResource(Res.string.result_unrecognized_title),
+                    message = stringResource(
+                        Res.string.result_unrecognized_message,
+                        "${(state.classifierConfidence * 100).toInt()}%",
+                    ),
+                )
+
+                state.isCropMissMatch -> StatusBanner(
+                    icon = Icons.Default.Cancel,
+                    tint = MaterialTheme.colorScheme.error,
+                    title = stringResource(Res.string.result_mismatch_title),
+                    message = stringResource(Res.string.result_mismatch_message),
+                )
+
+                state.isDetectionSuccessful -> DetectionSummaryCard(
+                    summary = summary,
+                    totalFound = results.size,
+                    nameOf = ::nameOf,
+                    onOpen = { r ->
+                        val info = DiseaseDatabase.getDiseaseInfo(nameOf(r))
+                        onOpenDisease(info.id)
+                    },
+                )
+
+                else -> StatusBanner(
+                    icon = Icons.Default.Eco,
+                    tint = MaterialTheme.colorScheme.primary,
+                    title = stringResource(Res.string.result_no_disease_title),
+                    message = stringResource(Res.string.result_no_disease_message),
+                )
+            }
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 12.dp)
+                if (state.isDetectionSuccessful) {
+                    PrimaryActionButton(
+                        text = stringResource(Res.string.result_view_treatment),
+                        icon = Icons.AutoMirrored.Filled.MenuBook,
+                        onClick = onViewTreatment,
+                    )
+                }
+                TextButton(
+                    onClick = { showFlagDialog = true },
+                    enabled = flagState !is FlagState.Loading && appState.selectedImageByteArray != null,
                 ) {
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        item {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = stringResource(Res.string.detection_details_title),
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                IconButton(
-                                    onClick = {
-                                        appViewModel.reset()
-                                        detectionViewModel.reset()
-                                        onCloseDetection()
-                                    },
-                                    modifier = Modifier
-                                        .background(
-                                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
-                                            MaterialTheme.shapes.small,
-                                        )
-                                        .size(40.dp)
-                                ) {
-                                    Icon(Icons.Default.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurface)
-                                }
-                            }
-
-                            appState.selectedCrop?.let {
-                                Text(
-                                    text = stringResource(Res.string.selected_crop_label, it),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    modifier = Modifier.padding(bottom = 8.dp)
-                                )
-                            }
-
-                            if (detectionResults.isNotEmpty()) {
-                                if (distinctDiseaseNames.size > 1) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .horizontalScroll(rememberScrollState())
-                                            .padding(bottom = 8.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        FilterChip(
-                                            selected = selectedDiseaseFilter == null,
-                                            onClick = { selectedDiseaseFilter = null },
-                                            label = {
-                                                Text(
-                                                    text = "All (${detectionResults.size})",
-                                                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold)
-                                                )
-                                            }
-                                        )
-                                        distinctDiseaseNames.forEach { diseaseName ->
-                                            val count = detectionResults.count { it.displayName.ifEmpty { "Unknown" }.equals(diseaseName, ignoreCase = true) }
-                                            val isSelected = selectedDiseaseFilter.equals(diseaseName, ignoreCase = true)
-                                            FilterChip(
-                                                selected = isSelected,
-                                                onClick = {
-                                                    selectedDiseaseFilter = if (isSelected) null else diseaseName
-                                                },
-                                                label = {
-                                                    Text(
-                                                        text = "$diseaseName ($count)",
-                                                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold)
-                                                    )
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
-
-                                BoxConfidenceSlider(
-                                    value = boxConfidence,
-                                    onValueChange = { boxConfidence = it },
-                                    valueRange = boxFloor..1f,
-                                    shown = visibleBoxes.size,
-                                    total = detectionResults.size
-                                )
-                            }
-                        }
-
-                        if (detectionResults.isEmpty()) {
-                            item {
-                                Text(
-                                    text = stringResource(Res.string.no_detection_message),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(vertical = 16.dp)
-                                )
-                            }
-                        } else {
-                            items(distinctDetectionResults) { result ->
-                                DetectionResultCard(
-                                    result = result,
-                                    onClick = {
-                                        selectedDisease = DiseaseDatabase.diseases.find { disease ->
-                                            result.displayName.isNotEmpty() &&
-                                                disease.name.contains(result.displayName, ignoreCase = true)
-                                        } ?: DiseaseDatabase.diseases.getOrNull(result.classIndex)
-                                    }
-                                )
-                                Spacer(modifier = Modifier.height(12.0.dp))
-                            }
-                        }
-
-                        if (detectionResults.isNotEmpty()) {
-                            item {
-                                Box(modifier = Modifier.height(15.0.dp)) {}
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 8.dp),
-                                    horizontalArrangement = Arrangement.SpaceAround,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    if (appState.userRole == UserRole.FIELD_AGENT) {
-                                        Button(
-                                            onClick = { showFlagDialog = true },
-                                            modifier = Modifier.weight(1f).padding(end = 4.dp),
-                                            enabled = flagState !is FlagState.Loading
-                                        ) {
-                                            if (flagState is FlagState.Loading) {
-                                                CircularProgressIndicator(
-                                                    modifier = Modifier.size(18.dp),
-                                                    strokeWidth = 2.dp,
-                                                    color = MaterialTheme.colorScheme.onPrimary
-                                                )
-                                            } else {
-                                                Text(
-                                                    text = stringResource(Res.string.flag_button_text),
-                                                    style = MaterialTheme.typography.labelLarge.copy(
-                                                        textAlign = TextAlign.Center,
-                                                        color = MaterialTheme.colorScheme.onPrimary,
-                                                    ),
-                                                    maxLines = 1,
-                                                )
-                                            }
-                                        }
-                                    }
-                                    Button(
-                                        onClick = onNavigateToRecommendations,
-                                        modifier = Modifier.weight(1f).padding(
-                                            start = if (appState.userRole == UserRole.FIELD_AGENT) 4.dp else 0.dp
-                                        )
-                                    ) {
-                                        Text(
-                                            text = "Recommendations",
-                                            style = MaterialTheme.typography.labelLarge.copy(
-                                                textAlign = TextAlign.Center,
-                                                color = MaterialTheme.colorScheme.onPrimary,
-                                            ),
-                                            maxLines = 1,
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                    if (flagState is FlagState.Loading) {
+                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(Icons.Default.Flag, contentDescription = null, modifier = Modifier.size(18.dp))
                     }
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(Res.string.result_report_inaccurate), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
-    }
-
-    selectedDisease?.let { disease ->
-        DiseaseDetailDialog(
-            disease = disease,
-            onDismiss = { selectedDisease = null }
-        )
     }
 
     if (showFlagDialog) {
@@ -395,132 +266,132 @@ fun DetectionResultScreen(
                 detectionViewModel.flagDetection(
                     imageBytes = imageBytes,
                     cropName = appState.selectedCrop ?: "Unknown",
+                    // The role must be one the Firestore rules accept (FARMER/FIELD_AGENT).
                     userRole = appState.userRole.name,
                     notes = notes.ifBlank { null },
                     detectionThreshold = appState.detectionThreshold,
                     iouThreshold = appState.iouThreshold,
-                    classifierThreshold = appState.classifierThreshold
+                    classifierThreshold = appState.classifierThreshold,
                 )
-            }
+            },
         )
     }
 }
 
-/**
- * Controls how many boxes are drawn over the image, by hiding the weaker detections.
- * The live "N of M" readout is what makes the control legible — without it, dragging
- * on an image whose boxes are all similarly scored looks like nothing is happening.
- */
 @Composable
-private fun BoxConfidenceSlider(
-    value: Float,
-    onValueChange: (Float) -> Unit,
-    valueRange: ClosedFloatingPointRange<Float>,
-    shown: Int,
-    total: Int
+private fun ScanImage(imageBytes: ByteArray?, boxes: List<DetectionResult>) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(320.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (imageBytes != null) {
+            BoundingBoxImage(
+                imageBytes = imageBytes,
+                results = boxes,
+                // The square canvas detections are expressed in — not the photo's size.
+                modelWidth = BOX_COORDINATE_SPACE,
+                modelHeight = BOX_COORDINATE_SPACE,
+                contentDescription = stringResource(Res.string.detected_image_content_description),
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            CircularProgressIndicator()
+        }
+    }
+}
+
+@Composable
+private fun DetectionSummaryCard(
+    summary: List<DetectionResult>,
+    totalFound: Int,
+    nameOf: (DetectionResult) -> String,
+    onOpen: (DetectionResult) -> Unit,
 ) {
-    Column(modifier = Modifier.padding(bottom = 8.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+    GroupedCard(cornerRadius = 14) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Verified, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(8.dp))
             Text(
-                text = "Box confidence",
-                style = MaterialTheme.typography.titleSmall
+                stringResource(Res.string.result_summary_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
             )
             Text(
-                text = "$shown of $total  ·  ${(value * 100).toInt()}%",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                stringResource(Res.string.result_found_count, totalFound.toString()),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
             )
         }
-        Slider(
-            value = value,
-            onValueChange = onValueChange,
-            valueRange = valueRange
-        )
+        HorizontalDivider(Modifier.padding(vertical = 12.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            summary.forEach { r ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onOpen(r) }
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(nameOf(r), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            stringResource(Res.string.result_confidence, "${(r.score * 100).toInt()}%"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    LinearProgressIndicator(
+                        progress = { r.score },
+                        modifier = Modifier.width(80.dp),
+                        color = if (r.score > 0.6f) MaterialTheme.colorScheme.primary else WarningColor,
+                    )
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
     }
 }
 
 @Composable
 private fun FlagDetectionDialog(
     onDismiss: () -> Unit,
-    onConfirm: (notes: String) -> Unit
+    onConfirm: (notes: String) -> Unit,
 ) {
     var notes by remember { mutableStateOf("") }
-
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(Res.string.flag_dialog_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    text = stringResource(Res.string.flag_dialog_message),
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                Text(stringResource(Res.string.flag_dialog_message), style = MaterialTheme.typography.bodyMedium)
                 OutlinedTextField(
                     value = notes,
                     onValueChange = { notes = it },
                     placeholder = { Text(stringResource(Res.string.flag_notes_hint)) },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3,
-                    maxLines = 5
+                    maxLines = 5,
                 )
             }
         },
         confirmButton = {
-            Button(onClick = { onConfirm(notes) }) {
-                Text(stringResource(Res.string.flag_submit_button))
+            TextButton(onClick = { onConfirm(notes) }) {
+                Text(stringResource(Res.string.flag_submit_button), fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(Res.string.flag_cancel_button))
-            }
-        }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.flag_cancel_button)) }
+        },
     )
-}
-
-@Composable
-fun DetectionResultCard(
-    result: DetectionResult,
-    onClick: () -> Unit = {}
-) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.0.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = result.displayName.ifEmpty { "Unknown" },
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Confidence: ${((result.score * 1000).toInt() / 10.0)}%",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "View disease details",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                modifier = Modifier.size(20.dp)
-            )
-        }
-    }
 }

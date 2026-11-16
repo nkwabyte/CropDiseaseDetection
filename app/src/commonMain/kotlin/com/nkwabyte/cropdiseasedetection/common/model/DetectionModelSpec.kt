@@ -33,8 +33,9 @@ enum class DetectionOutputLayout {
  *                      Ultralytics runs it, `LetterBox(auto=false, scaleFill=true)`
  * @param normalizedBoxes  true when box coordinates come back in 0..1
  * @param applyNms      false for query-based heads that already emit unique boxes
- * @param available     false keeps a model visible in settings but unselectable,
- *                      for architectures that are trained but not converged
+ * @param downloadUrl   null when the `.pte` ships inside the app; otherwise where
+ *                      [com.nkwabyte.cropdiseasedetection.common.models.ModelDownloadManager]
+ *                      fetches it from on demand, because it is too large to bundle
  */
 data class DetectionModelSpec(
     val id: String,
@@ -46,15 +47,28 @@ data class DetectionModelSpec(
     val letterbox: Boolean,
     val normalizedBoxes: Boolean,
     val applyNms: Boolean,
-    val available: Boolean = true,
+    val downloadUrl: String? = null,
 ) {
-    /**
-     * How the model reads in a picker. Every model is listed so the user can see what
-     * the app is working towards, with the ones that have no shippable weights marked
-     * rather than hidden.
-     */
-    val listLabel: String
-        get() = if (available) displayName else "$displayName (Unavailable)"
+    /** True when the weights are fetched after install instead of shipped in the app. */
+    val requiresDownload: Boolean
+        get() = downloadUrl != null
+}
+
+/**
+ * Where on-demand model weights are hosted: the project's Firebase Storage bucket,
+ * under `models/`. Files are fetched with a plain HTTPS GET, so the bucket's storage
+ * rules must allow public reads of everything under `models/`.
+ */
+object ModelHosting {
+    /** Off until a host for the weights is chosen: the pickers then answer a download
+     *  request with a "not available yet" message instead of fetching. Flip to true
+     *  once the `.pte` files are uploaded. */
+    const val DOWNLOADS_ENABLED = false
+
+    private const val BUCKET = "cropdiseasedetector-rail.firebasestorage.app"
+
+    fun url(fileName: String): String =
+        "https://firebasestorage.googleapis.com/v0/b/$BUCKET/o/models%2F$fileName?alt=media"
 }
 
 /**
@@ -92,43 +106,40 @@ object DetectionModelCatalog {
         applyNms = false,
     )
 
-    /** Trained but not converged — no checkpoint reached a usable mAP, so these
-     *  are listed for transparency and cannot be selected. */
+    /** Too large to bundle — downloaded on demand. The decode fields below must
+     *  match how the hosted `.pte` was exported. */
     val FasterRcnn = DetectionModelSpec(
         id = "FasterRCNN",
         displayName = "Faster R-CNN",
-        assetName = "",
+        assetName = "crop_disease_faster_rcnn.pte",
         inputSize = 640,
         numClasses = 23,
         layout = DetectionOutputLayout.YOLO_ATTRIBUTE_MAJOR,
         letterbox = true,
         normalizedBoxes = false,
         applyNms = true,
-        available = false,
+        downloadUrl = ModelHosting.url("crop_disease_faster_rcnn.pte"),
     )
 
     val VisionTransformer = DetectionModelSpec(
         id = "VisionTransformer",
         displayName = "Vision Transformer",
-        assetName = "",
+        assetName = "crop_disease_vit.pte",
         inputSize = 640,
         numClasses = 23,
         layout = DetectionOutputLayout.YOLO_ATTRIBUTE_MAJOR,
         letterbox = true,
         normalizedBoxes = false,
         applyNms = true,
-        available = false,
+        downloadUrl = ModelHosting.url("crop_disease_vit.pte"),
     )
 
     val default = Yolo26
 
     val all = listOf(Yolo26, RtDetr, FasterRcnn, VisionTransformer)
 
-    val selectable = all.filter { it.available }
-
-    /** Falls back to the baseline for an unknown id, and for one that is listed
-     *  but not shippable — a stored preference must never leave the app with no
-     *  detector loaded. */
+    /** Falls back to the baseline for an unknown id. Whether a downloadable model is
+     *  actually on the device is [com.nkwabyte.cropdiseasedetection.common.models.ModelDownloadManager.resolve]'s job. */
     fun byId(id: String?): DetectionModelSpec =
-        all.firstOrNull { it.id == id && it.available } ?: default
+        all.firstOrNull { it.id == id } ?: default
 }

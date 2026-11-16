@@ -1,5 +1,8 @@
 package com.nkwabyte.cropdiseasedetection.ui.screens.privacy
 
+import com.nkwabyte.cropdiseasedetection.generated.resources.Res
+import com.nkwabyte.cropdiseasedetection.generated.resources.title_privacy_policy
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -33,22 +36,13 @@ import com.nkwabyte.cropdiseasedetection.common.navigation.appbar.AppBar
 @Composable
 fun PrivacyScreen(
     modifier: Modifier = Modifier,
-    onDrawerButtonClick: () -> Unit = {},
+    onBack: () -> Unit = {},
 ) {
     Scaffold(
         topBar = {
             AppBar(
-                title = {
-                    Text(
-                        text = "Privacy Policy",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Normal,
-                            color = MaterialTheme.colorScheme.primary,
-                        ),
-                    )
-                },
-                onDrawerButtonClick = onDrawerButtonClick,
-                isHomeScreen = false,
+                title = stringResource(Res.string.title_privacy_policy),
+                onBack = onBack,
             )
         },
         containerColor = MaterialTheme.colorScheme.background

@@ -30,7 +30,7 @@ import org.jetbrains.compose.resources.stringResource
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ForgotPasswordScreen(
-    onDrawerButtonClick: () -> Unit = { },
+    onBack: () -> Unit = {},
     onBackToLoginClick: () -> Unit,
     authViewModel: AuthViewModel
 ) {
@@ -61,17 +61,8 @@ fun ForgotPasswordScreen(
     Scaffold(
         topBar = {
             AppBar(
-                title = {
-                    Text(
-                        text = stringResource(Res.string.app_name),
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Normal,
-                            color = MaterialTheme.colorScheme.primary,
-                        ),
-                    )
-                },
-                onDrawerButtonClick = onDrawerButtonClick,
-                isHomeScreen = false,
+                title = stringResource(Res.string.account_forgot_password),
+                onBack = onBack,
             )
         },
         snackbarHost = {

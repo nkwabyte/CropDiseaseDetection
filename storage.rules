@@ -1,0 +1,17 @@
+rules_version = '2';
+
+// Firebase Storage rules. The app downloads large detector weights (.pte) from
+// models/ with a plain HTTPS GET, so that folder is publicly readable. Nothing is
+// writable from clients — upload model files from the Firebase console or CLI.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /models/{file} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -66,6 +66,7 @@ import kotlin.math.roundToInt
 actual class ObjectDetector actual constructor() : KoinComponent {
     private val context: Context by inject()
     private val settingsManager: com.nkwabyte.cropdiseasedetection.common.utils.SettingsManager by inject()
+    private val modelDownloads: com.nkwabyte.cropdiseasedetection.common.models.ModelDownloadManager by inject()
     private var _module: Module? = null
     private var _classifierModule: Module? = null
 
@@ -94,14 +95,14 @@ actual class ObjectDetector actual constructor() : KoinComponent {
      * touches the filesystem when the model actually differs.
      */
     actual suspend fun loadModel() {
-        val spec = DetectionModelCatalog.byId(settingsManager.getDetectionModel())
+        val spec = modelDownloads.resolve(settingsManager.getDetectionModel())
         if (_module != null && _loadedSpec?.id == spec.id) return
 
         _module?.destroy()
         _module = null
         _loadedSpec = null
 
-        val modelPath = assetFilePath(context, spec.assetName)
+        val modelPath = detectorFilePath(spec)
         val file = File(modelPath)
         _module = Module.load(modelPath)
         _loadedSpec = spec
@@ -487,7 +488,7 @@ actual class ObjectDetector actual constructor() : KoinComponent {
         }
         if (spec != null) {
             try {
-                val detectorPath = File(assetFilePath(context, spec.assetName))
+                val detectorPath = File(detectorFilePath(spec))
                 modelArtifacts.add(
                     ModelArtifact(
                         name = "detector (${spec.displayName})",
@@ -1359,6 +1360,10 @@ actual class ObjectDetector actual constructor() : KoinComponent {
 
         return Pair(result, floatArrayOf(scale, padLeft, padTop))
     }
+
+    /** Downloaded weights are read in place; bundled ones are unpacked from assets. */
+    private fun detectorFilePath(spec: DetectionModelSpec): String =
+        modelDownloads.localPath(spec) ?: assetFilePath(context, spec.assetName)
 
     private fun assetFilePath(context: Context, assetName: String): String {
         val file = File(context.filesDir, assetName)

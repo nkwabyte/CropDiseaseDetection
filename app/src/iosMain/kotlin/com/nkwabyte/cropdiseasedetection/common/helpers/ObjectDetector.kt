@@ -74,6 +74,12 @@ import kotlin.math.roundToInt
 
 actual class ObjectDetector actual constructor() : KoinComponent {
     private val settingsManager: SettingsManager by inject()
+    private val modelDownloads: com.nkwabyte.cropdiseasedetection.common.models.ModelDownloadManager by inject()
+
+    /** Downloaded weights are read from Application Support; bundled ones from the app. */
+    private fun detectorFilePath(spec: DetectionModelSpec): String? =
+        modelDownloads.localPath(spec)
+            ?: NSBundle.mainBundle.pathForResource(spec.assetName.removeSuffix(".pte"), ofType = "pte")
     private val bridge = ExecuTorchBridge.shared()
 
     actual val isLoaded: Boolean
@@ -106,13 +112,13 @@ actual class ObjectDetector actual constructor() : KoinComponent {
      * reloads when the model actually differs.
      */
     actual suspend fun loadModel() {
-        val spec = DetectionModelCatalog.byId(settingsManager.getDetectionModel())
+        val spec = modelDownloads.resolve(settingsManager.getDetectionModel())
         if (_isLoaded && _loadedSpec?.id == spec.id) return
 
         val modelName = spec.assetName.removeSuffix(".pte")
-        val path = NSBundle.mainBundle.pathForResource(modelName, ofType = "pte")
+        val path = detectorFilePath(spec)
         if (path == null) {
-            println("[iOS-ObjectDetector] ERROR: '$modelName.pte' not found in bundle")
+            println("[iOS-ObjectDetector] ERROR: '$modelName.pte' not found on device")
             _isLoaded = false
             _loadedSpec = null
             return
@@ -510,7 +516,7 @@ actual class ObjectDetector actual constructor() : KoinComponent {
         }
         if (spec != null) {
             val modelName = spec.assetName.removeSuffix(".pte")
-            val detectorPath = NSBundle.mainBundle.pathForResource(modelName, ofType = "pte")
+            val detectorPath = detectorFilePath(spec)
             if (detectorPath != null) {
                 val attrs = NSFileManager.defaultManager.attributesOfItemAtPath(detectorPath, error = null)
                 val sizeBytes = (attrs?.get(NSFileSize) as? NSNumber)?.longLongValue ?: 0L

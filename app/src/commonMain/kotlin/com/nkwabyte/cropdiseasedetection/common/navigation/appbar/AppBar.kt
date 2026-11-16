@@ -1,90 +1,88 @@
 package com.nkwabyte.cropdiseasedetection.common.navigation.appbar
 
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Photo
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarColors
+import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import com.nkwabyte.cropdiseasedetection.generated.resources.Res
+import com.nkwabyte.cropdiseasedetection.generated.resources.nav_back
 import org.jetbrains.compose.resources.stringResource
-import androidx.compose.ui.unit.dp
-import com.nkwabyte.cropdiseasedetection.generated.resources.*
 
+/**
+ * The one top bar every screen uses, matching the iOS navigation structure:
+ *
+ * - A tab's root screen (no [onBack]) gets a large, left-aligned title that collapses on
+ *   scroll — the Material equivalent of a SwiftUI large `navigationTitle`.
+ * - A screen pushed inside a tab (with [onBack]) gets a compact centred title and a back
+ *   arrow — the equivalent of `.navigationBarTitleDisplayMode(.inline)`.
+ *
+ * Navigation between sections lives in the bottom tab bar, so there is no drawer button.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppBar(
+    title: String,
     modifier: Modifier = Modifier,
-    title: @Composable () -> Unit = {},
-    onDrawerButtonClick: () -> Unit,
-    isHomeScreen: Boolean = false,
-    isCameraMode: Boolean = false,
-    onCheckedChange: (Boolean) -> Unit = {},
-    colors: TopAppBarColors? = null,
-    menuIconColor: Color? = null,
-    navigationIcon: (@Composable () -> Unit)? = null,
+    onBack: (() -> Unit)? = null,
+    scrollBehavior: TopAppBarScrollBehavior? = null,
+    actions: @Composable RowScope.() -> Unit = {},
 ) {
-
-    TopAppBar(
-        modifier = modifier,
-        title = title,
-        navigationIcon = {
-            if (navigationIcon != null) {
-                navigationIcon()
-            } else {
-                IconButton(onClick = onDrawerButtonClick) {
-                    Icon(
-                        imageVector = Icons.Default.Menu,
-                        contentDescription = stringResource(Res.string.home_open_drawer_description),
-                        tint = menuIconColor ?: MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        },
-        actions = {
-            if(isHomeScreen) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(end = 8.dp)
-                ) {
-                    Icon(
-                        imageVector = if (isCameraMode) Icons.Default.CameraAlt else Icons.Default.Photo,
-                        contentDescription = if (isCameraMode)
-                            stringResource(Res.string.home_camera_mode_description)
-                        else stringResource(Res.string.home_gallery_mode_description),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Switch(
-                        checked = isCameraMode,
-                        onCheckedChange = onCheckedChange,
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.primary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                            uncheckedThumbColor = MaterialTheme.colorScheme.secondary,
-                            uncheckedTrackColor = MaterialTheme.colorScheme.secondaryContainer,
-                        )
-                    )
-                }
-            }
-        },
-        colors = colors?: TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surfaceBright,
-            titleContentColor = MaterialTheme.colorScheme.onSurface
-        )
+    val colors = TopAppBarDefaults.topAppBarColors(
+        containerColor = MaterialTheme.colorScheme.background,
+        scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+        titleContentColor = MaterialTheme.colorScheme.onBackground,
     )
+
+    if (onBack == null) {
+        LargeTopAppBar(
+            modifier = modifier,
+            title = {
+                Text(
+                    text = title,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            },
+            actions = actions,
+            colors = colors,
+            scrollBehavior = scrollBehavior,
+        )
+    } else {
+        CenterAlignedTopAppBar(
+            modifier = modifier,
+            title = {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(Res.string.nav_back),
+                    )
+                }
+            },
+            actions = actions,
+            colors = colors,
+            scrollBehavior = scrollBehavior,
+        )
+    }
 }

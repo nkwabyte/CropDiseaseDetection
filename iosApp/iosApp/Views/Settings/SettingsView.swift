@@ -33,27 +33,7 @@ public struct SettingsView: View {
     public var body: some View {
         NavigationStack {
             Form {
-                Section(header: LText("Disease Detection Model")) {
-                    // Driven by the shared catalog so the two platforms cannot drift.
-                    // Every model is listed; the ones with no shippable weights carry an
-                    // "(Unavailable)" marker in their label.
-                    Picker(L("Detection Model"), selection: $selectedDetectionModel) {
-                        ForEach(DetectionModelCatalog.shared.all, id: \.id) { spec in
-                            LText(spec.listLabel).tag(spec.id)
-                        }
-                    }
-                    .onChange(of: selectedDetectionModel) { newModel in
-                        // Picker has no per-row disable, so an unavailable pick is bounced
-                        // back to whatever is actually loaded. byId() only ever returns an
-                        // available model, so this cannot loop.
-                        guard DetectionModelCatalog.shared.selectable.contains(where: { $0.id == newModel }) else {
-                            selectedDetectionModel = DetectionModelCatalog.shared
-                                .byId(id: KoinHelper.settingsManager.getDetectionModel()).id
-                            return
-                        }
-                        KoinHelper.appViewModel.setSelectedDetectionModel(model: newModel)
-                    }
-                }
+                DetectionModelSection(selectedDetectionModel: $selectedDetectionModel)
 
                 Section(header: LText("Appearance")) {
                     Picker(L("Theme Mode"), selection: $selectedTheme) {
@@ -162,10 +142,9 @@ public struct SettingsView: View {
                 self.selectedLanguage = currentRecLang
                 let recLang = RecommendationLanguage.from(code: currentRecLang)
                 LanguageManager.shared.setLanguage(recLang.localeCode)
-                // Normalize through the catalog: a stored id that is no longer
-                // selectable would otherwise leave the picker with no match.
-                self.selectedDetectionModel = DetectionModelCatalog.shared
-                    .byId(id: settings.getDetectionModel()).id
+                // The view model resolves the stored id to a model that is actually
+                // on the device (a deleted download falls back to the default).
+                self.selectedDetectionModel = appStateObs.value.selectedDetectionModel
                 self.detectionThreshold = settings.getDetectionThreshold()
                 self.iouThreshold = settings.getIouThreshold()
                 self.classifierThreshold = settings.getClassifierThreshold()
@@ -173,6 +152,10 @@ public struct SettingsView: View {
             }
             .onChange(of: appStateObs.value.selectedTheme) { newTheme in
                 self.selectedTheme = newTheme
+            }
+            // A finished download switches models from the view model; mirror it here.
+            .onChange(of: appStateObs.value.selectedDetectionModel) { newModel in
+                self.selectedDetectionModel = newModel
             }
         }
     }
@@ -365,6 +348,176 @@ final class BenchmarkRunner: ObservableObject {
 
 /// The "Developer — Benchmark" section, mirroring the shared Compose settings
 /// screen's two actions and adding direct JSON/CSV sharing.
+/// Detector picker. Bundled models switch immediately; a model whose weights are too
+/// large to bundle asks whether to download it or stay on the default, then shows
+/// download progress here. Mirrors the Android `ModelPicker.kt`.
+struct DetectionModelSection: View {
+    @Binding var selectedDetectionModel: String
+    @StateObject private var downloadsObs = ObservableFlow(KoinHelper.modelDownloadManager.downloads)
+    @StateObject private var langMgr = LanguageManager.shared
+    @State private var pendingDownload: DetectionModelSpec?
+    @State private var showDownloadsUnavailable = false
+
+    private var manager: ModelDownloadManager { KoinHelper.modelDownloadManager }
+    private var downloadable: [DetectionModelSpec] {
+        DetectionModelCatalog.shared.all.filter { $0.requiresDownload }
+    }
+
+    var body: some View {
+        Section(header: LText("Disease Detection Model")) {
+            Picker(selection: $selectedDetectionModel) {
+                ForEach(DetectionModelCatalog.shared.all, id: \.id) { spec in
+                    row(for: spec).tag(spec.id)
+                }
+            } label: {
+                LText("Detection Model")
+            }
+            .pickerStyle(.navigationLink)
+            .onChange(of: selectedDetectionModel) { newModel in
+                if manager.isReady(modelId: newModel) {
+                    KoinHelper.appViewModel.setSelectedDetectionModel(model: newModel)
+                    return
+                }
+                // Not on the device yet: stay on the current model and ask.
+                let spec = DetectionModelCatalog.shared.byId(id: newModel)
+                selectedDetectionModel = KoinHelper.appViewModel.appState.value.selectedDetectionModel
+                if !(downloadsObs.value.stateOf(modelId: newModel) is ModelDownloadState.Downloading) {
+                    pendingDownload = spec
+                }
+            }
+
+            ForEach(downloadable, id: \.id) { spec in
+                status(for: spec)
+            }
+        }
+        .alert(
+            L("Download %@?", pendingDownload?.displayName ?? ""),
+            isPresented: Binding(get: { pendingDownload != nil }, set: { if !$0 { pendingDownload = nil } }),
+            presenting: pendingDownload
+        ) { spec in
+            Button(L("Download")) {
+                if ModelHosting.shared.DOWNLOADS_ENABLED {
+                    KoinHelper.appViewModel.downloadDetectionModel(model: spec.id)
+                } else {
+                    showDownloadsUnavailable = true
+                }
+            }
+            Button(L("Use Default (%@)", DetectionModelCatalog.shared.default_.displayName)) {
+                KoinHelper.appViewModel.useDefaultDetectionModel()
+                selectedDetectionModel = DetectionModelCatalog.shared.default_.id
+            }
+            Button(L("Cancel"), role: .cancel) {}
+        } message: { spec in
+            Text(L("For better performance, you can download and try the %@ model. Its weights are too large to ship with the app, so they are downloaded once and kept on this device. Use Wi-Fi if you can.", spec.displayName))
+        }
+        // Shown instead of downloading until a host for the weights is chosen.
+        .alert(L("Feature Not Available Yet"), isPresented: $showDownloadsUnavailable) {
+            Button(L("OK"), role: .cancel) {}
+        } message: {
+            Text(L("Downloading additional models is not available yet. We are preparing these models and will enable downloads in a future update. You can keep using the built-in models in the meantime."))
+        }
+    }
+
+    @ViewBuilder
+    private func row(for spec: DetectionModelSpec) -> some View {
+        let state = downloadsObs.value.stateOf(modelId: spec.id)
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(spec.displayName)
+                Group {
+                    if !spec.requiresDownload {
+                        LText("Built in")
+                    } else if state is ModelDownloadState.Downloaded {
+                        LText("Downloaded")
+                    } else if state is ModelDownloadState.Downloading {
+                        LText("Downloading…")
+                    } else {
+                        LText("Download to use")
+                    }
+                }
+                .font(.caption)
+                .foregroundColor(.secondary)
+            }
+            Spacer()
+            if spec.requiresDownload && !(state is ModelDownloadState.Downloaded) {
+                Image(systemName: "icloud.and.arrow.down")
+                    .foregroundColor(.green)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func status(for spec: DetectionModelSpec) -> some View {
+        let state = downloadsObs.value.stateOf(modelId: spec.id)
+        if let downloading = state as? ModelDownloadState.Downloading {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        LText("Downloading %@", spec.displayName)
+                            .font(.subheadline.weight(.semibold))
+                        Text(Self.progressText(downloading))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    Button {
+                        manager.cancel(modelId: spec.id)
+                    } label: {
+                        Image(systemName: "xmark.circle.fill").foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel(L("Cancel download"))
+                }
+                if let fraction = downloading.fraction?.floatValue {
+                    ProgressView(value: fraction)
+                } else {
+                    ProgressView().frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        } else if let failed = state as? ModelDownloadState.Failed {
+            HStack(alignment: .top) {
+                Image(systemName: "exclamationmark.triangle.fill").foregroundColor(.red)
+                LText("%@ download failed: %@", spec.displayName, failed.message)
+                    .font(.caption)
+                    .foregroundColor(.red)
+                Spacer()
+                Button(L("Retry")) {
+                    KoinHelper.appViewModel.downloadDetectionModel(model: spec.id)
+                }
+                .buttonStyle(.borderless)
+                Button {
+                    manager.dismissError(modelId: spec.id)
+                } label: {
+                    Image(systemName: "xmark").foregroundColor(.secondary)
+                }
+                .buttonStyle(.borderless)
+            }
+        } else if state is ModelDownloadState.Downloaded {
+            HStack {
+                Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
+                Text(spec.displayName + " · ") + Text(L("Downloaded"))
+                Spacer()
+                Button(role: .destructive) {
+                    KoinHelper.appViewModel.deleteDownloadedModel(model: spec.id)
+                } label: {
+                    Image(systemName: "trash")
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel(L("Delete downloaded model"))
+            }
+            .font(.subheadline)
+        }
+    }
+
+    private static func progressText(_ d: ModelDownloadState.Downloading) -> String {
+        let mb = { (bytes: Int64) in String(format: "%.1f MB", Double(bytes) / 1_048_576) }
+        if let total = d.totalBytes?.int64Value {
+            return "\(mb(d.downloadedBytes)) / \(mb(total))"
+        }
+        return mb(d.downloadedBytes)
+    }
+}
+
 struct DeveloperBenchmarkSection: View {
 
     @StateObject private var runner = BenchmarkRunner()

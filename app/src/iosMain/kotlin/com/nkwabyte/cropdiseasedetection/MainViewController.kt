@@ -23,6 +23,7 @@ import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.ProfileView
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.HistoryViewModel
 import com.nkwabyte.cropdiseasedetection.common.helpers.ObjectDetector
 import com.nkwabyte.cropdiseasedetection.common.utils.SettingsManager
+import com.nkwabyte.cropdiseasedetection.common.models.ModelDownloadManager
 import com.nkwabyte.cropdiseasedetection.data.repository.SyncRepository
 
 private var koinInitialized = false
@@ -69,6 +70,9 @@ object KoinDependencies : KoinComponent {
      */
     val objectDetector: ObjectDetector by inject()
 
+    /** On-demand model weights — drives the SwiftUI model picker's download flow. */
+    val modelDownloadManager: ModelDownloadManager by inject()
+
     fun getAppViewModel(): AppViewModel = appViewModel
     fun getAuthViewModel(): AuthViewModel = authViewModel
     fun getDetectionViewModel(): DetectionViewModel = detectionViewModel
@@ -76,4 +80,5 @@ object KoinDependencies : KoinComponent {
     fun getSettingsManager(): SettingsManager = settingsManager
     fun getHistoryViewModel(): HistoryViewModel = historyViewModel
     fun getObjectDetector(): ObjectDetector = objectDetector
+    fun getModelDownloadManager(): ModelDownloadManager = modelDownloadManager
 }
