@@ -13,5 +13,8 @@
         "supportEmail": "responsibleailabknust@gmail.com"
       }
     }
+  },
+  "storage": {
+    "rules": "storage.rules"
   }
 }

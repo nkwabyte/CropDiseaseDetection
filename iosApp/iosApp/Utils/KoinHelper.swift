@@ -25,4 +25,15 @@ public struct KoinHelper {
     public static var historyViewModel: HistoryViewModel {
         KoinDependencies.shared.getHistoryViewModel()
     }
+
+    /// The same singleton detector the DetectionViewModel uses, so the Settings
+    /// screen's benchmarks time the models the app actually has loaded.
+    public static var objectDetector: ObjectDetector {
+        KoinDependencies.shared.getObjectDetector()
+    }
+
+    /// Downloads detector weights that are too large to bundle with the app.
+    public static var modelDownloadManager: ModelDownloadManager {
+        KoinDependencies.shared.getModelDownloadManager()
+    }
 }

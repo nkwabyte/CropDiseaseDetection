@@ -49,6 +49,10 @@ kotlin {
     sourceSets {
         androidMain.dependencies {
             implementation(libs.androidx.core.ktx)
+            // EXIF orientation normalization for camera/gallery images — see
+            // common/utils/ImageOrientation.kt. The maintained AndroidX build,
+            // not the deprecated android.media.ExifInterface.
+            implementation(libs.androidx.exifinterface)
             implementation(libs.material)
             implementation(libs.androidx.activity.compose)
             
@@ -122,6 +126,46 @@ kotlin {
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
+        }
+        
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+            implementation(libs.kotlinx.coroutines.test)
+        }
+
+        androidUnitTest.dependencies {
+            implementation(libs.junit)
+            implementation(kotlin("test"))
+        }
+
+        androidInstrumentedTest.dependencies {
+            implementation(libs.androidx.junit)
+            implementation(libs.androidx.espresso.core)
+            implementation(libs.androidx.exifinterface)
+        }
+    }
+}
+
+// The shipped iOS framework is STATIC, so its Kotlin linker options never reach
+// Xcode's link line — Xcode satisfies Firebase from its own SPM products. A
+// Kotlin/Native TEST executable, however, links on its own and inherits
+// `-framework FirebaseCore` (and friends) from the GitLive Firebase dependency.
+// Firebase comes from Swift Package Manager here, which produces static
+// libraries rather than .framework bundles, so no framework search path can
+// satisfy those flags and `linkDebugTest<target>` fails with
+// "framework 'FirebaseCore' not found" the moment any commonTest source exists.
+//
+// The shared tests therefore run on the JVM (Android) target, where they cover
+// exactly the same commonMain code. These link tasks are disabled deliberately
+// and visibly rather than left to fail on every `check`, and the limitation is
+// recorded in the research worklog. Removing this needs an iOS test host — an
+// Xcode test target, or Firebase supplied as XCFrameworks — not a flag here.
+// NOTE: only the TEST binaries are affected; the shipped framework still links
+// strictly, so a real missing symbol in production code still breaks the build.
+listOf("IosX64", "IosArm64", "IosSimulatorArm64").forEach { target ->
+    listOf("linkDebugTest$target", "${target.replaceFirstChar { it.lowercase() }}Test").forEach { name ->
+        tasks.matching { it.name == name }.configureEach {
+            enabled = false
         }
     }
 }
@@ -230,6 +274,30 @@ compose.resources {
     packageOfResClass = "com.nkwabyte.cropdiseasedetection.generated.resources"
 }
 
+// Project.exec {} was removed in Gradle 9, so the build identifier is read
+// through the provider API instead. Same value as before: the short commit SHA,
+// or "unknown" outside a git checkout.
+// A "-dirty" suffix is appended when the working tree has uncommitted tracked
+// changes. Without it a build made from a modified tree stamps the parent
+// commit's SHA and is indistinguishable from a build of that commit — which
+// would silently falsify the provenance field the physical-device benchmark
+// protocol relies on to prove which source produced a measurement. Any export
+// whose buildIdentifier ends in "-dirty" must not be cited as results for a
+// committed build.
+val gitCommitSha: String = try {
+    val sha = providers.exec {
+        commandLine("git", "rev-parse", "--short=12", "HEAD")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.get().trim().ifBlank { "unknown" }
+    val dirty = providers.exec {
+        commandLine("git", "status", "--porcelain", "--untracked-files=no")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.get().trim().isNotEmpty()
+    if (sha != "unknown" && dirty) "$sha-dirty" else sha
+} catch (e: Exception) {
+    "unknown"
+}
+
 buildkonfig {
     packageName = "com.nkwabyte.cropdiseasedetection"
     val credsFile = file("../local.properties")
@@ -243,6 +311,7 @@ buildkonfig {
         buildConfigField(com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING, "CLOUDINARY_API_SECRET", credsProps.getProperty("CLOUDINARY_API_SECRET", ""))
         buildConfigField(com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING, "CLOUDINARY_CLOUD_NAME", "dxdun6eym")
         buildConfigField(com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING, "GOOGLE_WEB_CLIENT_ID", credsProps.getProperty("GOOGLE_WEB_CLIENT_ID", ""))
+        buildConfigField(com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING, "BUILD_GIT_SHA", gitCommitSha)
     }
 }
 

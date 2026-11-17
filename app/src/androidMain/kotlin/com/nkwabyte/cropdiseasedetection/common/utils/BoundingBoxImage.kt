@@ -1,6 +1,5 @@
 package com.nkwabyte.cropdiseasedetection.common.utils
 
-import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -19,7 +18,11 @@ actual fun BoundingBoxImage(
     modifier: Modifier
 ) {
     val bitmap = remember(imageBytes, results) {
-        val originalBitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+        // MUST use the same orientation-normalizing decode the models use. The
+        // detector's boxes describe the upright image; decoding the raw bytes
+        // here instead would draw them on a sideways one, so a portrait photo
+        // showed boxes in the wrong place on Android (and only on Android).
+        val originalBitmap = ImageOrientation.decodeUpright(imageBytes)?.bitmap
         if (originalBitmap != null) {
             if (results.isNotEmpty()) {
                 drawBoundingBoxesOnBitmap(

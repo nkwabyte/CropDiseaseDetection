@@ -1,0 +1,124 @@
+section,key,value
+meta,schemaVersion,4
+meta,generatedAtEpochMs,1789405578716
+device,platform,ios
+device,manufacturer,Apple
+device,model,arm64
+device,osVersion,26.5
+device,apiLevelOrOsBuild,iOS 26.5
+device,abis,arm64
+device,isEmulator,true
+device,totalRamBytes,25769803776
+device,batteryLevelPercent,unavailable
+device,isCharging,unavailable
+device,thermalStatus,nominal
+device,thermalStatusNote,"thermalStatus is reported by ProcessInfo, but this run is on the iOS Simulator: there is no real thermal sensor behind it — treat it as not meaningful."
+device,buildIdentifier,31fb8f5576a6
+device,appVersionName,1.0
+device,appVersionCode,1
+device,installedAppSizeBytes,576270114
+device,installedAppSizeNote,"installedAppSizeBytes is the sum of file sizes under the app's own bundle (ExecuTorchBridge.installedAppSizeBytes()), not the figure Settings > General > iPhone Storage reports: it excludes on-device install-time optimizations, App Store thinning already applied, and any data written since install — a best-effort proxy, like the Android APK-file-size figure it sits next to."
+
+model_artifacts
+name,assetFileName,sizeBytes,sha256
+classifier,crop_classifier_ood.pte,30820096,39e1b63dac8ddea9d88e7549dbbb34a9d7363987de89ed1d7ffbdcc4a86b1aad
+detector (YOLO26n),crop_disease_yolo26.pte,9768796,baa36404dbb6c8244121ae2f5e220ae432dbf3718d9fa4eef91498dac3292fe1
+
+image_manifest
+id,widthPx,heightPx,sizeBytes,sha256,source
+classifier_260x260,260,260,8326,0668c73026b77611050c01e4cf9239940bcf1ef0224fc66f2d0380868d59f90d,synthetic_striped_pattern
+detector_1920x1080,1920,1080,108609,0e60a149e9f14ad66d36b95b3e5a1e6347bb724017bb34ba9e7baa128ea52cd5,synthetic_striped_pattern
+detector_1280x960,1280,960,50269,85fb63411bc826ac2f89bd009694210c65c95271b8cd3ae731ff8071706ee954,synthetic_striped_pattern
+detector_640x480,640,480,37459,ee0264f40d72c9c5b3925ccb5e414e2d589374d673a3f19a9bc108bfbbad7d78,synthetic_striped_pattern
+
+cold_load
+repetitions,note
+5,"Each repetition calls release() first, so this is a genuine cold load (module/spec state cleared), not the idempotent no-op loadModel()/loadClassifierModel() take when already loaded. release() is only invoked this way from the benchmark path; normal app usage never forces a mid-session cold reload."
+
+stage,n,meanMs,medianMs,stdDevMs,minMs,maxMs,p50Ms,p90Ms,p95Ms,p99Ms
+cold_load_classifier,5,0.3539752006530762,0.31550002098083496,0.09661270503561759,0.2571669816970825,0.48420798778533936,0.31550002098083496,0.48420798778533936,0.48420798778533936,0.48420798778533936
+cold_load_detector,5,0.3109999895095825,0.32245802879333496,0.04473415312515706,0.2526249885559082,0.35737502574920654,0.32245802879333496,0.35737502574920654,0.35737502574920654,0.35737502574920654
+
+classifier_stage_benchmark (warmup=10, measured=100)
+stage,n,meanMs,medianMs,stdDevMs,minMs,maxMs,p50Ms,p90Ms,p95Ms,p99Ms
+image_decode,100,0.1286670899999999,0.1237705,0.02216403977603899,0.0995,0.275834,0.124041,0.144084,0.151417,0.2285
+orientation_correction,100,0.0010275000000000009,0.001,2.1124936196185998E-4,5.0E-4,0.001959,0.001,0.00125,0.001416,0.001625
+preprocess,100,7.154065449999998,7.027687500000001,0.5412316368869251,6.653667,11.26025,7.027917,7.454917,7.745417,9.009417
+classifier_inference,100,10.841049189999996,10.417062999999999,1.888668537767761,8.766583,22.051542,10.421584,11.793125,13.219,21.208042
+routing,100,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+end_to_end_classifier_only,100,18.181107929944993,17.59147948026657,2.153013520857142,15.88604199886322,29.41699993610382,17.6047500371933,19.40262496471405,20.82241702079773,28.933083057403564
+
+detector_stage_benchmark_1920x1080 (warmup=10, measured=100)
+stage,n,meanMs,medianMs,stdDevMs,minMs,maxMs,p50Ms,p90Ms,p95Ms,p99Ms
+image_decode,100,0.13121834999999998,0.127313,0.01897674369911016,0.103292,0.221417,0.127417,0.150791,0.165958,0.204166
+orientation_correction,100,0.001177150000000001,0.0011665,2.781836968478189E-4,0.0,0.002209,0.001167,0.001459,0.001625,0.001792
+preprocess,100,42.98171746999999,41.807145500000004,8.354516925692947,40.346291,124.552708,41.819541,43.402667,45.56025,48.6685
+detector_inference,100,19.248331623125836,19.047853946025846,1.2290728978686853,17.08816592693329,22.736000021751405,19.069915919891358,20.90954298074341,21.40875096357727,22.394083033561706
+output_transfer (subset of detector_inference),100,1.3859399731258395,1.3118745159187317,0.2095812454354571,1.2270820280227661,2.775499968345642,1.3139170677108765,1.6143340503616332,1.7803759826507568,1.9391239277038574
+postprocess_nms,100,0.6588137078285218,0.6511249542236328,0.034313660276677226,0.6119170188903809,0.8694169521331787,0.6512919664382935,0.6870410442352295,0.7135829925537109,0.7592079639434814
+end_to_end_detector_only,100,63.13551580786705,62.121999979019165,8.604343858769855,58.987082958221436,145.3723750114441,62.185624957084656,65.03433299064636,66.98587501049042,72.0257499217987
+
+detector_stage_benchmark_1280x960 (warmup=10, measured=100)
+stage,n,meanMs,medianMs,stdDevMs,minMs,maxMs,p50Ms,p90Ms,p95Ms,p99Ms
+image_decode,100,0.14259377999999992,0.1290835,0.07316664840540671,0.108708,0.830208,0.129208,0.15575,0.181083,0.277291
+orientation_correction,100,0.0011670500000000009,0.001125,2.90500347710983E-4,4.2E-5,0.002166,0.001125,0.0015,0.001625,0.002125
+preprocess,100,44.06573500999998,43.008104,3.670139597577087,41.635333,65.019042,43.016708,45.662791,47.68275,64.09675
+detector_inference,100,19.343231182187576,18.855353521732333,1.9515700164008485,16.79916797579193,30.799583010856626,18.87458301925659,21.114873901771546,21.896041032241822,26.18075104827118
+output_transfer (subset of detector_inference),100,1.3858670221875762,1.2978544827423097,0.22065860707745202,1.2255420772476195,2.5739590435028075,1.298125982650757,1.5737500019073485,1.7527489708023072,2.233208000366211
+postprocess_nms,100,0.8506833338737487,0.6346459984779358,2.0314105406079115,0.5954999923706055,20.94725000858307,0.6352089643478394,0.6857080459594727,0.7006250619888306,1.3312499523162842
+end_to_end_detector_only,100,64.5222791314125,62.84756249189377,6.745856384879075,60.01412498950958,114.6574170589447,62.85249996185303,67.54841709136963,71.11733305454254,96.55045902729034
+
+detector_stage_benchmark_640x480 (warmup=10, measured=100)
+stage,n,meanMs,medianMs,stdDevMs,minMs,maxMs,p50Ms,p90Ms,p95Ms,p99Ms
+image_decode,100,0.12925369999999997,0.127479,0.010675270281630279,0.111334,0.197667,0.127541,0.140667,0.143416,0.156917
+orientation_correction,100,0.0010892200000000008,0.001083,2.581862369091213E-4,4.2E-5,0.001833,0.001083,0.001375,0.001458,0.001708
+preprocess,100,40.31806747000002,39.6748125,4.240402933136167,38.22275,80.517584,39.687583,41.032542,41.548333,47.851
+detector_inference,100,19.00726090040458,18.984937999816893,0.9666974044296595,16.616666022117617,22.45666702307129,19.003208979789736,20.013458037376402,20.313416068077085,22.352832993507384
+output_transfer (subset of detector_inference),100,1.3808916604045869,1.302645981311798,0.21296939070060805,1.2238749572677612,2.941292070388794,1.303749979789734,1.6221659515457154,1.6729170574035646,1.8021659752044679
+postprocess_nms,100,0.6283049869537354,0.6230000853538513,0.024697079176476438,0.587333083152771,0.7379580736160278,0.6237500905990601,0.6578339338302612,0.6739169359207153,0.7002080678939819
+end_to_end_detector_only,100,60.17042203426361,59.66089600324631,4.688755987439493,56.21191596984863,103.86275005340576,59.67149996757507,61.40645790100098,62.55187499523163,67.01029098033905
+
+end_to_end_rejected_out_of_distribution (warmup=10, measured=100, image=detector_1920x1080, order="ensureClassifierLoaded(idempotent)->decode+exifOrientation->classifierPreprocess+inference+postprocess->routingDecision->ensureDetectorLoaded(idempotent, routed only)->detectorPreprocess+inference+postprocess(routed only)->classIdFiltering(routed only)")
+stage,n,meanMs,medianMs,stdDevMs,minMs,maxMs,p50Ms,p90Ms,p95Ms,p99Ms
+end_to_end_rejected_out_of_distribution,100,27.803072427511214,27.379374980926514,2.186584000032094,24.57195806503296,37.578166007995605,27.439291954040527,30.57729196548462,32.21287500858307,34.9140830039978
+
+end_to_end_rejected_out_of_distribution_stages
+stage,n,meanMs,medianMs,stdDevMs,minMs,maxMs,p50Ms,p90Ms,p95Ms,p99Ms
+image_decode,100,0.08029751000000002,0.0749585,0.020037688938847213,0.056291,0.178292,0.075125,0.108125,0.11575,0.1495
+orientation_correction,100,5.770600000000003E-4,5.0E-4,2.2931623526818975E-4,2.5E-4,0.001208,5.0E-4,9.16E-4,0.001,0.001125
+preprocess,100,8.566830460000002,8.494999499999999,0.37779961085056285,8.099459,10.684,8.496291,8.864791,9.216959,10.032292
+classifier_inference,100,17.545789139999997,17.1778755,1.874349247065032,14.904541,26.012166,17.183417,19.531125,21.240416,23.041666
+routing,100,5.841300000000003E-4,5.42E-4,2.764849953004007E-4,3.33E-4,0.003,5.42E-4,7.09E-4,7.92E-4,0.001041
+detector_inference,100,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+output_transfer (subset of detector_inference),100,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+postprocess_nms,100,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+pipeline_total,100,27.799739620000004,27.376062,2.186408456363318,24.56875,37.572833,27.436333,30.573709,32.209542,34.910958
+
+end_to_end_rejected_out_of_distribution_counts
+outcome,count
+success,100
+failure,0
+detector_executed,0
+detector_skipped,100
+
+cpu_utilization
+threadCpuTimeMs,wallClockMs,utilizationRatio,measuredOnThread,available,note
+7730.006999999998,2885.0414580106735,2.6793400068954574,process (getrusage RUSAGE_SELF — not per-thread),true,"iOS reports PROCESS-level user+system CPU time via getrusage() (ExecuTorchBridge.processCpuTimeMs()), not a per-thread figure like Android's Debug.threadCpuTimeNanos() — the two numbers are not directly comparable across platforms in this export."
+
+memory_samples
+label,totalPssKb,nativeHeapAllocatedKb,javaHeapAllocatedKb,timestampEpochMs,available,note
+before_measured_loop,365024,0,0,1789405578705,true,"On iOS, totalPssKb actually holds mach_task_basic_info.resident_size (RSS-like, via ExecuTorchBridge.residentMemoryBytes()) — iOS exposes no PSS-equivalent to app code, unlike Android's ActivityManager-based PSS. nativeHeapAllocatedKb/javaHeapAllocatedKb are Android-only concepts and are always 0 here, not measurements. Do not directly compare this figure to the Android totalPssKb value without accounting for the difference."
+after_measured_loop,365376,0,0,1789405578705,true,"On iOS, totalPssKb actually holds mach_task_basic_info.resident_size (RSS-like, via ExecuTorchBridge.residentMemoryBytes()) — iOS exposes no PSS-equivalent to app code, unlike Android's ActivityManager-based PSS. nativeHeapAllocatedKb/javaHeapAllocatedKb are Android-only concepts and are always 0 here, not measurements. Do not directly compare this figure to the Android totalPssKb value without accounting for the difference."
+
+notes
+1,"Timing uses a monotonic clock (DispatchTime.now().uptimeNanoseconds, exposed to Kotlin via ExecuTorchBridge.monotonicNowMs()) around the same classify()/detect() code paths used in production; no external tool or automation-layer round-trip time is included in any figure in this export."
+2,"Both platforms now correct EXIF image orientation before resizing — iOS via UIImage.fixOrientation() inside ExecuTorchBridge.preprocessCHW, Android via common/utils/ImageOrientation.kt — so orientationCorrectionMs is a real measurement on both. The Android-only gap recorded as C025, where Android fed the raw sensor-order buffer to models trained on upright images and reported orientationCorrectionMs as a constant 0.0, is fixed."
+3,"All benchmark images are deterministic synthetic striped patterns generated by ExecuTorchBridge.syntheticJpegData, not photographs. Legitimate for latency-only timing (compute cost is driven by tensor shape, not pixel content) but NOT used for any accuracy or output-agreement claim here — the cross-platform output-agreement procedure uses real checksum-locked images instead."
+4,"The synthetic benchmark image is rejected by the classifier (label=""unknown"", confidence=0.80603254), so only the out-of-distribution path is measured here — and it correctly never invokes the detector. The accepted and mismatch paths require an image the classifier accepts and are NOT measured in this export; their absence is not a zero."
+5,"endToEnd/endToEndByPath measure DetectionPipeline.run(), the same entry point DetectionViewModel.detect() calls in the app. The classifier runs first and gates the detector; a rejected or crop-mismatched image never reaches detector inference, verifiable here as detectorExecutedCount == 0 for those paths."
+6,"Latency is NOT comparable across entries of endToEndByPath: only the accepted path includes detector inference. Do not average them together or quote one as ""the"" end-to-end figure without its path."
+7,"""Offline"" here means no network call occurs anywhere in classify()/detect()/routing — all run entirely against on-device ExecuTorch modules. offlineFailureCount counts classifier/detector error outcomes and thrown exceptions during the timed call, not prediction accuracy."
+8,"Memory samples are resident-memory snapshots taken immediately before and after the measured loop, never inside a timed call, so sampling itself never perturbs the reported latency numbers — but for the same reason they cannot capture a transient peak during a single inference call."
+9,"thermalStatus is reported by ProcessInfo, but this run is on the iOS Simulator: there is no real thermal sensor behind it — treat it as not meaningful."
+10,"installedAppSizeBytes is the sum of file sizes under the app's own bundle (ExecuTorchBridge.installedAppSizeBytes()), not the figure Settings > General > iPhone Storage reports: it excludes on-device install-time optimizations, App Store thinning already applied, and any data written since install — a best-effort proxy, like the Android APK-file-size figure it sits next to."
+11,"This export was produced on the iOS SIMULATOR (arm64), NOT a physical iPhone 15 Pro Max or any physical device. Do not cite any figure in this export as physical-device performance."

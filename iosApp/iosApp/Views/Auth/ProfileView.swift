@@ -58,7 +58,7 @@ struct ProfileView: View {
             authErrorMessage = nil
         } else if let error = state as? AuthState.Error {
             isAuthLoading = false
-            authErrorMessage = error.message
+            authErrorMessage = friendlyAuthErrorMessage(error.message)
         } else if state is AuthState.Success {
             isAuthLoading = false
             authErrorMessage = nil
@@ -69,6 +69,97 @@ struct ProfileView: View {
         } else {
             isAuthLoading = false
         }
+    }
+
+    private func friendlyAuthErrorMessage(_ raw: String) -> String {
+        let lower = raw.lowercased()
+        
+        // Invalid credentials / incorrect email or password
+        if raw.contains("17004") ||
+           raw.contains("ERROR_INVALID_CREDENTIAL") ||
+           raw.contains("INVALID_LOGIN_CREDENTIALS") ||
+           raw.contains("ERROR_WRONG_PASSWORD") ||
+           raw.contains("ERROR_USER_NOT_FOUND") ||
+           lower.contains("wrong-password") ||
+           lower.contains("user-not-found") ||
+           lower.contains("invalid-credential") ||
+           lower.contains("malformed or has expired") ||
+           lower.contains("no user record") ||
+           lower.contains("password is invalid") ||
+           lower.contains("invalid credential") ||
+           raw == "Invalid email or password. Please check your credentials and try again." {
+            return L("Invalid email or password. Please check your credentials and try again.")
+        }
+        
+        // Invalid email formatting
+        if raw.contains("17008") ||
+           raw.contains("ERROR_INVALID_EMAIL") ||
+           lower.contains("invalid-email") ||
+           lower.contains("badly formatted") ||
+           raw == "Please enter a valid email address." {
+            return L("Please enter a valid email address.")
+        }
+        
+        // Disabled user
+        if raw.contains("17005") ||
+           raw.contains("ERROR_USER_DISABLED") ||
+           lower.contains("user-disabled") ||
+           lower.contains("has been disabled") ||
+           raw == "This account has been disabled. Please contact support." {
+            return L("This account has been disabled. Please contact support.")
+        }
+        
+        // Email already registered
+        if raw.contains("17007") ||
+           raw.contains("ERROR_EMAIL_ALREADY_IN_USE") ||
+           lower.contains("email-already-in-use") ||
+           lower.contains("already in use") ||
+           raw == "An account with this email already exists. Try signing in instead." {
+            return L("An account with this email already exists. Try signing in instead.")
+        }
+        
+        // Password too weak
+        if raw.contains("17026") ||
+           raw.contains("ERROR_WEAK_PASSWORD") ||
+           lower.contains("weak-password") ||
+           lower.contains("password should be at least") ||
+           lower.contains("at least 6 characters") ||
+           raw == "Password is too weak. Please use at least 6 characters." {
+            return L("Password is too weak. Please use at least 6 characters.")
+        }
+        
+        // Rate limiting / too many attempts
+        if raw.contains("17010") ||
+           raw.contains("ERROR_TOO_MANY_REQUESTS") ||
+           lower.contains("too-many-requests") ||
+           lower.contains("blocked all requests") ||
+           raw == "Too many attempts. Please wait a moment and try again." {
+            return L("Too many attempts. Please wait a moment and try again.")
+        }
+        
+        // Network connectivity issues
+        if raw.contains("17020") ||
+           raw.contains("ERROR_NETWORK_ERROR") ||
+           lower.contains("network error") ||
+           lower.contains("network-request-failed") ||
+           lower.contains("timeout") ||
+           lower.contains("unreachable") ||
+           raw == "Network connection error. Please check your internet connection." {
+            return L("Network connection error. Please check your internet connection.")
+        }
+
+        if raw.contains("Registration failed") {
+            return L("Registration failed. Please try again.")
+        }
+        
+        // Generic FIRAuth error fallback
+        if raw.contains("FIRAuthErrorDomain") || raw.contains("FirebaseAuthException") {
+            return isRegistering ?
+                L("Unable to create account. Please check your details and try again.") :
+                L("Unable to sign in. Please check your details and try again.")
+        }
+        
+        return L(raw)
     }
 
     // ── Toast Banner ──────────────────────────────────────────
@@ -195,19 +286,36 @@ struct ProfileView: View {
                 }
                 .pickerStyle(.segmented)
                 .padding(.bottom, 8)
+                .onChange(of: isRegistering) { _ in
+                    authErrorMessage = nil
+                }
                 
                 if let errorMsg = authErrorMessage {
-                    HStack {
+                    HStack(alignment: .top, spacing: 10) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundColor(.red)
-                        Text(errorMsg)
-                            .font(.caption)
+                            .font(.subheadline)
+                            .padding(.top, 2)
+                        
+                        Text(friendlyAuthErrorMessage(errorMsg))
+                            .font(.subheadline)
                             .foregroundColor(.red)
+                            .fixedSize(horizontal: false, vertical: true)
+                        
                         Spacer()
+                        
+                        Button {
+                            authErrorMessage = nil
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.caption)
+                                .foregroundColor(.red.opacity(0.7))
+                                .padding(4)
+                        }
                     }
                     .padding()
                     .background(Color.red.opacity(0.12))
-                    .cornerRadius(10)
+                    .cornerRadius(12)
                 }
                 
                 VStack(spacing: 12) {

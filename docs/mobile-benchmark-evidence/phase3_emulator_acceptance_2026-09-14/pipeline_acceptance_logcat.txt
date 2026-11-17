@@ -1,0 +1,7 @@
+case=supported_corn selected=<none> outcome=DETECTED classifier=Corn@0.92429954 detectorExecuted=true classifyCalls=1 detectCalls=1 raw=21 routed=21 routedClassIds=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] oriented=640x288@exif1
+case=ood_cassava selected=<none> outcome=REJECTED_OUT_OF_DISTRIBUTION classifier=unknown@0.79975957 detectorExecuted=false classifyCalls=1 detectCalls=0 raw=0 routed=0 routedClassIds=[] oriented=960x960@exif1
+case=supported_tomato selected=<none> outcome=DETECTED classifier=Tomato@0.9492269 detectorExecuted=true classifyCalls=1 detectCalls=1 raw=10 routed=10 routedClassIds=[16, 16, 16, 16, 16, 16, 16, 16, 16, 16] oriented=640x480@exif1
+case=orientation_exif1 selected=<none> outcome=DETECTED classifier=Corn@0.92429954 detectorExecuted=true classifyCalls=1 detectCalls=1 raw=21 routed=21 routedClassIds=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] oriented=640x288@exif1
+case=orientation_exif6 selected=<none> outcome=DETECTED classifier=Corn@0.9248228 detectorExecuted=true classifyCalls=1 detectCalls=1 raw=4 routed=4 routedClassIds=[4, 4, 0, 0] oriented=288x640@exif6
+case=mismatch_corn_as_tomato selected=Tomato outcome=CROP_MISMATCH classifier=Corn@0.92429954 detectorExecuted=false classifyCalls=1 detectCalls=0 raw=0 routed=0 routedClassIds=[] oriented=640x288@exif1
+case=supported_pepper selected=<none> outcome=DETECTED classifier=Pepper@0.8913713 detectorExecuted=true classifyCalls=1 detectCalls=1 raw=2 routed=2 routedClassIds=[8, 8] oriented=640x480@exif1

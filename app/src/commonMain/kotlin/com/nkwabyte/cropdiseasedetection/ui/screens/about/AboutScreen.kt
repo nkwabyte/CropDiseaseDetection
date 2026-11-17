@@ -37,7 +37,7 @@ import com.nkwabyte.cropdiseasedetection.ui.theme.CropDiseaseDetectionTheme
 @Composable
 fun AboutScreen(
     modifier: Modifier = Modifier,
-    onDrawerButtonClick: () -> Unit = {},
+    onBack: () -> Unit = {},
 ) {
     var isVisible by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
 
@@ -48,17 +48,8 @@ fun AboutScreen(
     Scaffold(
         topBar = {
             AppBar(
-                title = {
-                    Text(
-                        text = stringResource(Res.string.app_name),
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                        ),
-                    )
-                },
-                onDrawerButtonClick = onDrawerButtonClick,
-                isHomeScreen = false,
+                title = stringResource(Res.string.title_about),
+                onBack = onBack,
             )
         },
         containerColor = MaterialTheme.colorScheme.background // Biophilic background

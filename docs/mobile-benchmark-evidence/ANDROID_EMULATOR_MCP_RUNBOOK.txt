@@ -1,0 +1,31 @@
+ANDROID EMULATOR MCP — CLAUDE DESKTOP RUNBOOK
+
+Configured server name: android-emulator
+Pinned package version: 2.0.0
+AVD name: Medium_Phone
+Verified live environment: Android 17/API 37, arm64 emulator, 1080x2400, density 420
+Verified application activity: com.nkwabyte.cropdiseasedetection/.MainActivity
+
+After fully quitting and reopening Claude Desktop, ask Claude:
+
+"Use the android-emulator MCP. First call device_info and get_current_activity. Then capture a screenshot and inspect the UI tree. Do not tap, clear data, reinstall, or modify the application until you have summarized the current state."
+
+For repeatable application testing, ask Claude to use this order:
+
+1. Confirm exactly one authorized device is connected.
+2. Record device_info, screen size, orientation, current activity, application version, build identifier, and model selection.
+3. Install the intended release/profile APK when required.
+4. Force-stop and launch the app into a defined initial state.
+5. Use a checksum-locked image set and a written test-case manifest.
+6. Navigate using element/resource IDs when available, waiting for UI stability after each transition.
+7. Capture screenshots and filtered logs at declared checkpoints.
+8. Export in-app benchmark JSON/CSV.
+9. Verify counts, model hashes, run conditions, and failures before analysis.
+
+Important measurement boundary:
+
+The MCP controls and observes the emulator, but its request duration is not application inference latency. Do not time MCP calls and report them as performance. Model-load, preprocessing, classifier, detector, postprocessing, and end-to-end latency must be measured inside the app with monotonic clocks or through Android benchmarking/profiling tools. Keep emulator measurements separate from Samsung Galaxy A10 physical-device measurements.
+
+Recommended first performance task for Claude:
+
+"Review the Kotlin Multiplatform application and the publication mobile-benchmark protocol. Add minimally invasive structured benchmark instrumentation to Android without changing inference behavior. Build a release/profile APK, install it on Medium_Phone, use the android-emulator MCP to run the fixed test flow, and export raw JSON/CSV. Report emulator findings separately and generate a Galaxy A10 physical-device runbook. Do not treat MCP round-trip time or the emulator as Galaxy A10 performance."

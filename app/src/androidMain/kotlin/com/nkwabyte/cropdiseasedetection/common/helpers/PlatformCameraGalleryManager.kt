@@ -2,7 +2,6 @@ package com.nkwabyte.cropdiseasedetection.common.helpers
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -11,8 +10,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
-import com.nkwabyte.cropdiseasedetection.common.utils.loadBitmapFromUri
-import java.io.ByteArrayOutputStream
+import com.nkwabyte.cropdiseasedetection.common.utils.ImageIngest
+import com.nkwabyte.cropdiseasedetection.common.utils.readBytesFromUri
 import java.io.File
 
 @Composable
@@ -29,14 +28,13 @@ actual fun PlatformCameraGalleryManager(
             onImageBytesReceived(null)
             return
         }
-        val bitmap = loadBitmapFromUri(context, uri)
-        if (bitmap != null) {
-            val outputStream = ByteArrayOutputStream()
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-            onImageBytesReceived(outputStream.toByteArray())
-        } else {
-            onImageBytesReceived(null)
-        }
+        // Orientation is applied HERE, once, to the original bytes — before the
+        // re-encode that would otherwise discard the EXIF tag. Everything
+        // downstream (preview, classifier, detector, overlay) therefore sees the
+        // same upright pixels. See ImageIngest's doc comment.
+        val original = readBytesFromUri(context, uri)
+        val upright = original?.let { ImageIngest.uprightJpegBytes(it) }
+        onImageBytesReceived(upright)
     }
 
     val cameraLauncher = rememberLauncherForActivityResult(

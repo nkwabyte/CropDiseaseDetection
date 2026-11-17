@@ -3,6 +3,8 @@ package com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nkwabyte.cropdiseasedetection.common.model.AppData
+import com.nkwabyte.cropdiseasedetection.common.model.DetectionModelCatalog
+import com.nkwabyte.cropdiseasedetection.common.models.ModelDownloadManager
 import com.nkwabyte.cropdiseasedetection.common.model.DetectionResult
 import com.nkwabyte.cropdiseasedetection.common.model.RecommendationLanguage
 import com.nkwabyte.cropdiseasedetection.common.model.UserRole
@@ -16,11 +18,13 @@ import kotlinx.coroutines.launch
 
 class AppViewModel(
     private val settingsManager: SettingsManager,
-    private val syncRepository: SyncRepository
+    private val syncRepository: SyncRepository,
+    private val modelDownloads: ModelDownloadManager,
 ) : ViewModel() {
     private val _appState = MutableStateFlow(
         AppData(
             selectedCrop = null,
+            selectedCropId = null,
             selectedImageByteArray = null,
             detectionResult = emptyList(),
             isLoading = false,
@@ -32,7 +36,7 @@ class AppViewModel(
             recommendationLanguage = runCatching {
                 RecommendationLanguage.valueOf(settingsManager.getRecommendationLanguage())
             }.getOrDefault(RecommendationLanguage.ENGLISH),
-            selectedDetectionModel = settingsManager.getDetectionModel()
+            selectedDetectionModel = modelDownloads.resolve(settingsManager.getDetectionModel()).id
         )
     )
     val appState: StateFlow<AppData> = _appState.asStateFlow()
@@ -57,10 +61,18 @@ class AppViewModel(
         _appState.update { it.copy(recommendationLanguage = language) }
     }
 
-    fun setSelectedCrop(crop: String) {
+    /**
+     * Records the user's crop choice.
+     *
+     * @param crop the translated display name, for the UI only.
+     * @param cropId the canonical [SupportedCrop] id, which is what the
+     *        detection pipeline routes on.
+     */
+    fun setSelectedCrop(crop: String, cropId: String) {
         _appState.update { currentState ->
             currentState.copy(
                 selectedCrop = crop,
+                selectedCropId = cropId,
                 selectedImageByteArray = null,
                 detectionResult = emptyList()
             )
@@ -139,15 +151,33 @@ class AppViewModel(
         _appState.update { it.copy(detectionThreshold = value) }
     }
 
+    /** Selects a detector. A downloadable one is only selected once its weights are on
+     *  the device — call [downloadDetectionModel] first. */
     fun setSelectedDetectionModel(model: String) {
+        if (!modelDownloads.isReady(model)) return
         settingsManager.setDetectionModel(model)
         _appState.update { it.copy(selectedDetectionModel = model) }
+    }
+
+    /** Downloads a model's weights and switches to it when the download finishes. */
+    fun downloadDetectionModel(model: String) {
+        modelDownloads.download(model) { setSelectedDetectionModel(model) }
+    }
+
+    /** Goes back to the bundled default detector. */
+    fun useDefaultDetectionModel() = setSelectedDetectionModel(DetectionModelCatalog.default.id)
+
+    /** Deletes a downloaded model, falling back to the default if it was in use. */
+    fun deleteDownloadedModel(model: String) {
+        modelDownloads.delete(model)
+        if (_appState.value.selectedDetectionModel == model) useDefaultDetectionModel()
     }
 
     fun reset() {
         _appState.update { currentState ->
             AppData(
                 selectedCrop = null,
+                selectedCropId = null,
                 selectedImageByteArray = null,
                 detectionResult = emptyList(),
                 isLoading = false,

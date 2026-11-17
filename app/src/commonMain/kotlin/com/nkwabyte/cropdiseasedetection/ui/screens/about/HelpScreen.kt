@@ -42,22 +42,13 @@ import com.nkwabyte.cropdiseasedetection.ui.theme.CropDiseaseDetectionTheme
 @Composable
 fun HelpScreen(
     modifier: Modifier = Modifier,
-    onDrawerButtonClick: () -> Unit = {},
+    onBack: () -> Unit = {},
 ) {
     Scaffold(
         topBar = {
             AppBar(
-                title = {
-                    Text(
-                        text = stringResource(Res.string.app_name),
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Normal,
-                            color = MaterialTheme.colorScheme.primary,
-                        ),
-                    )
-                },
-                onDrawerButtonClick = onDrawerButtonClick,
-                isHomeScreen = false,
+                title = stringResource(Res.string.title_help_support),
+                onBack = onBack,
             )
         },
     ) { paddingValues ->

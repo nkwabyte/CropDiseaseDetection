@@ -46,7 +46,7 @@ import com.nkwabyte.cropdiseasedetection.common.data.RecommendationStrings
 import com.nkwabyte.cropdiseasedetection.common.model.RecommendationLanguage
 import com.nkwabyte.cropdiseasedetection.common.navigation.appbar.AppBar
 import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.AppViewModel
-import com.nkwabyte.cropdiseasedetection.common.navigation.viewmodel.DetectionViewModel
+import com.nkwabyte.cropdiseasedetection.common.model.DetectionResult
 import com.nkwabyte.cropdiseasedetection.ui.screens.encyclopedia.getCropTheme
 import com.nkwabyte.cropdiseasedetection.ui.screens.encyclopedia.getDiseaseDrawable
 import org.jetbrains.compose.resources.painterResource
@@ -60,13 +60,11 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecommendationScreen(
-    detectionViewModel: DetectionViewModel,
+    results: List<DetectionResult>,
     appViewModel: AppViewModel,
     onBack: () -> Unit,
-    onDrawerButtonClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val detectionState by detectionViewModel.detectionState.collectAsState()
     val appState by appViewModel.appState.collectAsState()
     val selectedLanguage = appState.recommendationLanguage
 
@@ -74,8 +72,8 @@ fun RecommendationScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
-    val detectedDiseases: List<Pair<DiseaseInfo, Int>> = remember(detectionState.results) {
-        detectionState.results
+    val detectedDiseases: List<Pair<DiseaseInfo, Int>> = remember(results) {
+        results
             .groupBy { it.displayName.ifEmpty { it.classIndex.toString() } }
             .map { (_, results) ->
                 val sample = results.first()
@@ -98,26 +96,8 @@ fun RecommendationScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             AppBar(
-                title = {
-                    Text(
-                        "Recommendations",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Normal,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    )
-                },
-                onDrawerButtonClick = onDrawerButtonClick,
-                isHomeScreen = false,
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
+                title = stringResource(Res.string.title_treatment_guidelines),
+                onBack = onBack,
             )
         }
     ) { contentPadding ->
@@ -173,7 +153,7 @@ fun RecommendationScreen(
                             disease = disease,
                             selectedLanguage = selectedLanguage,
                             detectionCount = detectedDiseases.find { it.first.id == disease.id }?.second ?: 1,
-                            totalDetections = detectionState.results.size,
+                            totalDetections = results.size,
                             showBackToList = detectedDiseases.size > 1,
                             onBackToList = { selectedDisease = null }
                         )

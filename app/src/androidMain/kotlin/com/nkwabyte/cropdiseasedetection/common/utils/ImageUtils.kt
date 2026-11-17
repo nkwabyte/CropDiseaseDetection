@@ -17,14 +17,28 @@ fun saveBitmapToFile(context: Context, bitmap: Bitmap): File {
     return file
 }
 
-fun loadBitmapFromUri(context: Context, uri: Uri): Bitmap? {
+/** Raw bytes behind a content/file URI, or null if it cannot be read. */
+fun readBytesFromUri(context: Context, uri: Uri): ByteArray? {
     return try {
-        val stream = context.contentResolver.openInputStream(uri)
-        BitmapFactory.decodeStream(stream)
+        context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
     } catch (e: Exception) {
         e.printStackTrace()
         null
     }
+}
+
+/**
+ * Decodes a picked image UPRIGHT.
+ *
+ * The bytes are read first and decoded through [ImageOrientation] rather than
+ * streamed straight into `BitmapFactory`, because BitmapFactory ignores EXIF:
+ * the previous version of this function returned a sideways bitmap for every
+ * portrait phone photo, and its caller then re-encoded that bitmap to JPEG,
+ * destroying the orientation tag along with it.
+ */
+fun loadBitmapFromUri(context: Context, uri: Uri): Bitmap? {
+    val bytes = readBytesFromUri(context, uri) ?: return null
+    return ImageOrientation.decodeUpright(bytes)?.bitmap
 }
 
 

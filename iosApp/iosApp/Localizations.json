@@ -4307,6 +4307,321 @@
         }
       }
     },
+    "Invalid email or password. Please check your credentials and try again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ee": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E-mail alo nyagbe ɣaɣla la mesɔ o. Taflatsɛ gbugbɔ te kpɔ."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adresse e-mail ou mot de passe invalide. Veuillez vérifier vos identifiants et réessayer."
+          }
+        },
+        "ga": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E-mail loo teemɔ wiemɔ lɛ jeee nɔŋŋ. Ofainɛ ka mli ekoŋŋ."
+          }
+        },
+        "ha": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imel ko kalmar sirri ba daidai ba ne. Da fatan a sake gwadawa."
+          }
+        },
+        "tw": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E-mail anaa kokoam nsɛmfua no nyɛ papa. Yɛsrɛ wo sɔhwɛ bio."
+          }
+        }
+      }
+    },
+    "Please enter a valid email address.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ee": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taflatsɛ ŋlɔ e-mail nyuitɔ."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Veuillez entrer une adresse e-mail valide."
+          }
+        },
+        "ga": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ofainɛ ŋmala e-mail nɔŋŋ ni ja."
+          }
+        },
+        "ha": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da fatan a shigar da ingantaccen adireshin imel."
+          }
+        },
+        "tw": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yɛsrɛ wo, hyɛ e-mail a ɛfata mu."
+          }
+        }
+      }
+    },
+    "This account has been disabled. Please contact support.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ee": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wotɔ teƒe na asusu sia. Taflatsɛ kpe ɖe mí ŋu."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce compte a été désactivé. Veuillez contacter l'assistance."
+          }
+        },
+        "ga": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Akpasa akawnt nɛɛ. Ofainɛ bi yelikɛbuamɔ."
+          }
+        },
+        "ha": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An kashe wannan asusun. Tuntuɓi tallafi."
+          }
+        },
+        "tw": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wɔagyae akawnt yi dwumadi. Yɛsrɛ wo kɔ mmoa nkyɛn."
+          }
+        }
+      }
+    },
+    "An account with this email already exists. Try signing in instead.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ee": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Asusu aɖe le e-mail sia ŋu xoxo. Te kpɔ be nàge ɖe eme."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un compte avec cet e-mail existe déjà. Essayez plutôt de vous connecter."
+          }
+        },
+        "ga": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Akawnt kɛ e-mail nɛɛ yɛ momo. Ka mli ni obote mli."
+          }
+        },
+        "ha": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Akwai asusu da wannan imel ɗin. Gwada shiga maimakon haka."
+          }
+        },
+        "tw": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Akawnt bi wɔ e-mail yi dedaw. Bɔ mmɔden sɛ wobɛwura mu mmom."
+          }
+        }
+      }
+    },
+    "Password is too weak. Please use at least 6 characters.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ee": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nyagbe ɣaɣla la megbɔ o. Taflatsɛ zã nuŋɔŋlɔ 6 ya teti."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le mot de passe est trop faible. Veuillez utiliser au moins 6 caractères."
+          }
+        },
+        "ga": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teemɔ wiemɔ lɛ waaa. Ofainɛ kɛ ŋmalɛi 6 kɛya nɔ atsu nii."
+          }
+        },
+        "ha": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalmar sirri tayi rauni sosai. Yi amfani da haruffa aƙalla 6."
+          }
+        },
+        "tw": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kokoam nsɛmfua no nyɛ den. Yɛsrɛ wo fa nkyerɛwde 6 anaa nea ɛboro saa."
+          }
+        }
+      }
+    },
+    "Too many attempts. Please wait a moment and try again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ee": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agbagbadzedzewo sɔ gbɔ akpa. Taflatsɛ lala vie eye nàgbugbɔ ate kpɔ."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trop de tentatives. Veuillez patienter un instant et réessayer."
+          }
+        },
+        "ga": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bɔmɔi lɛ efakɛ. Ofainɛ mɛ fioo ni oka mli ekoŋŋ."
+          }
+        },
+        "ha": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ƙoƙari yayi yawa. Da fatan a ɗan jira sannan a sake gwadawa."
+          }
+        },
+        "tw": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mmɔdebɔ no adɔɔso dodo. Yɛsrɛ wo twɛn kakra na sɔhwɛ bio."
+          }
+        }
+      }
+    },
+    "Network connection error. Please check your internet connection.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ee": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kadmɔkadɔ gbegblẽ. Taflatsɛ kpɔ wò intanɛt kadodo la ɖa."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erreur de connexion réseau. Veuillez vérifier votre connexion Internet."
+          }
+        },
+        "ga": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intanɛt yelikɛbua mfomso. Ofainɛ kwɛmɔ o-intanɛt lɛ."
+          }
+        },
+        "ha": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kuskuren haɗin yanar gizo. Da fatan a duba haɗin intanet ɗin ku."
+          }
+        },
+        "tw": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nkitahodi mfomso. Yɛsrɛ wo hwɛ w'intanɛt nkitahodi no yie."
+          }
+        }
+      }
+    },
+    "Unable to sign in. Please check your details and try again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ee": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Míete ŋu ge ɖe eme o. Taflatsɛ gbugbɔ te kpɔ."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de se connecter. Veuillez vérifier vos informations et réessayer."
+          }
+        },
+        "ga": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nyɛɛɛ abote mli. Ofainɛ kwɛmɔ o-saji lɛ ni oka mli ekoŋŋ."
+          }
+        },
+        "ha": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ba a iya shiga ba. Da fatan a duba bayananku sannan a sake gwadawa."
+          }
+        },
+        "tw": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entumi anya kwan anwura mu. Yɛsrɛ wo sɔhwɛ bio."
+          }
+        }
+      }
+    },
+    "Registration failed. Please try again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ee": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ŋkɔŋlɔla la do kpo. Taflatsɛ gbugbɔ te kpɔ."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'inscription a échoué. Veuillez réessayer."
+          }
+        },
+        "ga": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ŋma gbɛi lɛ etsɛɛɛ. Ofainɛ ka mli ekoŋŋ."
+          }
+        },
+        "ha": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rajista ba ta yi nasara ba. Da fatan a sake gwadawa."
+          }
+        },
+        "tw": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kyerɛw wo din no anyɛ yie. Yɛsrɛ wo sɔhwɛ bio."
+          }
+        }
+      }
+    },
     "Please fill in all email and password fields.": {
       "extractionState": "manual",
       "localizations": {
