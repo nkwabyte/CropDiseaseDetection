@@ -43,6 +43,7 @@ import com.nkwabyte.cropdiseasedetection.common.model.SupportedCrop
 import com.nkwabyte.cropdiseasedetection.common.pipeline.BOX_COORDINATE_SPACE
 import com.nkwabyte.cropdiseasedetection.common.pipeline.DetectionPipeline
 import com.nkwabyte.cropdiseasedetection.common.pipeline.ObjectDetectorEngine
+import com.nkwabyte.cropdiseasedetection.common.pipeline.runOutputAgreementPipeline
 import com.nkwabyte.cropdiseasedetection.common.pipeline.PipelineOutcome
 import com.nkwabyte.cropdiseasedetection.common.pipeline.RoutingDecision
 import com.nkwabyte.cropdiseasedetection.common.model.StageLatencyMs
@@ -1388,6 +1389,43 @@ actual class ObjectDetector actual constructor() : KoinComponent {
             }
         }
         return file.absolutePath
+    }
+
+    actual suspend fun runOutputAgreement(): String? = withContext(Dispatchers.Default) {
+        val base = context.getExternalFilesDir(null) ?: context.filesDir
+        val inDir = File(base, "agreement_in")
+        val files = (inDir.listFiles() ?: emptyArray())
+            .filter { it.isFile && it.extension.lowercase() in setOf("jpg", "jpeg", "png") }
+            .sortedBy { it.name }
+        if (files.isEmpty()) {
+            Log.w("Agreement", "no input images in ${inDir.absolutePath}")
+            return@withContext null
+        }
+        val inputs = files.map { it.name to it.readBytes() }
+        val debuggable = (context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        val env = mapOf(
+            "osVersion" to "Android ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})",
+            "device" to "${Build.MANUFACTURER} ${Build.MODEL}",
+            "buildIdentifier" to BuildKonfig.BUILD_GIT_SHA,
+            "debuggableApk" to debuggable.toString(),
+            "detectionModel" to settingsManager.getDetectionModel(),
+            "detectionThreshold" to settingsManager.getDetectionThreshold().toString(),
+            "iouThreshold" to settingsManager.getIouThreshold().toString(),
+            "classifierThreshold" to settingsManager.getClassifierThreshold().toString(),
+        )
+        val now = System.currentTimeMillis()
+        val json = runOutputAgreementPipeline(
+            detector = this@ObjectDetector,
+            inputs = inputs,
+            sha256 = { bytes -> MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) } },
+            platform = "android",
+            environment = env,
+            nowEpochMs = now,
+        )
+        val out = File(base, "output_agreement_$now.json")
+        out.writeText(json)
+        Log.i("Agreement", "wrote ${inputs.size} records to ${out.absolutePath}")
+        out.absolutePath
     }
 
     actual fun loadBenchmarkImage(image: BenchmarkImage): ByteArray? = try {

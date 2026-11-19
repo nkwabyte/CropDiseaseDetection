@@ -122,5 +122,14 @@ expect class ObjectDetector() {
      */
     fun loadBenchmarkImage(image: BenchmarkImage): ByteArray?
 
+    /**
+     * Cross-platform output-agreement run: passes every image in the platform's
+     * agreement input folder (iOS: Documents/agreement_in, Android:
+     * externalFiles/agreement_in) through the production pipeline and writes a
+     * JSON export next to it. Returns the export path, or null when there was no
+     * input. See common/pipeline/OutputAgreement.kt.
+     */
+    suspend fun runOutputAgreement(): String?
+
     fun release()
 }

@@ -29,6 +29,7 @@ import com.nkwabyte.cropdiseasedetection.common.model.BenchmarkPath
 import com.nkwabyte.cropdiseasedetection.common.model.emptyStageLatency
 import com.nkwabyte.cropdiseasedetection.common.pipeline.DetectionPipeline
 import com.nkwabyte.cropdiseasedetection.common.pipeline.ObjectDetectorEngine
+import com.nkwabyte.cropdiseasedetection.common.pipeline.runOutputAgreementPipeline
 import com.nkwabyte.cropdiseasedetection.common.pipeline.PipelineOutcome
 import com.nkwabyte.cropdiseasedetection.common.pipeline.RoutingDecision
 import com.nkwabyte.cropdiseasedetection.common.model.StageBenchmark
@@ -1308,6 +1309,46 @@ actual class ObjectDetector actual constructor() : KoinComponent {
         for (note in export.notes) {
             println("[iOS-ObjectDetector]   NOTE: $note")
         }
+    }
+
+    @OptIn(kotlin.experimental.ExperimentalNativeApi::class)
+    actual suspend fun runOutputAgreement(): String? = withContext(Dispatchers.Default) {
+        val docs = (NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true)
+            .firstOrNull() as? String) ?: return@withContext null
+        val inDir = "$docs/agreement_in"
+        val names = (NSFileManager.defaultManager.contentsOfDirectoryAtPath(inDir, null) ?: emptyList<Any?>())
+            .mapNotNull { it as? String }
+            .filter { it.endsWith(".jpg", true) || it.endsWith(".jpeg", true) || it.endsWith(".png", true) }
+            .sorted()
+        if (names.isEmpty()) {
+            println("[iOS-Agreement] no input images in $inDir")
+            return@withContext null
+        }
+        val inputs = names.mapNotNull { n ->
+            NSData.dataWithContentsOfFile("$inDir/$n")?.toByteArray()?.let { n to it }
+        }
+        val env = mapOf(
+            "osVersion" to UIDevice.currentDevice.systemVersion,
+            "buildIdentifier" to BuildKonfig.BUILD_GIT_SHA,
+            "kotlinNativeDebugBinary" to kotlin.native.Platform.isDebugBinary.toString(),
+            "detectionModel" to settingsManager.getDetectionModel(),
+            "detectionThreshold" to settingsManager.getDetectionThreshold().toString(),
+            "iouThreshold" to settingsManager.getIouThreshold().toString(),
+            "classifierThreshold" to settingsManager.getClassifierThreshold().toString(),
+        )
+        val now = (NSDate().timeIntervalSince1970 * 1000).toLong()
+        val json = runOutputAgreementPipeline(
+            detector = this@ObjectDetector,
+            inputs = inputs,
+            sha256 = { bridge.sha256HexOfData(it.toNSData() ?: NSData()) },
+            platform = "ios",
+            environment = env,
+            nowEpochMs = now,
+        )
+        val path = "$docs/output_agreement_$now.json"
+        (json as NSString).writeToFile(path, atomically = true, encoding = NSUTF8StringEncoding, error = null)
+        println("[iOS-Agreement] wrote ${inputs.size} records to $path (debugBinary=${kotlin.native.Platform.isDebugBinary})")
+        path
     }
 
     actual fun loadBenchmarkImage(image: BenchmarkImage): ByteArray? {

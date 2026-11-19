@@ -10,15 +10,20 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     ) -> Bool {
         FirebaseApp.configure()
         MainViewControllerKt.doInitKoin()
-        #if DEBUG
+        // Compiled into Debug builds, and into Release builds only when built with
+        // SWIFT_ACTIVE_COMPILATION_CONDITIONS including HEADLESS_BENCHMARK (used to
+        // measure the optimised Release configuration on a device). Each trigger is
+        // inert unless its explicit launch argument is passed.
+        #if DEBUG || HEADLESS_BENCHMARK
         HeadlessBenchmark.runIfRequested()
+        HeadlessAgreement.runIfRequested()
         HeadlessDiagnostics.runIfRequested()
         #endif
         return true
     }
 }
 
-#if DEBUG
+#if DEBUG || HEADLESS_BENCHMARK
 /// Headless trigger for the publication-protocol benchmark, for scripted runs
 /// on a physical device.
 ///
@@ -139,6 +144,30 @@ enum HeadlessBenchmark {
         }
     }
 }
+/// Headless trigger for the cross-platform output-agreement run: every image
+/// copied into Documents/agreement_in is passed once through the production
+/// pipeline and the results are written to Documents/output_agreement_<ms>.json.
+///
+///     xcrun devicectl device process launch --console --device <udid> \
+///       com.nkwabyte.cropdiseasedetection --run-output-agreement
+enum HeadlessAgreement {
+    static let launchArgument = "--run-output-agreement"
+    private static let tag = "[HeadlessAgreement]"
+
+    static func runIfRequested() {
+        guard ProcessInfo.processInfo.arguments.contains(launchArgument) else { return }
+        Task.detached(priority: .userInitiated) {
+            print("\(tag) START")
+            do {
+                let path = try await KoinHelper.objectDetector.runOutputAgreement()
+                print("\(tag) DONE export=\(path ?? "none (no input images)")")
+            } catch {
+                print("\(tag) FAILED: \(error.localizedDescription)")
+            }
+        }
+    }
+}
+
 #endif
 
 @main
